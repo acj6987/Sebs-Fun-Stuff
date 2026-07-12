@@ -3,20 +3,8 @@
    Design tokens, layout, and components
    ============================================================ */
 
+/* Shared, theme-independent tokens */
 :root {
-  --bg: #0f1512;
-  --bg-elev: #16201b;
-  --bg-elev-2: #1d2b23;
-  --surface: #16201b;
-  --border: #26362d;
-  --border-soft: #1f2d25;
-  --text: #eaf3ec;
-  --text-dim: #a9bcb0;
-  --text-faint: #7d9187;
-  --accent: #4ecb8b;
-  --accent-2: #f2b84b;
-  --accent-ink: #06231a;
-  --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
   --radius: 16px;
   --radius-sm: 10px;
   --maxw: 1200px;
@@ -24,6 +12,8 @@
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
 }
 
+/* Light theme (default) */
+:root,
 :root[data-theme="light"] {
   --bg: #f7f9f5;
   --bg-elev: #ffffff;
@@ -38,6 +28,40 @@
   --accent-2: #c98a17;
   --accent-ink: #ffffff;
   --shadow: 0 10px 30px -14px rgba(20, 40, 30, 0.25);
+}
+
+/* Dark theme — follows the OS preference, and the toggle can force it */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1512;
+    --bg-elev: #16201b;
+    --bg-elev-2: #1d2b23;
+    --surface: #16201b;
+    --border: #26362d;
+    --border-soft: #1f2d25;
+    --text: #eaf3ec;
+    --text-dim: #a9bcb0;
+    --text-faint: #7d9187;
+    --accent: #4ecb8b;
+    --accent-2: #f2b84b;
+    --accent-ink: #06231a;
+    --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1512;
+  --bg-elev: #16201b;
+  --bg-elev-2: #1d2b23;
+  --surface: #16201b;
+  --border: #26362d;
+  --border-soft: #1f2d25;
+  --text: #eaf3ec;
+  --text-dim: #a9bcb0;
+  --text-faint: #7d9187;
+  --accent: #4ecb8b;
+  --accent-2: #f2b84b;
+  --accent-ink: #06231a;
+  --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
 }
 
 * { box-sizing: border-box; }

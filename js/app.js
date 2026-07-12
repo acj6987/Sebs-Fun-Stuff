@@ -231,16 +231,35 @@
       </article>`;
   }
 
+  // A group is given its own two-colour tint so the fallback art still reads
+  // as intentional when a photo cannot load.
+  const GROUP_TINT = {
+    Mammals: ["#7c4a24", "#b9822f"],
+    Birds: ["#1f6f8f", "#57b6c9"],
+    Reptiles: ["#2f6b39", "#7aa43a"],
+    Amphibians: ["#1f8f7a", "#63c58f"],
+    Fish: ["#204f8f", "#4aa6c9"],
+    Invertebrates: ["#5a2f8f", "#a25bc9"],
+  };
+
   // Inline SVG fallback if an image fails to load. The whole SVG is
   // URL-encoded so it contains no quotes and is safe inside the single-quoted
   // onerror attribute in the card/modal markup.
   function placeholder(a) {
     const letter = (a.name[0] || "?").replace(/[&<>"']/g, "");
+    const [c1, c2] = GROUP_TINT[a.group] || ["#243a2e", "#3d6b52"];
     const svg =
       `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">` +
-      `<rect width="100%" height="100%" fill="#1d2b23"/>` +
-      `<text x="50%" y="50%" font-size="120" fill="#4ecb8b" text-anchor="middle" ` +
-      `dominant-baseline="central" font-family="sans-serif">${letter}</text></svg>`;
+      `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
+      `<stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/>` +
+      `</linearGradient></defs>` +
+      `<rect width="100%" height="100%" fill="url(#g)"/>` +
+      `<text x="50%" y="50%" font-size="150" fill="rgba(255,255,255,0.9)" ` +
+      `text-anchor="middle" dominant-baseline="central" ` +
+      `font-family="Georgia, serif" font-weight="bold">${letter}</text>` +
+      `<text x="50%" y="86%" font-size="20" fill="rgba(255,255,255,0.7)" ` +
+      `text-anchor="middle" letter-spacing="3" ` +
+      `font-family="sans-serif">${escapeHtml(a.group).toUpperCase()}</text></svg>`;
     return "data:image/svg+xml," + encodeURIComponent(svg);
   }
 
