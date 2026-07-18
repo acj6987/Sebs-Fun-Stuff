@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLADEBLADE X</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0b1030 0%, #1b1464 45%, #3a0a5e 100%);
+    color: #fff;
+    overflow-x: hidden;
+  }
+
+  .stars {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, #fff8, transparent),
+      radial-gradient(2px 2px at 70% 15%, #fff6, transparent),
+      radial-gradient(1px 1px at 40% 70%, #fff7, transparent),
+      radial-gradient(2px 2px at 85% 60%, #fff5, transparent),
+      radial-gradient(1px 1px at 10% 85%, #fff6, transparent),
+      radial-gradient(2px 2px at 55% 45%, #fff4, transparent);
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 20px; }
+
+  header { text-align: center; padding: 18px 0 8px; }
+
+  h1 {
+    font-size: clamp(2.6rem, 9vw, 5rem);
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #00e5ff, #7c4dff, #ff1744, #ffab00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 18px rgba(0, 229, 255, .45));
+    animation: titlePulse 2.2s ease-in-out infinite;
+  }
+  @keyframes titlePulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(0,229,255,.35)); }
+    50% { filter: drop-shadow(0 0 26px rgba(255,23,68,.55)); }
+  }
+
+  .tagline { font-size: 1.05rem; color: #b3c6ff; margin-top: 4px; letter-spacing: 3px; text-transform: uppercase; }
+
+  .spinner {
+    display: inline-block;
+    font-size: 2.2rem;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== Referee panel ===== */
+  .referee {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(0, 0, 0, .35);
+    border: 2px solid #00e5ff;
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    box-shadow: 0 0 20px rgba(0, 229, 255, .25);
+  }
+  .referee .face {
+    font-size: 3rem; line-height: 1;
+    animation: bob 1.6s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  .referee .who { font-weight: 800; color: #00e5ff; font-size: .85rem; letter-spacing: 2px; text-transform: uppercase; }
+  .referee .say { font-size: 1.15rem; font-weight: 600; min-height: 1.6em; }
+  .ref-main { flex: 1; }
+
+  .voice-btn {
+    background: rgba(0,229,255,.15);
+    border: 2px solid #00e5ff;
+    color: #00e5ff;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .voice-btn.off { border-color: #666; color: #999; background: rgba(255,255,255,.05); }
+
+  /* ===== Setup ===== */
+  .card {
+    background: rgba(255, 255, 255, .07);
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(255,255,255,.12);
+  }
+  .setup h2 { text-align: center; margin-bottom: 14px; font-size: 1.4rem; color: #ffd54f; }
+  .setup .names { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .setup .field { flex: 1; min-width: 220px; }
+  .setup label { display: block; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+  .setup .p1-label { color: #40c4ff; }
+  .setup .p2-label { color: #ff5252; }
+  .setup input {
+    width: 100%;
+    font-size: 1.25rem;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,.25);
+    background: rgba(0,0,0,.35);
+    color: #fff;
+    outline: none;
+  }
+  .setup input:focus { border-color: #ffd54f; }
+  .warn { text-align: center; color: #ff8a80; font-weight: 700; margin-top: 10px; min-height: 1.4em; }
+
+  .big-btn {
+    display: block;
+    margin: 16px auto 0;
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    padding: 14px 40px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    color: #1a1a2e;
+    background: linear-gradient(90deg, #ffd54f, #ffab00);
+    box-shadow: 0 6px 0 #b26a00, 0 0 24px rgba(255,171,0,.5);
+    transition: transform .08s;
+  }
+  .big-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b26a00; }
+
+  /* ===== Arena ===== */
+  .arena { display: none; }
+  .arena.on { display: block; }
+
+  .scoreboard { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
+  .player {
+    flex: 1; min-width: 240px;
+    text-align: center;
+    border-radius: 20px;
+    padding: 18px 14px;
+    position: relative;
+  }
+  .player.p1 { background: linear-gradient(180deg, rgba(64,196,255,.22), rgba(64,196,255,.06)); border: 2px solid #40c4ff; }
+  .player.p2 { background: linear-gradient(180deg, rgba(255,82,82,.22), rgba(255,82,82,.06)); border: 2px solid #ff5252; }
+
+  .player .pname { font-size: 1.5rem; font-weight: 900; letter-spacing: 1px; word-break: break-word; }
+  .player.p1 .pname { color: #40c4ff; }
+  .player.p2 .pname { color: #ff5252; }
+
+  .player .score {
+    font-size: 4.5rem;
+    font-weight: 900;
+    line-height: 1.1;
+    text-shadow: 0 0 18px rgba(255,255,255,.35);
+  }
+  .player .score.bump { animation: bump .4s; }
+  @keyframes bump { 30% { transform: scale(1.35); } }
+
+  .finish-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .finish-btns button {
+    font-size: 1.05rem;
+    font-weight: 800;
+    padding: 12px 8px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    color: #fff;
+    transition: transform .08s;
+  }
+  .finish-btns button:active { transform: scale(.95); }
+  .btn-burst { background: linear-gradient(90deg, #ff1744, #ff9100); box-shadow: 0 0 14px rgba(255,23,68,.5); }
+  .btn-ko { background: linear-gradient(90deg, #7c4dff, #536dfe); }
+  .btn-survivor { background: linear-gradient(90deg, #00bfa5, #00c853); }
+  .finish-btns .pts { font-size: .8rem; opacity: .9; display: block; }
+
+  .vs {
+    align-self: center;
+    font-size: 2.2rem;
+    font-weight: 900;
+    font-style: italic;
+    color: #ffd54f;
+    text-shadow: 0 0 14px rgba(255,213,79,.6);
+    padding: 0 4px;
+  }
+
+  .goal-note { text-align: center; margin-top: 12px; color: #b3c6ff; font-weight: 600; }
+
+  .log-card h3 { color: #ffd54f; margin-bottom: 10px; letter-spacing: 1px; }
+  .log { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 6px; }
+  .log p {
+    background: rgba(0,0,0,.3);
+    border-left: 4px solid #00e5ff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: .98rem;
+  }
+  .log p.hot { border-left-color: #ff1744; }
+
+  /* ===== Winner overlay ===== */
+  .winner-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    display: none;
+    align-items: center; justify-content: center;
+    background: rgba(5, 5, 25, .9);
+    text-align: center;
+  }
+  .winner-overlay.on { display: flex; }
+  .winner-box { padding: 24px; max-width: 640px; }
+  .number-one {
+    font-size: clamp(6rem, 24vw, 12rem);
+    font-weight: 900;
+    background: linear-gradient(180deg, #fff59d, #ffab00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 30px rgba(255,213,79,.8));
+    animation: champ 1s ease-in-out infinite;
+    line-height: 1;
+  }
+  @keyframes champ { 0%,100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.12) rotate(3deg); } }
+  .winner-name { font-size: clamp(1.8rem, 7vw, 3.2rem); font-weight: 900; margin-top: 10px; color: #fff; }
+  .winner-sub { font-size: 1.3rem; color: #ffd54f; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-top: 6px; animation: titlePulse 1.5s infinite; }
+
+  .confetti {
+    position: fixed; top: -20px;
+    font-size: 1.6rem;
+    animation: fall linear forwards;
+    z-index: 51;
+    pointer-events: none;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); }
+  }
+
+  footer { text-align: center; padding: 20px 0 30px; color: #7986cb; font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+<div class="wrap">
+
+  <header>
+    <div><span class="spinner">🌀</span></div>
+    <h1>BLADEBLADE&nbsp;X</h1>
+    <div class="tagline">The TV Show &bull; The Game &bull; The Battle</div>
+  </header>
+
+  <div class="referee">
+    <div class="face">🤖</div>
+    <div class="ref-main">
+      <div class="who">Referee Mumba Zero</div>
+      <div class="say" id="refSay">Welcome to BLADEBLADE X! Write the names of both battlers to begin!</div>
+    </div>
+    <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🔊 Voice ON</button>
+  </div>
+
+  <!-- SETUP -->
+  <div class="card setup" id="setup">
+    <h2>⚡ Enter the Battlers! ⚡</h2>
+    <div class="names">
+      <div class="field">
+        <label class="p1-label" for="name1">🔵 Battler 1</label>
+        <input id="name1" maxlength="20" placeholder="Write name here…" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="p2-label" for="name2">🔴 Battler 2</label>
+        <input id="name2" maxlength="20" placeholder="Write name here…" autocomplete="off">
+      </div>
+    </div>
+    <div class="warn" id="warn"></div>
+    <button class="big-btn" onclick="startBattle()">3&hellip;2&hellip;1&hellip; GO SHOOT!</button>
+  </div>
+
+  <!-- ARENA -->
+  <div class="arena" id="arena">
+    <div class="card">
+      <div class="scoreboard">
+        <div class="player p1">
+          <div class="pname" id="pname1">Battler 1</div>
+          <div class="score" id="score1">0</div>
+          <div class="finish-btns">
+            <button class="btn-burst" onclick="addPoints(1, 2, 'BURST FINISH')">💥 Burst Finish <span class="pts">+2 points</span></button>
+            <button class="btn-ko" onclick="addPoints(1, 1, 'KNOCKOUT FINISH')">👊 Knockout Finish <span class="pts">+1 point</span></button>
+            <button class="btn-survivor" onclick="addPoints(1, 1, 'SURVIVOR FINISH')">🌀 Survivor Finish <span class="pts">+1 point</span></button>
+          </div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="player p2">
+          <div class="pname" id="pname2">Battler 2</div>
+          <div class="score" id="score2">0</div>
+          <div class="finish-btns">
+            <button class="btn-burst" onclick="addPoints(2, 2, 'BURST FINISH')">💥 Burst Finish <span class="pts">+2 points</span></button>
+            <button class="btn-ko" onclick="addPoints(2, 1, 'KNOCKOUT FINISH')">👊 Knockout Finish <span class="pts">+1 point</span></button>
+            <button class="btn-survivor" onclick="addPoints(2, 1, 'SURVIVOR FINISH')">🌀 Survivor Finish <span class="pts">+1 point</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="goal-note">🏆 First battler to <strong>4 points</strong> wins the battle!</div>
+    </div>
+
+    <div class="card log-card">
+      <h3>📣 Mumba Zero's Battle Report</h3>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <footer>BLADEBLADE X &mdash; made for super super amazing battles 🌀</footer>
+</div>
+
+<!-- WINNER -->
+<div class="winner-overlay" id="winnerOverlay">
+  <div class="winner-box">
+    <div class="number-one">#1</div>
+    <div class="winner-name" id="winnerName"></div>
+    <div class="winner-sub">Super Super Amazing!!!</div>
+    <button class="big-btn" onclick="newBattle()">⚡ New Battle ⚡</button>
+  </div>
+</div>
+
+<script>
+  const WIN_SCORE = 4;
+  let scores = [0, 0];
+  let names = ['', ''];
+  let battleOver = false;
+  let voiceOn = true;
+
+  function toggleVoice() {
+    voiceOn = !voiceOn;
+    const b = document.getElementById('voiceBtn');
+    b.textContent = voiceOn ? '🔊 Voice ON' : '🔇 Voice OFF';
+    b.classList.toggle('off', !voiceOn);
+    if (!voiceOn) speechSynthesis.cancel();
+    else refSpeak('Mumba Zero voice is back online!');
+  }
+
+  function refSpeak(text, hot) {
+    document.getElementById('refSay').textContent = text;
+    const log = document.getElementById('log');
+    if (document.getElementById('arena').classList.contains('on')) {
+      const p = document.createElement('p');
+      p.textContent = '🤖 ' + text;
+      if (hot) p.classList.add('hot');
+      log.prepend(p);
+    }
+    if (voiceOn && 'speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05;
+      u.pitch = 1.15;
+      speechSynthesis.speak(u);
+    }
+  }
+
+  function startBattle() {
+    const n1 = document.getElementById('name1').value.trim();
+    const n2 = document.getElementById('name2').value.trim();
+    const warn = document.getElementById('warn');
+    if (!n1 || !n2) {
+      warn.textContent = '⚠️ You HAVE to write the name of both people!';
+      refSpeak('Stop! You have to write the name of both battlers before we can start!');
+      return;
+    }
+    warn.textContent = '';
+    names = [n1, n2];
+    scores = [0, 0];
+    battleOver = false;
+    document.getElementById('pname1').textContent = n1;
+    document.getElementById('pname2').textContent = n2;
+    document.getElementById('score1').textContent = '0';
+    document.getElementById('score2').textContent = '0';
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('arena').classList.add('on');
+    refSpeak('The battle begins! ' + n1 + ' versus ' + n2 + '! Three! Two! One! GO SHOOT!', true);
+  }
+
+  function addPoints(player, pts, finishName) {
+    if (battleOver) return;
+    const i = player - 1;
+    scores[i] += pts;
+    const el = document.getElementById('score' + player);
+    el.textContent = scores[i];
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+
+    const name = names[i];
+    const ptWord = pts === 1 ? 'point' : 'points';
+    if (scores[i] >= WIN_SCORE) {
+      refSpeak(finishName + '! ' + name + ' gets ' + pts + ' ' + ptWord + ' and that is the battle! ' +
+        name + ' WINS ' + scores[i] + ' to ' + scores[1 - i] + '! SUPER SUPER AMAZING!', true);
+      endBattle(name);
+    } else {
+      const need = WIN_SCORE - scores[i];
+      refSpeak(finishName + '! ' + name + ' scores ' + pts + ' ' + ptWord + '! The score is ' +
+        scores[0] + ' to ' + scores[1] + '. ' + name + ' needs ' + need + ' more to win!',
+        finishName === 'BURST FINISH');
+    }
+  }
+
+  function endBattle(winner) {
+    battleOver = true;
+    document.getElementById('winnerName').textContent = '🏆 ' + winner + ' WINS! 🏆';
+    document.getElementById('winnerOverlay').classList.add('on');
+    launchConfetti();
+  }
+
+  function launchConfetti() {
+    const emojis = ['🎉', '⭐', '💥', '🌀', '🏆', '✨', '🎊'];
+    for (let i = 0; i < 60; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.animationDuration = (2 + Math.random() * 3) + 's';
+      c.style.animationDelay = (Math.random() * 1.5) + 's';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 6000);
+    }
+  }
+
+  function newBattle() {
+    document.getElementById('winnerOverlay').classList.remove('on');
+    document.getElementById('arena').classList.remove('on');
+    document.getElementById('setup').style.display = '';
+    document.getElementById('name1').value = '';
+    document.getElementById('name2').value = '';
+    refSpeak('New battle! Write the names of both battlers to begin!');
+  }
+</script>
+</body>
+</html>
