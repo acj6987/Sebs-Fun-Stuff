@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seb's Complete Wine Guide — Every Type of Wine</title>
+  <meta name="description" content="An illustrated guide to every major type of wine — reds, whites, rosés, sparkling, dessert, fortified and orange wines — with tasting profiles, pairings and hundreds of facts.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍷%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="hero">
+    <div class="vine">🍇🍷🍇</div>
+    <h1>Seb's Complete <em>Wine Guide</em></h1>
+    <p class="sub">
+      Every major type of wine in the world — from the king of reds to 8,000-year-old amber wines —
+      each with its own illustration, tasting profile, perfect pairings and a cellar-full of facts.
+      Click any wine to pour out its full story.
+    </p>
+    <p class="stats-line"><span id="wine-total">…</span> wines · 7 families · hundreds of facts</p>
+  </header>
+
+  <nav class="controls" aria-label="Search and filter">
+    <div class="controls-inner">
+      <input id="search" type="search" placeholder="Search wines, flavours, regions, foods…"
+             aria-label="Search wines">
+      <div id="chips" role="group" aria-label="Filter by category"></div>
+      <div id="result-count" aria-live="polite"></div>
+    </div>
+  </nav>
+
+  <main>
+    <div id="sections"></div>
+  </main>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Wine details">
+    <div class="modal-card">
+      <button class="modal-close" aria-label="Close">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p class="toast">“Wine is bottled poetry.” — Robert Louis Stevenson</p>
+    <p>Built for Seb's Fun Stuff · All illustrations hand-drawn in SVG · Please enjoy responsibly 🍷</p>
+  </footer>
+
+  <script src="js/wines.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
