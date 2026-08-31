@@ -9,9 +9,11 @@ borrows two web fonts when you happen to be online.
 | Button | What it does |
 | --- | --- |
 | 📚 **Pokémon Facts** | How Pokémon was invented, **how Ash Ketchum was created**, **how long one episode takes to make**, and lots more facts. |
-| 🌿 **Wild Pokémon Adventure** | Explore 8 places, find wild Pokémon, weaken them and catch them with your Poké Balls. |
-| 🃏 **Cards & Team Rocket Battle** | Your card collection. Tap a card to make it your battler, then fight 7 Team Rocket enemies for coins. |
+| 🌿 **Wild Pokémon Adventure** | **Walk around** 8 different places with the arrow keys. Pokémon wander about where you can see them — bump into one to battle it, or find things dropped on the ground. |
+| 🃏 **Cards & Team Rocket Battle** | Your card collection. Tap cards to build a **battle team of three**, then fight 7 Team Rocket enemies for coins. |
 | 🏟️ **Nine Gyms** | Nine cities, nine Gym Leaders, nine badges. Beat one to unlock the next. |
+| ✨ **Mega Shrine** | Beat the Guardian to win the **Key Stone**, then Mega Evolve one Pokémon per battle. Nine Pokémon have a Mega form. |
+| 🏆 **Champion Stadium** | Sign up for the **league** and beat five trainers in a row to become Champion — or swap **team codes** with a friend and battle their exact team. |
 | 🛒 **Poké Mart** | Spend your coins on Poké Balls, Great Balls, Ultra Balls, Potions and random card packs. |
 | 📕 **Pokédex** | All 50 Pokémon in the game, with the ones you have caught in colour. |
 
@@ -20,13 +22,28 @@ borrows two web fonts when you happen to be online.
 1. Type a **trainer name** and make up a **password**, then press **NEW TRAINER**.
    Next time, type the same name and password and press **ENTER** to load your game.
 2. You start with **60 Poké Balls**, 200 coins and a Pikachu card.
-3. Go to the **Wild Pokémon Adventure**. Press **Weaken it** first — a hurt Pokémon
-   is much easier to catch — then throw a Ball.
-4. When your Balls run out, earn coins by battling **Team Rocket** and the **Gym
+3. Go to the **Wild Pokémon Adventure** and pick a place. Now **walk around** with the
+   arrow keys, **W A S D**, or the buttons under the map on a phone. You are the trainer
+   inside the yellow ring. Walk into a Pokémon to battle it, or walk over a ⚪ 🪙 💊 to
+   pick it up. Long grass hides extra Pokémon that jump out at you.
+4. In an encounter, press **Weaken it** first — a hurt Pokémon is much easier to
+   catch — then throw a Ball.
+5. In your card collection, tap up to **three** cards to build your battle team.
+   When one faints the next one comes out, and you can swap during a battle.
+6. When your Balls run out, earn coins by battling **Team Rocket** and the **Gym
    Leaders**, then buy more at the **Poké Mart**.
-5. Types matter! Water beats Fire, Fire beats Grass, Grass beats Water, Electric
-   beats Water and Flying, and so on. Pick the right card for each Gym Leader.
-6. Every badge you win makes your Pokémon a bit stronger.
+7. Types matter! Water beats Fire, Fire beats Grass, Grass beats Water, Electric
+   beats Water and Flying, and so on. Pick the right team for each Gym Leader.
+8. Every badge you win makes your Pokémon a bit stronger.
+9. With **3 badges** the Guardian at the Mega Shrine will battle you for the Key Stone.
+   With **2 badges** you can sign up at the Champion Stadium.
+
+## Battling your friends
+
+There is no server behind this game, so it cannot put two people in the same battle
+live. What it does instead is give every trainer a **team code**. Copy yours from the
+Champion Stadium, send it to a friend who also has the game, and paste theirs in — you
+then battle the exact three Pokémon they built their team with.
 
 ## Putting it on the internet
 

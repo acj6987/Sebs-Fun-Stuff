@@ -167,7 +167,7 @@ header.top{
 .rar{background:#3c4370;color:#fff}
 
 /* ---------- battle ---------- */
-.arena{display:grid;gap:16px;grid-template-columns:1fr 1fr;align-items:end}
+.arena{display:grid;gap:16px;grid-template-columns:1fr 1fr;align-items:stretch}
 @media(max-width:640px){.arena{grid-template-columns:1fr}}
 .fighter{text-align:center;background:rgba(0,0,0,.22);border:3px solid var(--line);border-radius:16px;padding:14px}
 .fighter .big{font-size:64px;line-height:1;filter:drop-shadow(0 4px 3px rgba(0,0,0,.45))}
@@ -228,6 +228,46 @@ header.top{
   html{scroll-behavior:auto}
 }
 
+/* ---------- walk-around map ---------- */
+.mapwrap{position:relative;border:3px solid var(--line);border-radius:16px;overflow:hidden;background:#0b1c14;box-shadow:var(--shadow)}
+#ow-canvas{display:block;width:100%;height:auto;touch-action:none}
+.maphud{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.dpad{display:grid;grid-template-columns:repeat(3,62px);grid-template-rows:repeat(3,62px);gap:8px;justify-content:center;margin:16px auto 0}
+.dpad button{font-size:22px;font-family:inherit;border:3px solid #0b0e22;border-radius:14px;background:var(--panel2);color:#fff;box-shadow:var(--shadow);cursor:pointer;touch-action:none}
+.dpad button:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.dpad .u{grid-area:1/2}.dpad .l{grid-area:2/1}.dpad .d{grid-area:3/2}.dpad .r{grid-area:2/3}
+.hint{font-size:13px;color:var(--dim)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;z-index:60;
+  background:var(--panel2);border:3px solid var(--yellow);border-radius:14px;padding:10px 18px;
+  font-weight:900;box-shadow:var(--shadow);pointer-events:none}
+
+/* ---------- team, shrine, stadium ---------- */
+.teamtag{position:absolute;top:-10px;left:-10px;background:var(--green);color:#06210f;
+  border:3px solid #0b0e22;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:900}
+.pcard.team{outline:4px solid var(--green);outline-offset:3px}
+.shrine-card{background:linear-gradient(180deg,#3b2168 0%,#190f2e 100%);border-color:#8257e0}
+.stadium-card{background:linear-gradient(180deg,#5e3d12 0%,#2a1a08 100%);border-color:#d99b00}
+.codebox{width:100%;padding:12px;border-radius:12px;border:3px solid var(--line);
+  background:#0d1130;color:var(--ink);font:inherit;font-size:13px;word-break:break-all}
+.mega-glow{text-shadow:0 0 22px #ffd34d,0 0 40px #ff9d00}
+/* glows rather than moves, so it never wriggles out from under a finger */
+@keyframes pulse{
+  0%,100%{box-shadow:var(--shadow),0 0 0 0 rgba(190,140,255,.55)}
+  50%{box-shadow:var(--shadow),0 0 18px 7px rgba(190,140,255,.40)}
+}
+.pulse{animation:pulse 1.4s ease-in-out infinite}
+.bracket{display:grid;gap:10px;margin:16px 0}
+.round{display:flex;align-items:center;gap:14px;background:rgba(0,0,0,.22);
+  border:3px solid var(--line);border-radius:14px;padding:12px}
+.round.won{border-color:var(--green)}
+.round.now{border-color:var(--yellow)}
+.round .ico{font-size:32px;flex:none}
+.round .who{flex:1;min-width:0}
+.party{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.slot{background:rgba(0,0,0,.3);border:3px dashed var(--line);border-radius:12px;
+  padding:8px 14px;font-weight:900;font-size:15px}
+.slot.full{border-style:solid;border-color:var(--green)}
+
 footer{border-top:3px solid var(--line);margin-top:40px;padding:20px 0;color:var(--dim);font-size:13px}
 </style>
 </head>
@@ -261,6 +301,8 @@ footer{border-top:3px solid var(--line);margin-top:40px;padding:20px 0;color:var
       <div class="stat">⚪ <b id="s-balls">0</b> Balls</div>
       <div class="stat">🃏 <b id="s-cards">0</b> Cards</div>
       <div class="stat">🏅 <b id="s-badges">0</b>/9</div>
+      <div class="stat hidden" id="s-key">🔑 Key Stone</div>
+      <div class="stat hidden" id="s-champ">🏆 Champion</div>
       <button class="btn ghost small" id="btn-logout">Log out</button>
     </div>
   </div>
@@ -278,6 +320,8 @@ footer{border-top:3px solid var(--line);margin-top:40px;padding:20px 0;color:var
       <button class="menu-btn" data-go="cards"><span class="ico">🃏</span><h3>Cards &amp; Team Rocket Battle</h3><p>Look at your card collection and use your cards to battle Team Rocket.</p></button>
       <button class="menu-btn" data-go="gyms"><span class="ico">🏟️</span><h3>Nine Gyms</h3><p>Challenge the Gym Leaders in nine different cities and win all nine badges.</p></button>
       <button class="menu-btn" data-go="shop"><span class="ico">🛒</span><h3>Poké Mart</h3><p>Out of Poké Balls? Spend the coins you won in battles on more.</p></button>
+      <button class="menu-btn" data-go="shrine"><span class="ico">✨</span><h3>Mega Shrine</h3><p>Beat the Guardian to win the Key Stone, then Mega Evolve your Pokémon in battle.</p></button>
+      <button class="menu-btn" data-go="stadium"><span class="ico">🏆</span><h3>Champion Stadium</h3><p>Sign up for the league, battle other trainers, and swap team codes with your friends.</p></button>
       <button class="menu-btn" data-go="dex"><span class="ico">📕</span><h3>Pokédex</h3><p>See every Pokémon in the game and which ones you have already caught.</p></button>
     </div>
   </section>
@@ -312,6 +356,25 @@ footer{border-top:3px solid var(--line);margin-top:40px;padding:20px 0;color:var
     <div id="wild-pick">
       <div class="grid routes" id="route-list"></div>
     </div>
+
+    <div id="wild-map" class="hidden">
+      <div class="maphud">
+        <button class="btn ghost small" id="ow-leave">← Leave this place</button>
+        <span class="stat" id="ow-where">—</span>
+        <span class="stat">⚪ <b id="ow-balls">0</b> Balls</span>
+        <span class="stat">🪙 <b id="ow-coins">0</b></span>
+      </div>
+      <div class="mapwrap"><canvas id="ow-canvas" width="800" height="520"></canvas></div>
+      <p class="hint center" style="margin:10px 0 0">Walk with the <b>arrow keys</b> or <b>W A S D</b> — or the buttons below on a phone.
+      Bump into a Pokémon to battle it. Long grass hides more of them, and you can pick things up off the ground.</p>
+      <div class="dpad">
+        <button class="u" data-dir="up" aria-label="Walk up">▲</button>
+        <button class="l" data-dir="left" aria-label="Walk left">◀</button>
+        <button class="d" data-dir="down" aria-label="Walk down">▼</button>
+        <button class="r" data-dir="right" aria-label="Walk right">▶</button>
+      </div>
+    </div>
+
     <div id="wild-fight" class="hidden"></div>
   </section>
 
@@ -319,7 +382,8 @@ footer{border-top:3px solid var(--line);margin-top:40px;padding:20px 0;color:var
   <section id="v-cards" class="view hidden">
     <button class="btn ghost small back" data-go="home">← Back to menu</button>
     <h1>🃏 Card Collection</h1>
-    <p class="muted">Tap a card to make it your battler, then take on Team Rocket for coins.</p>
+    <p class="muted">Tap a card to put that Pokémon in your battle team. You can take <b>three</b> into a fight — when one faints the next one comes out.</p>
+    <div class="party" id="team-slots"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
       <button class="btn red" id="btn-rocket">⚔️ Battle Team Rocket</button>
       <button class="btn ghost" id="btn-heal">💊 Use Potion (<span id="potion-count">0</span>)</button>
@@ -350,6 +414,20 @@ footer{border-top:3px solid var(--line);margin-top:40px;padding:20px 0;color:var
     <h1>📕 Pokédex</h1>
     <p class="muted">Caught: <b id="dex-count">0</b> of <b id="dex-total">0</b></p>
     <div class="grid cards" id="dex-list"></div>
+  </section>
+
+  <!-- MEGA SHRINE -->
+  <section id="v-shrine" class="view hidden">
+    <button class="btn ghost small back" data-go="home">← Back to menu</button>
+    <h1>✨ The Mega Shrine</h1>
+    <div id="shrine-body"></div>
+  </section>
+
+  <!-- CHAMPION STADIUM -->
+  <section id="v-stadium" class="view hidden">
+    <button class="btn ghost small back" data-go="home">← Back to menu</button>
+    <h1>🏆 Champion Stadium</h1>
+    <div id="stadium-body"></div>
   </section>
 
   <!-- BATTLE (shared by Team Rocket + gyms) -->
@@ -421,6 +499,10 @@ const DEX = [
   {n:"Gyarados",   e:"🐊", t:"Water",    hp:95,  a:125, r:3},
   {n:"Aerodactyl", e:"🦖", t:"Rock",     hp:80,  a:105, r:3},
   {n:"Charizard",  e:"🐉", t:"Fire",     hp:78,  a:84,  r:3},
+  {n:"Venusaur",   e:"🌳", t:"Grass",    hp:80,  a:82,  r:3},
+  {n:"Blastoise",  e:"🐢", t:"Water",    hp:79,  a:83,  r:3},
+  {n:"Machamp",    e:"🦾", t:"Fighting", hp:90,  a:130, r:3},
+  {n:"Lucario",    e:"🥋", t:"Fighting", hp:70,  a:110, r:3},
   {n:"Articuno",   e:"🧊", t:"Ice",      hp:90,  a:85,  r:4},
   {n:"Zapdos",     e:"🌩️", t:"Electric", hp:90,  a:90,  r:4},
   {n:"Moltres",    e:"🦅", t:"Fire",     hp:90,  a:100, r:4},
@@ -468,24 +550,49 @@ const CHART = {
   Normal:{Rock:.5,Steel:.5,Ghost:0}
 };
 
+/* --- Pokémon that can Mega Evolve once you own the Key Stone --- */
+const MEGA = {
+  Charizard : {atk:1.5,  hp:1.25, t:"Dragon",   about:"Mega Charizard X turns black and breathes blue fire."},
+  Blastoise : {atk:1.5,  hp:1.3,  t:"Water",    about:"Mega Blastoise's shell cannons join into one huge cannon."},
+  Venusaur  : {atk:1.4,  hp:1.4,  t:"Grass",    about:"Mega Venusaur's flower grows heavy with petals."},
+  Gengar    : {atk:1.6,  hp:1.2,  t:"Ghost",    about:"Mega Gengar sinks into the ground and grins from your shadow."},
+  Alakazam  : {atk:1.65, hp:1.15, t:"Psychic",  about:"Mega Alakazam holds five spoons at once."},
+  Gyarados  : {atk:1.45, hp:1.3,  t:"Dark",     about:"Mega Gyarados turns Dark type and even angrier."},
+  Aerodactyl: {atk:1.5,  hp:1.25, t:"Rock",     about:"Mega Aerodactyl bristles with stone spikes."},
+  Lucario   : {atk:1.6,  hp:1.25, t:"Fighting", about:"Mega Lucario's aura burns so hot it can be seen."},
+  Mewtwo    : {atk:1.55, hp:1.25, t:"Psychic",  about:"Mega Mewtwo Y is the strongest Mega of them all."}
+};
+
+/* --- The Guardian who keeps the Key Stone --- */
+const GUARDIAN = {n:"Guardian Aurelia", e:"🛡️", team:["Machamp","Alakazam","Lucario"], coins:700, needBadges:3};
+
+/* --- The Champion League ladder --- */
+const LEAGUE = [
+  {n:"Trainer Nova",   e:"🧑‍🎤", team:["Jolteon","Clefairy","Snorlax"], coins:300},
+  {n:"Ace Trainer Kai",e:"🥋", team:["Machamp","Gyarados","Venusaur"],           coins:450},
+  {n:"Rival Gary",     e:"😎", team:["Alakazam","Arcanine","Blastoise"],         coins:650},
+  {n:"Dragon Master Lance", e:"🐲", team:["Aerodactyl","Gyarados","Dragonite"],  coins:900},
+  {n:"Champion Leon",  e:"👑", team:["Gengar","Snorlax","Charizard"],            coins:1500}
+];
+
 /* --- Places to explore in the wild --- */
 const ROUTES = [
   {n:"Route 1 — Tall Grass", e:"🌾", tier:[1,1,1,2], types:["Normal","Flying","Bug"],
-   note:"Easy Pokémon. A good place to start."},
+   note:"Easy Pokémon. A good place to start.", ground:"#2f6b41", grassCol:"#1e5030", block:"🌳"},
   {n:"Viridian Forest",      e:"🌲", tier:[1,1,2,2], types:["Bug","Grass","Poison"],
-   note:"Bug, Grass and Poison types everywhere."},
+   note:"Bug, Grass and Poison types everywhere.", ground:"#255839", grassCol:"#153f28", block:"🌲"},
   {n:"Mt. Moon Cave",        e:"🕯️", tier:[1,2,2,3], types:["Rock","Ground","Fairy","Poison"],
-   note:"Rock and Ground types hiding in the dark."},
+   note:"Rock and Ground types hiding in the dark.", ground:"#4a4038", grassCol:"#39312b", block:"🪨"},
   {n:"Cerulean Lake",        e:"🌊", tier:[1,2,2,3], types:["Water","Ice"],
-   note:"Lots and lots of Water Pokémon."},
+   note:"Lots and lots of Water Pokémon.", ground:"#356b7a", grassCol:"#215663", block:"🌊"},
   {n:"Rock Tunnel",          e:"🪨", tier:[2,2,3,3], types:["Rock","Ground","Fighting"],
-   note:"Tough and rocky. Bring spare Balls."},
+   note:"Tough and rocky. Bring spare Balls.", ground:"#3c3a44", grassCol:"#2b2933", block:"🪨"},
   {n:"Safari Zone",          e:"🦓", tier:[2,3,3,3], types:["Normal","Ground","Grass","Water","Psychic"],
-   note:"All sorts of rare Pokémon hide here."},
+   note:"All sorts of rare Pokémon hide here.", ground:"#6b6132", grassCol:"#524a26", block:"🌴"},
   {n:"Power Plant",          e:"🔌", tier:[2,3,3,4], types:["Electric","Steel"],
-   note:"Electric types — and rumours of a Legendary bird."},
+   note:"Electric types — and rumours of a Legendary bird.", ground:"#3a3a52", grassCol:"#2a2a3f", block:"⚙️"},
   {n:"Cerulean Cave",        e:"💠", tier:[3,3,4,4], types:["Psychic","Dragon","Ghost","Ice","Water"],
-   note:"Only the strongest trainers dare go in."}
+   note:"Only the strongest trainers dare go in.", ground:"#2a2450", grassCol:"#1c1839", block:"💎"}
 ];
 
 /* --- Team Rocket grunts --- */
@@ -567,7 +674,10 @@ const FACTS_MORE = [
   ["MissingNo.","A famous glitch in the first games summons a broken Pokémon called <b>MissingNo.</b> It scrambles your screen but also duplicates the sixth item in your bag — the most famous cheat in Pokémon history."],
   ["Cards worth a house","The rarest Pokémon card, the <b>Pikachu Illustrator</b>, sold for over <b>$5 million</b>. Only a few dozen exist."],
   ["A real animal helped design one","<b>Wooper</b>, <b>Mudkip</b> and others are based on the axolotl, and <b>Drowzee</b> is based on the Japanese <i>baku</i>, a spirit that eats bad dreams."],
-  ["Gyms are a real ladder","In the games you need all <b>eight</b> badges of a region to enter the Pokémon League. In this game you get <b>nine</b> — we added a Ghost gym in Lavender Town for fun."]
+  ["Gyms are a real ladder","In the games you need all <b>eight</b> badges of a region to enter the Pokémon League. In this game you get <b>nine</b> — we added a Ghost gym in Lavender Town for fun."],
+  ["Mega Evolution only lasts one battle","<b>Mega Evolution</b> arrived in <i>Pokémon X and Y</i> in 2013. A trainer needs a <b>Key Stone</b> and the Pokémon needs its own <b>Mega Stone</b>, and it only works <b>once per battle</b> — when the battle ends, the Pokémon changes straight back."],
+  ["Mega Gyarados changes type","Some Megas change type completely: Mega Gyarados turns from Water/Flying into <b>Water/Dark</b>, and Mega Charizard X becomes <b>Fire/Dragon</b> — the Dragon type Charizard never had, even though it looks like one."],
+  ["Lucario reads your feelings","<b>Lucario</b> senses <i>aura</i> — the energy every living thing gives off — which is how it can tell how you are feeling and even find people half a mile away. It was the star of the 8th Pokémon film and later became the mascot of Mega Evolution."]
 ];
 
 /* =========================================================
@@ -609,9 +719,13 @@ function freshTrainer(name, pass){
     potions: 1,
     cards: {Pikachu:1},
     active: "Pikachu",
+    party: ["Pikachu"],
     badges: GYMS.map(()=>false),
     rocketBeaten: 0,
-    caught: 0
+    caught: 0,
+    keyStone: false,
+    league: 0,
+    champion: false
   };
 }
 
@@ -645,6 +759,11 @@ $("#btn-login").onclick = () => {
   if(!state.balls) state.balls = {ball:60,great:0,ultra:0};
   if(state.potions == null) state.potions = 1;
   if(!state.badges || state.badges.length !== GYMS.length) state.badges = GYMS.map(()=>false);
+  if(!state.party || !state.party.length) state.party = state.active ? [state.active] : [];
+  state.party = state.party.filter(n => state.cards[n]);
+  if(state.keyStone == null) state.keyStone = false;
+  if(state.league   == null) state.league = 0;
+  if(state.champion == null) state.champion = false;
   loginMsg("Welcome back, " + rec.name + "!", true);
   setTimeout(startGame, 400);
 };
@@ -661,6 +780,19 @@ $("#btn-logout").onclick = () => {
   loginMsg("Saved and logged out. See you soon!", true);
 };
 
+function setupControls(){
+  $$(".dpad button").forEach(b => {
+    const dir = b.dataset.dir;
+    const on  = e => { e.preventDefault(); if(ow) ow.keys[dir] = true;  };
+    const off = e => { e.preventDefault(); if(ow) ow.keys[dir] = false; };
+    b.addEventListener("pointerdown", on);
+    b.addEventListener("pointerup", off);
+    b.addEventListener("pointerleave", off);
+    b.addEventListener("pointercancel", off);
+  });
+  $("#ow-leave").onclick = () => go("wild");
+}
+
 function startGame(){
   try{ localStorage.setItem(SESSION, state.name.toLowerCase()); }catch(e){}
   $("#login-screen").classList.add("hidden");
@@ -668,6 +800,7 @@ function startGame(){
   $("#hi-name").textContent = state.name;
   buildFacts();
   buildRoutes();
+  setupControls();
   buildShop();
   buildGyms();
   refresh();
@@ -687,7 +820,43 @@ function refresh(){
   $("#s-cards").textContent  = cardCount();
   $("#s-badges").textContent = state.badges.filter(Boolean).length;
   $("#potion-count").textContent = state.potions;
+  $("#s-key").classList.toggle("hidden", !state.keyStone);
+  $("#s-champ").classList.toggle("hidden", !state.champion);
   save();
+}
+
+let toastTimer = null;
+function toast(msg){
+  let el = $("#toast");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "toast";
+    el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), 2400);
+}
+
+/* --- your battle team: up to three cards --- */
+function partyList(){ return (state.party || []).filter(n => state.cards[n]); }
+
+function toggleParty(name){
+  const i = state.party.indexOf(name);
+  if(i >= 0){
+    state.party.splice(i, 1);
+    toast(name + " left your team.");
+  }else if(state.party.length >= 3){
+    return toast("Your team is full — tap a green card to take one out.");
+  }else{
+    state.party.push(name);
+    toast(name + " joined your team!");
+  }
+  state.active = state.party[0] || name;
+  refresh();
+  renderCollection();
 }
 
 function go(view){
@@ -697,7 +866,14 @@ function go(view){
   if(view === "cards") renderCollection();
   if(view === "dex")   renderDex();
   if(view === "gyms")  buildGyms();
-  if(view === "wild")  { $("#wild-pick").classList.remove("hidden"); $("#wild-fight").classList.add("hidden"); }
+  if(view === "shrine") buildShrine();
+  if(view === "stadium") buildStadium();
+  stopWalking();
+  if(view === "wild"){
+    $("#wild-pick").classList.remove("hidden");
+    $("#wild-map").classList.add("hidden");
+    $("#wild-fight").classList.add("hidden");
+  }
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-go]");
@@ -708,9 +884,10 @@ function cardHTML(sp, opts){
   opts = opts || {};
   const r = RARITY[sp.r];
   const qty = opts.qty ? '<span class="qty">x' + opts.qty + '</span>' : "";
+  const tag = opts.team ? '<span class="teamtag">#' + opts.team + '</span>' : "";
   const dim = opts.dim ? 'filter:grayscale(1);opacity:.45;' : "";
-  return '<div class="pcard ' + (opts.pick ? "pick " : "") + (opts.sel ? "sel" : "") + '" ' +
-         (opts.pick ? 'data-card="' + esc(sp.n) + '"' : "") + ' style="' + dim + '">' + qty +
+  return '<div class="pcard ' + (opts.pick ? "pick " : "") + (opts.team ? "team" : "") + '" ' +
+         (opts.pick ? 'data-card="' + esc(sp.n) + '"' : "") + ' style="' + dim + '">' + qty + tag +
          '<div class="no">No. ' + String(sp.id).padStart(3,"0") + '</div>' +
          '<div class="art">' + sp.e + '</div>' +
          '<div class="nm">' + sp.n + '</div>' +
@@ -722,7 +899,9 @@ function cardHTML(sp, opts){
 
 function giveCard(name){
   state.cards[name] = (state.cards[name] || 0) + 1;
-  if(!state.active) state.active = name;
+  if(!state.party) state.party = [];
+  if(state.party.length < 3 && !state.party.includes(name)) state.party.push(name);
+  if(!state.active) state.active = state.party[0] || name;
   refresh();
 }
 
@@ -766,14 +945,22 @@ function renderDex(){
 
 function renderCollection(){
   const names = Object.keys(state.cards).sort((a,b) => byName[a].id - byName[b].id);
+  const team  = partyList();
+
+  $("#team-slots").innerHTML = [0,1,2].map(i =>
+    team[i] ? '<span class="slot full">' + byName[team[i]].e + ' ' + team[i] + '</span>'
+            : '<span class="slot">empty slot</span>').join("");
+
   if(!names.length){
     $("#collection").innerHTML = '<p class="muted">You have no cards yet! Go to the Wild Pokémon Adventure and catch one.</p>';
     return;
   }
-  $("#collection").innerHTML = names.map(n =>
-    cardHTML(byName[n], {qty: state.cards[n], pick:true, sel: state.active === n})).join("");
+  $("#collection").innerHTML = names.map(n => {
+    const spot = team.indexOf(n);
+    return cardHTML(byName[n], {qty: state.cards[n], pick:true, team: spot >= 0 ? spot + 1 : 0});
+  }).join("");
   $("#collection").querySelectorAll("[data-card]").forEach(el => {
-    el.onclick = () => { state.active = el.dataset.card; refresh(); renderCollection(); };
+    el.onclick = () => toggleParty(el.dataset.card);
   });
 }
 
@@ -785,8 +972,8 @@ function makeMon(sp){
 }
 /* Your card is trained, so it is stronger than the same wild Pokémon.
    Every badge you win makes it stronger again. */
-function myMon(){
-  const sp = byName[state.active] || DEX[0];
+function myMon(name){
+  const sp = byName[name] || byName[state.active] || DEX[0];
   const m  = makeMon(sp);
   const badgeBoost = 1 + state.badges.filter(Boolean).length * 0.06;
   m.max = Math.round(m.max * 1.35 * badgeBoost);
@@ -818,7 +1005,7 @@ function hpBar(mon){
 function fighterHTML(mon, label){
   return '<div class="muted" style="font-size:13px;letter-spacing:1px">' + label + '</div>' +
          '<div style="font-weight:bold;font-size:18px">' + mon.sp.n + '</div>' +
-         '<div class="big">' + mon.sp.e + '</div>' +
+         '<div class="big' + (mon.mega ? " mega-glow" : "") + '">' + mon.sp.e + (mon.mega ? "✨" : "") + '</div>' +
          '<span class="chip" style="background:' + TYPE_COLOUR[mon.sp.t] + '">' + mon.sp.t + '</span>' +
          hpBar(mon);
 }
@@ -831,22 +1018,316 @@ let wild = null;
 function buildRoutes(){
   $("#route-list").innerHTML = ROUTES.map((r,i) =>
     '<button class="route" data-route="' + i + '"><span class="ico">' + r.e + '</span>' +
-    '<b>' + r.n + '</b><div class="muted" style="font-size:13px;margin-top:4px">' + r.note + '</div></button>').join("");
+    '<b>' + r.n + '</b><div class="muted" style="font-size:13px;margin-top:4px">' + r.note + '</div>' +
+    '<div style="margin-top:8px;font-weight:900;color:var(--yellow)">Walk around here →</div></button>').join("");
   $("#route-list").querySelectorAll("[data-route]").forEach(el => {
     el.onclick = () => enterRoute(+el.dataset.route);
   });
 }
 
+/* ---------------------------------------------------------
+   The walk-around map. Every place gets its own little world
+   with wandering Pokémon you can see and bump into.
+   --------------------------------------------------------- */
+const TILE = 40, MAP_W = 20, MAP_H = 13;
+const GROUND = 0, GRASS = 1, BLOCK = 2;
+const START_TX = 2, START_TY = 6;
+let ow = null;
+
+/* small seeded random, so each place looks the same every visit */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function buildMap(idx){
+  const rand = mulberry32(idx * 9871 + 12345);
+  const g = [];
+  for(let y = 0; y < MAP_H; y++){
+    const row = [];
+    for(let x = 0; x < MAP_W; x++){
+      if(x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1){ row.push(BLOCK); continue; }
+      const r = rand();
+      row.push(r < 0.11 ? BLOCK : r < 0.50 ? GRASS : GROUND);
+    }
+    g.push(row);
+  }
+  /* a clear patch to stand in when you arrive */
+  for(let y = START_TY - 1; y <= START_TY + 1; y++)
+    for(let x = 1; x <= 3; x++) g[y][x] = GROUND;
+
+  /* flood fill from the start; wall off any corner you could never walk to */
+  const open = g.map(r => r.map(() => false));
+  const q = [[START_TX, START_TY]];
+  open[START_TY][START_TX] = true;
+  while(q.length){
+    const [x, y] = q.pop();
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(d => {
+      const nx = x + d[0], ny = y + d[1];
+      if(nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return;
+      if(open[ny][nx] || g[ny][nx] === BLOCK) return;
+      open[ny][nx] = true;
+      q.push([nx, ny]);
+    });
+  }
+  for(let y = 0; y < MAP_H; y++)
+    for(let x = 0; x < MAP_W; x++)
+      if(!open[y][x] && g[y][x] !== BLOCK) g[y][x] = BLOCK;
+
+  return {grid: g, open};
+}
+
+function freeTile(minDist){
+  if(!ow) return null;
+  for(let tries = 0; tries < 250; tries++){
+    const x = 1 + Math.floor(Math.random() * (MAP_W - 2));
+    const y = 1 + Math.floor(Math.random() * (MAP_H - 2));
+    if(!ow.open[y][x]) continue;
+    if(Math.hypot(x + .5 - ow.x / TILE, y + .5 - ow.y / TILE) < (minDist || 4)) continue;
+    if(ow.mons.some(m => m.tx === x && m.ty === y)) continue;
+    if(ow.items.some(m => m.tx === x && m.ty === y)) continue;
+    return {x, y};
+  }
+  return null;
+}
+
+function spawnMon(){
+  if(!ow) return;
+  const t = freeTile(4);
+  if(!t) return;
+  ow.mons.push({
+    sp: rollSpecies(ow.route.tier, ow.route.types),
+    tx: t.x, ty: t.y,
+    next: performance.now() + 600 + Math.random() * 1400,
+    bob: Math.random() * 6
+  });
+}
+
+function spawnItem(){
+  if(!ow) return;
+  const t = freeTile(3);
+  if(!t) return;
+  const kind = pick([
+    {k:"ball",   e:"⚪", n:"a Poké Ball"},
+    {k:"ball",   e:"⚪", n:"a Poké Ball"},
+    {k:"coin",   e:"🪙", n:"20 coins"},
+    {k:"coin",   e:"🪙", n:"20 coins"},
+    {k:"potion", e:"💊", n:"a Potion"}
+  ]);
+  ow.items.push(Object.assign({tx: t.x, ty: t.y}, kind));
+}
+
 function enterRoute(i){
-  if(totalBalls() === 0 && !confirm("You have no Poké Balls left! You can still weaken Pokémon, but you cannot catch anything. Go anyway?")) return;
   const route = ROUTES[i];
-  const sp = rollSpecies(route.tier, route.types);
-  wild = {route, mon: makeMon(sp), me: myMon(), log: [], over:false};
-  wild.log.push("You are exploring " + route.n + "...");
-  wild.log.push("A wild " + sp.n + " appeared!");
+  const m = buildMap(i);
+  ow = {
+    ri: i, route, grid: m.grid, open: m.open,
+    x: START_TX * TILE + TILE / 2,
+    y: START_TY * TILE + TILE / 2,
+    keys: {}, mons: [], items: [], raf: 0, step: 0, moving: false
+  };
+  for(let k = 0; k < 7; k++) spawnMon();
+  for(let k = 0; k < 4; k++) spawnItem();
   $("#wild-pick").classList.add("hidden");
+  $("#wild-fight").classList.add("hidden");
+  $("#wild-map").classList.remove("hidden");
+  $("#ow-where").textContent = route.e + " " + route.n;
+  updateMapHud();
+  resumeWalking();
+  if(totalBalls() === 0) toast("You have no Poké Balls! Win some coins and visit the Poké Mart.");
+}
+
+function updateMapHud(){
+  $("#ow-balls").textContent = totalBalls();
+  $("#ow-coins").textContent = state.coins;
+}
+
+const KEYMAP = {
+  ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right",
+  w:"up", a:"left", s:"down", d:"right", W:"up", A:"left", S:"down", D:"right"
+};
+function owKey(e){
+  if(!ow) return;
+  const dir = KEYMAP[e.key];
+  if(!dir) return;
+  e.preventDefault();
+  ow.keys[dir] = (e.type === "keydown");
+}
+
+function resumeWalking(){
+  if(!ow || ow.raf) return;
+  window.addEventListener("keydown", owKey);
+  window.addEventListener("keyup", owKey);
+  ow.raf = requestAnimationFrame(owFrame);
+}
+function pauseWalking(){
+  if(!ow) return;
+  if(ow.raf) cancelAnimationFrame(ow.raf);
+  ow.raf = 0;
+  ow.keys = {};
+  window.removeEventListener("keydown", owKey);
+  window.removeEventListener("keyup", owKey);
+}
+function stopWalking(){ pauseWalking(); ow = null; }
+
+function walkable(px, py){
+  const half = 12;
+  return [[px-half,py-half],[px+half,py-half],[px-half,py+half],[px+half,py+half]].every(pt => {
+    const tx = Math.floor(pt[0] / TILE), ty = Math.floor(pt[1] / TILE);
+    if(tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return false;
+    return ow.grid[ty][tx] !== BLOCK;
+  });
+}
+
+function owFrame(now){
+  if(!ow || !ow.raf) return;
+  const speed = 3.1;
+  let dx = 0, dy = 0;
+  if(ow.keys.left)  dx -= speed;
+  if(ow.keys.right) dx += speed;
+  if(ow.keys.up)    dy -= speed;
+  if(ow.keys.down)  dy += speed;
+  if(dx && dy){ dx *= .72; dy *= .72; }
+  if(dx && walkable(ow.x + dx, ow.y)) ow.x += dx;
+  if(dy && walkable(ow.x, ow.y + dy)) ow.y += dy;
+  ow.moving = !!(dx || dy);
+
+  if(ow.moving){
+    ow.step++;
+    const tx = Math.floor(ow.x / TILE), ty = Math.floor(ow.y / TILE);
+    /* something rustles in the long grass */
+    if(ow.grid[ty][tx] === GRASS && Math.random() < 0.007){
+      return startEncounter(rollSpecies(ow.route.tier, ow.route.types));
+    }
+  }
+
+  /* the Pokémon on the map wander about on their own */
+  ow.mons.forEach(m => {
+    if(now > m.next){
+      m.next = now + 700 + Math.random() * 1500;
+      const d = pick([[1,0],[-1,0],[0,1],[0,-1],[0,0],[0,0]]);
+      const nx = m.tx + d[0], ny = m.ty + d[1];
+      if(nx > 0 && ny > 0 && nx < MAP_W - 1 && ny < MAP_H - 1 && ow.open[ny][nx]){ m.tx = nx; m.ty = ny; }
+    }
+  });
+
+  /* walked into one? */
+  for(let i = 0; i < ow.mons.length; i++){
+    const m = ow.mons[i];
+    if(Math.hypot(m.tx * TILE + TILE / 2 - ow.x, m.ty * TILE + TILE / 2 - ow.y) < 26){
+      ow.mons.splice(i, 1);
+      setTimeout(spawnMon, 5000);
+      return startEncounter(m.sp);
+    }
+  }
+
+  /* picked something up? */
+  for(let i = ow.items.length - 1; i >= 0; i--){
+    const it = ow.items[i];
+    if(Math.hypot(it.tx * TILE + TILE / 2 - ow.x, it.ty * TILE + TILE / 2 - ow.y) < 24){
+      ow.items.splice(i, 1);
+      if(it.k === "ball") state.balls.ball++;
+      else if(it.k === "coin") state.coins += 20;
+      else state.potions++;
+      toast("You found " + it.n + "!");
+      refresh();
+      updateMapHud();
+      setTimeout(spawnItem, 7000);
+    }
+  }
+
+  drawMap(now);
+  ow.raf = requestAnimationFrame(owFrame);
+}
+
+function drawMap(now){
+  const c = $("#ow-canvas"), g = c.getContext("2d");
+  const r = ow.route;
+  g.fillStyle = r.ground;
+  g.fillRect(0, 0, c.width, c.height);
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+
+  for(let y = 0; y < MAP_H; y++){
+    for(let x = 0; x < MAP_W; x++){
+      const t = ow.grid[y][x], px = x * TILE, py = y * TILE;
+      if(t === GRASS){
+        g.fillStyle = r.grassCol;
+        g.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+        g.strokeStyle = "rgba(255,255,255,.12)";
+        g.lineWidth = 2;
+        g.beginPath();
+        for(let b = 0; b < 3; b++){
+          const bx = px + 10 + b * 10;
+          g.moveTo(bx, py + TILE - 8);
+          g.lineTo(bx + 3, py + 12);
+        }
+        g.stroke();
+      }else if(t === BLOCK){
+        g.font = "30px serif";
+        g.fillText(r.block, px + TILE / 2, py + TILE / 2 + 2);
+      }
+    }
+  }
+
+  g.font = "24px serif";
+  ow.items.forEach(it => {
+    const bob = Math.sin(now / 260 + it.tx) * 2;
+    g.fillText(it.e, it.tx * TILE + TILE / 2, it.ty * TILE + TILE / 2 + bob);
+  });
+
+  g.font = "30px serif";
+  ow.mons.forEach(m => {
+    const cx = m.tx * TILE + TILE / 2, cy = m.ty * TILE + TILE / 2;
+    const bob = Math.sin(now / 300 + m.bob) * 3;
+    g.fillStyle = "rgba(255,255,255,.18)";
+    g.beginPath(); g.arc(cx, cy + bob, 17, 0, 7); g.fill();
+    g.fillStyle = "rgba(0,0,0,.3)";
+    g.beginPath(); g.ellipse(cx, m.ty * TILE + TILE - 7, 13, 4, 0, 0, 7); g.fill();
+    g.fillText(m.sp.e, cx, cy + bob);
+  });
+
+  /* the trainer gets a yellow ring so you can always find yourself */
+  const hop = ow.moving ? Math.abs(Math.sin(ow.step / 6)) * 4 : 0;
+  g.fillStyle = "rgba(0,0,0,.35)";
+  g.beginPath(); g.ellipse(ow.x, ow.y + 16, 14, 5, 0, 0, 7); g.fill();
+  g.fillStyle = "rgba(255,203,5,.30)";
+  g.beginPath(); g.arc(ow.x, ow.y - hop, 20, 0, 7); g.fill();
+  g.strokeStyle = "#ffcb05";
+  g.lineWidth = 3;
+  g.beginPath(); g.arc(ow.x, ow.y - hop, 20, 0, 7); g.stroke();
+  g.font = "30px serif";
+  g.fillText("🚶", ow.x, ow.y - hop);
+}
+
+function startEncounter(sp){
+  pauseWalking();
+  wild = {
+    route: ow ? ow.route : ROUTES[0],
+    mon: makeMon(sp),
+    me: myMon(partyList()[0] || state.active),
+    log: ["A wild " + sp.n + " appeared!"],
+    over: false
+  };
+  $("#wild-map").classList.add("hidden");
   $("#wild-fight").classList.remove("hidden");
   renderWild();
+}
+
+function backToMap(){
+  wild = null;
+  if(ow){
+    $("#wild-fight").classList.add("hidden");
+    $("#wild-map").classList.remove("hidden");
+    updateMapHud();
+    resumeWalking();
+  }else{
+    go("wild");
+  }
 }
 
 function catchChance(){
@@ -880,12 +1361,12 @@ function renderWild(){
       '<div class="ballrow">' + balls + '</div>' +
       '<div class="actions" style="justify-content:center">' +
         '<button class="btn red" id="w-fight" ' + (w.over ? "disabled" : "") + '>⚔️ Weaken it</button>' +
-        '<button class="btn ghost" id="w-run">🏃 ' + (w.over ? "Back to the map" : "Run away") + '</button>' +
+        '<button class="btn ghost" id="w-run">' + (w.over ? "🗺️ Back to the map" : "🏃 Run away") + '</button>' +
       '</div>' +
     '</div>';
 
   const log = $("#wild-log"); log.scrollTop = log.scrollHeight;
-  $("#w-run").onclick = () => { wild = null; go("wild"); };
+  $("#w-run").onclick = backToMap;
   const f = $("#w-fight"); if(f) f.onclick = wildAttack;
   $("#wild-fight").querySelectorAll("[data-ball]").forEach(el => {
     el.onclick = () => throwBall(el.dataset.ball);
@@ -951,19 +1432,24 @@ function throwBall(kind){
    ========================================================= */
 let bt = null;
 
+/* Your Pokémon fight as a team of up to three. When one faints the next comes out. */
 function startBattle(cfg){
-  if(!state.active || !state.cards[state.active]){
-    alert("You need a Pokémon card first! Catch one in the Wild Pokémon Adventure.");
+  const names = partyList();
+  if(!names.length){
+    toast("Put a Pokémon in your team first!");
     return go("cards");
   }
   bt = {
     title: cfg.title, who: cfg.who, emoji: cfg.emoji,
     team: cfg.team.map(n => makeMon(byName[n])),
-    idx: 0, me: myMon(),
-    coins: cfg.coins, onWin: cfg.onWin, back: cfg.back,
-    log: [cfg.who + " wants to battle!", "Go, " + state.active + "!"],
-    over: false, turn: 0
+    idx: 0,
+    mine: names.map(n => myMon(n)),
+    meIdx: 0,
+    coins: cfg.coins, onWin: cfg.onWin, onLose: cfg.onLose, back: cfg.back,
+    megaUsed: false, over: false, won: false,
+    log: [cfg.who + " wants to battle!", "Go, " + names[0] + "!"]
   };
+  bt.me = bt.mine[0];
   $("#battle-title").textContent = cfg.title;
   go("battle");
   renderBattle();
@@ -971,11 +1457,21 @@ function startBattle(cfg){
 
 function foe(){ return bt.team[Math.min(bt.idx, bt.team.length - 1)]; }
 function bLog(t){ bt.log.push(t); }
+function canMega(){ return state.keyStone && !bt.megaUsed && !bt.me.mega && MEGA[bt.me.sp.n]; }
+
+function teamRow(){
+  return '<div class="party" style="justify-content:center;margin-top:10px">' +
+    bt.mine.map((m,i) =>
+      '<span class="slot ' + (m.hp > 0 ? "full" : "") + '" style="' +
+      (i === bt.meIdx ? "outline:3px solid var(--yellow);outline-offset:2px;" : "") +
+      (m.hp <= 0 ? "opacity:.4;" : "") + '">' + m.sp.e + ' ' + m.hp + '</span>').join("") +
+    '</div>';
+}
 
 function renderBattle(){
   const f = foe();
-  $("#foe-box").innerHTML = fighterHTML(f, bt.emoji + " " + bt.who + "  (" + (bt.idx+1) + "/" + bt.team.length + ")");
-  $("#me-box").innerHTML  = fighterHTML(bt.me, "👤 " + state.name);
+  $("#foe-box").innerHTML = fighterHTML(f, bt.emoji + " " + bt.who + "  (" + (bt.idx + 1) + "/" + bt.team.length + ")");
+  $("#me-box").innerHTML  = fighterHTML(bt.me, "👤 " + state.name) + teamRow();
   $("#battle-log").innerHTML = bt.log.map(l => '<div>' + l + '</div>').join("");
   const log = $("#battle-log"); log.scrollTop = log.scrollHeight;
 
@@ -984,19 +1480,42 @@ function renderBattle(){
     $("#b-done").onclick = () => { const b = bt.back; bt = null; go(b); };
     return;
   }
+
+  const others = bt.mine.map((m, i) => ({m, i})).filter(o => o.i !== bt.meIdx && o.m.hp > 0);
   $("#battle-actions").innerHTML =
     '<button class="btn red" id="b-atk">⚔️ Attack</button>' +
     '<button class="btn gold" id="b-spec">💥 Power Move (may miss)</button>' +
+    (canMega() ? '<button class="btn pulse" id="b-mega" style="background:#8257e0">✨ Mega Evolve</button>' : "") +
     '<button class="btn green" id="b-pot" ' + (state.potions <= 0 ? "disabled" : "") + '>💊 Potion (' + state.potions + ')</button>' +
+    others.map(o => '<button class="btn ghost small" data-switch="' + o.i + '">🔄 ' + o.m.sp.e + ' ' + o.m.sp.n + '</button>').join("") +
     '<button class="btn ghost" id="b-run">🏃 Run away</button>';
+
   $("#b-atk").onclick  = () => playerTurn("attack");
   $("#b-spec").onclick = () => playerTurn("special");
   $("#b-pot").onclick  = () => playerTurn("potion");
+  const mg = $("#b-mega"); if(mg) mg.onclick = () => playerTurn("mega");
   $("#b-run").onclick  = () => { bLog("You ran away from the battle."); bt.over = true; renderBattle(); };
+  $("#battle-actions").querySelectorAll("[data-switch]").forEach(el => {
+    el.onclick = () => playerTurn("switch", +el.dataset.switch);
+  });
 }
 
-function playerTurn(action){
+function megaEvolve(){
+  const m = MEGA[bt.me.sp.n];
+  const addHp = Math.round(bt.me.max * (m.hp - 1));
+  bt.me.max += addHp;
+  bt.me.hp  += addHp;
+  bt.me.atk  = Math.round(bt.me.atk * m.atk);
+  /* copy the species so the Pokédex entry itself is never changed */
+  bt.me.sp   = Object.assign({}, bt.me.sp, {n: "Mega " + bt.me.sp.n, t: m.t});
+  bt.me.mega = true;
+  bt.megaUsed = true;
+  bLog("✨ Your Key Stone flashes — " + bt.me.sp.n + "! " + m.about);
+}
+
+function playerTurn(action, arg){
   const f = foe();
+
   if(action === "potion"){
     if(state.potions <= 0) return;
     state.potions--;
@@ -1004,6 +1523,13 @@ function playerTurn(action){
     bt.me.hp = Math.min(bt.me.max, bt.me.hp + heal);
     bLog("💊 You used a Potion. " + bt.me.sp.n + " recovered " + heal + " HP.");
     refresh();
+  }else if(action === "switch"){
+    bt.meIdx = arg;
+    bt.me = bt.mine[arg];
+    bLog("🔄 Come back! Go, " + bt.me.sp.n + "!");
+  }else if(action === "mega"){
+    if(!canMega()) return;
+    megaEvolve();
   }else if(action === "special"){
     if(Math.random() < 0.32){
       bLog("💥 " + bt.me.sp.n + " used its Power Move... but it missed!");
@@ -1016,29 +1542,44 @@ function playerTurn(action){
     bLog(bt.me.sp.n + " attacks " + f.sp.n + " for " + r.dmg + "." + r.note);
   }
 
+  /* did the opponent's Pokémon faint? */
   if(f.hp <= 0){
     bLog("💫 " + bt.who + "'s " + f.sp.n + " fainted!");
     bt.idx++;
-    if(bt.idx >= bt.team.length){ return winBattle(); }
+    if(bt.idx >= bt.team.length) return winBattle();
     const breath = Math.round(bt.me.max * 0.25);
     bt.me.hp = Math.min(bt.me.max, bt.me.hp + breath);
     bLog(bt.me.sp.n + " catches its breath and recovers " + breath + " HP.");
     bLog(bt.who + " sends out " + foe().sp.n + "!");
-    renderBattle();
-    return;
+    return renderBattle();
   }
 
+  /* the opponent hits back */
   const back = strike(foe(), bt.me);
   bLog(bt.who + "'s " + foe().sp.n + " hits back for " + back.dmg + "." + back.note);
+
   if(bt.me.hp <= 0){
-    bLog("💤 " + bt.me.sp.n + " fainted. You lost this one — try a stronger card!");
-    bt.over = true;
+    bLog("💤 " + bt.me.sp.n + " fainted!");
+    const next = bt.mine.findIndex(m => m.hp > 0);
+    if(next < 0) return loseBattle();
+    bt.meIdx = next;
+    bt.me = bt.mine[next];
+    bLog("Go, " + bt.me.sp.n + "!");
   }
+  renderBattle();
+}
+
+function loseBattle(){
+  bLog("💤 Your whole team fainted. " + bt.who + " wins this time — train up and come back!");
+  if(bt.onLose) bt.onLose();
+  bt.over = true;
+  refresh();
   renderBattle();
 }
 
 function winBattle(){
   state.coins += bt.coins;
+  bt.won = true;
   bLog("🏆 You beat " + bt.who + "! You won " + bt.coins + " coins.");
   if(Math.random() < 0.45){
     const drop = rollSpecies([1,2,2,3]);
@@ -1099,6 +1640,197 @@ function buildGyms(){
       });
     };
   });
+}
+
+/* =========================================================
+   9b. THE MEGA SHRINE
+   ========================================================= */
+function buildShrine(){
+  const badges = state.badges.filter(Boolean).length;
+  const ready  = badges >= GUARDIAN.needBadges;
+  const mine   = Object.keys(state.cards).filter(n => MEGA[n]);
+
+  let html = '<div class="card shrine-card" style="margin-bottom:16px">' +
+    '<p>Deep in a cave there is a stone that answers to a trainer\'s heart. Hold a <b>Key Stone</b>, ' +
+    'and once per battle your Pokémon can <b>Mega Evolve</b> — growing stronger, tougher, and sometimes ' +
+    'changing type completely.</p>' +
+    '<p class="muted" style="margin:0">The Guardian will not simply hand it over. You have to earn it.</p>' +
+    '</div>';
+
+  if(state.keyStone){
+    html += '<div class="card" style="border-color:var(--green);margin-bottom:16px">' +
+      '<h2>🔑 The Key Stone is yours</h2>' +
+      '<p>In any trainer battle you will see a purple <b>✨ Mega Evolve</b> button — but only when the ' +
+      'Pokémon you have out is one that has a Mega form, and only <b>once per battle</b>. Choose your moment!</p>' +
+      '<p class="muted" style="margin:0">Mega Evolving takes your turn, so the opponent gets a free hit. It is worth it.</p>' +
+      '</div>';
+  }else{
+    html += '<div class="card" style="margin-bottom:16px">' +
+      '<div style="font-size:52px">' + GUARDIAN.e + '</div>' +
+      '<h2>' + GUARDIAN.n + '</h2>' +
+      '<p class="muted">Team: ' + GUARDIAN.team.map(n => byName[n].e + " " + n).join(", ") + '</p>' +
+      (ready
+        ? '<p>Beat her and the Key Stone — and her own Lucario — are yours.</p>' +
+          '<button class="btn" id="btn-guardian" style="background:#8257e0">⚔️ Challenge the Guardian</button>'
+        : '<p>🔒 The Guardian only battles trainers with at least <b>' + GUARDIAN.needBadges +
+          ' badges</b>. You have ' + badges + '.</p>') +
+      '</div>';
+  }
+
+  html += '<h2>Pokémon that can Mega Evolve</h2><div class="grid facts">' +
+    Object.keys(MEGA).map(n =>
+      '<div class="fact" style="border-left-color:' + (state.cards[n] ? "#37d67a" : "#3a4396") + '">' +
+      '<h3>' + byName[n].e + ' Mega ' + n + '</h3>' +
+      '<p>' + MEGA[n].about + '<br><span class="muted">Becomes a <b>' + MEGA[n].t + '</b> type. ' +
+      (state.cards[n] ? "✔ You have this card." : "You have not caught this one yet.") + '</span></p></div>').join("") +
+    '</div>';
+
+  $("#shrine-body").innerHTML = html;
+
+  const btn = $("#btn-guardian");
+  if(btn) btn.onclick = () => startBattle({
+    title: "✨ The Guardian of the Mega Shrine",
+    who: GUARDIAN.n, emoji: GUARDIAN.e, team: GUARDIAN.team,
+    coins: GUARDIAN.coins, back: "shrine",
+    onWin: () => {
+      state.keyStone = true;
+      giveCard("Lucario");
+      bLog("🔑 The Guardian presses the Key Stone into your hand — and gives you her Lucario card!");
+      bLog("You can now Mega Evolve once in every battle.");
+    }
+  });
+}
+
+/* =========================================================
+   9c. CHAMPION STADIUM — the league, and battling friends
+   ========================================================= */
+function myTeamCode(){
+  const raw = "PW1|" + state.name + "|" + partyList().join(",");
+  try{ return btoa(encodeURIComponent(raw)); }catch(e){ return raw; }
+}
+function readTeamCode(code){
+  let raw = (code || "").trim();
+  if(!raw) return null;
+  try{ raw = decodeURIComponent(atob(raw)); }catch(e){ /* maybe it was pasted un-scrambled */ }
+  if(raw.indexOf("PW1|") !== 0) return null;
+  const parts = raw.split("|");
+  const name  = (parts[1] || "Trainer").slice(0, 14);
+  const team  = (parts[2] || "").split(",").map(x => x.trim()).filter(n => byName[n]).slice(0, 3);
+  return team.length ? {name, team} : null;
+}
+
+function buildStadium(){
+  const team   = partyList();
+  const badges = state.badges.filter(Boolean).length;
+  const round  = Math.min(state.league, LEAGUE.length);
+  const signedUp = team.length > 0 && badges >= 2;
+
+  let html = '<div class="card stadium-card" style="margin-bottom:16px">' +
+    '<p>Five trainers are waiting in the tunnel, and the last one is the reigning Champion. ' +
+    'Beat all five in a row to take the title. Lose one, and you start the ladder again.</p>' +
+    '<div class="party" id="stad-team">' + [0,1,2].map(i =>
+      team[i] ? '<span class="slot full">' + byName[team[i]].e + ' ' + team[i] + '</span>'
+              : '<span class="slot">empty slot</span>').join("") + '</div>' +
+    (signedUp
+      ? '<p class="muted" style="margin:0">✔ Signed up as <b>' + esc(state.name) + '</b>' +
+        (team.length < 3 ? ' — but you only have ' + team.length + ' Pokémon. Three is much safer!' : '.') + '</p>'
+      : '<p style="color:#ff8080;font-weight:900;margin:0">🔒 To sign up you need at least <b>2 gym badges</b> ' +
+        'and <b>one Pokémon in your team</b>. You have ' + badges + ' badges and ' + team.length + ' in your team.</p>') +
+    '</div>';
+
+  html += '<h2>The ladder</h2><div class="bracket">' +
+    LEAGUE.map((t, i) => {
+      const done = i < state.league;
+      const now  = i === round && signedUp && state.league < LEAGUE.length;
+      return '<div class="round ' + (done ? "won" : now ? "now" : "") + '">' +
+        '<div class="ico">' + t.e + '</div>' +
+        '<div class="who"><b>Round ' + (i + 1) + ' — ' + t.n + '</b>' +
+        '<div class="muted" style="font-size:13px">' + t.team.map(n => byName[n].e + " " + n).join(", ") + '</div></div>' +
+        (done ? '<span class="chip" style="background:#1f9d55">Beaten</span>'
+              : now ? '<button class="btn red small" id="btn-league">Battle!</button>'
+                    : '<span class="chip rar">Locked</span>') +
+        '</div>';
+    }).join("") + '</div>';
+
+  if(state.league >= LEAGUE.length){
+    html += '<div class="card" style="border-color:var(--yellow);margin-bottom:16px">' +
+      '<h2>🏆 You are the Champion!</h2>' +
+      '<p>Your name is on the wall of the stadium. Want to defend the title?</p>' +
+      '<button class="btn gold" id="btn-league-again">Run the ladder again</button></div>';
+  }
+
+  html += '<h2 style="margin-top:26px">⚔️ Battle a friend\'s team</h2>' +
+    '<div class="card">' +
+    '<p>Anyone else playing this game has a <b>team code</b>. Send yours to a friend, get theirs back, ' +
+    'and you can battle the exact team they built.</p>' +
+    '<p class="muted" style="font-size:13px">Your code (tap to select, then copy):</p>' +
+    '<input class="codebox" id="my-code" readonly value="' + esc(myTeamCode()) + '">' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0">' +
+    '<button class="btn gold small" id="btn-copy">📋 Copy my code</button></div>' +
+    '<p class="muted" style="font-size:13px;margin-top:16px">Paste your friend\'s code here:</p>' +
+    '<input class="codebox" id="friend-code" placeholder="Paste a team code…">' +
+    '<div style="margin-top:12px"><button class="btn red small" id="btn-friend">⚔️ Battle this team</button></div>' +
+    '<div class="msg" id="code-msg"></div></div>';
+
+  $("#stadium-body").innerHTML = html;
+
+  const lb = $("#btn-league");
+  if(lb) lb.onclick = () => {
+    const t = LEAGUE[state.league];
+    startBattle({
+      title: "🏆 League Round " + (state.league + 1),
+      who: t.n, emoji: t.e, team: t.team, coins: t.coins, back: "stadium",
+      onWin: () => {
+        state.league++;
+        if(state.league >= LEAGUE.length){
+          state.champion = true;
+          state.coins += 2000;
+          bLog("🏆🏆 YOU BEAT THE WHOLE LEAGUE! You are the CHAMPION! Bonus: 2000 coins!");
+        }else{
+          bLog("Round won! Next up: " + LEAGUE[state.league].n + ".");
+        }
+        buildStadium();
+      },
+      onLose: () => {
+        state.league = 0;
+        bLog("You are out of the league. Sign up again whenever you are ready.");
+        buildStadium();
+      }
+    });
+  };
+
+  const again = $("#btn-league-again");
+  if(again) again.onclick = () => { state.league = 0; refresh(); buildStadium(); };
+
+  $("#btn-copy").onclick = () => {
+    const box = $("#my-code");
+    box.select();
+    box.setSelectionRange(0, 99999);
+    let ok = false;
+    try{ ok = document.execCommand("copy"); }catch(e){}
+    if(navigator.clipboard) navigator.clipboard.writeText(box.value).catch(() => {});
+    toast(ok || navigator.clipboard ? "Team code copied!" : "Press Ctrl+C to copy it.");
+  };
+
+  $("#btn-friend").onclick = () => {
+    const msg = $("#code-msg");
+    const foeTeam = readTeamCode($("#friend-code").value);
+    if(!foeTeam){
+      msg.className = "msg bad";
+      msg.textContent = "That code did not work. Check it was copied all the way to the end.";
+      return;
+    }
+    if(!partyList().length){
+      msg.className = "msg bad";
+      msg.textContent = "Put a Pokémon in your own team first!";
+      return;
+    }
+    msg.textContent = "";
+    startBattle({
+      title: "⚔️ " + foeTeam.name + "'s team",
+      who: foeTeam.name, emoji: "🧑", team: foeTeam.team, coins: 250, back: "stadium"
+    });
+  };
 }
 
 /* =========================================================
