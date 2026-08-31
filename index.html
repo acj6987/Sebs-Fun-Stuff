@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Twins at Thirty-Nine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Karla:wght@300..700&display=swap">
+<style>
+/* ---------- tokens: light is the base, both themes defined at token level ---------- */
+:root{
+  --ground:#edefe8;
+  --ground-lift:#f6f7f2;
+  --ink:#1b2320;
+  --ink-soft:#4e5a54;
+  --ink-faint:#8b968f;
+  --accent:#1f5f52;
+  --spark:#c26f18;
+  --line:#cdd3c9;
+  --line-soft:#dee2d8;
+  --shadow:0 1px 0 rgba(27,35,32,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#101512;
+    --ground-lift:#171d19;
+    --ink:#e8ede6;
+    --ink-soft:#a8b4ac;
+    --ink-faint:#6d7a73;
+    --accent:#6fbfa9;
+    --spark:#f0a93f;
+    --line:#2b332e;
+    --line-soft:#222a26;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101512;
+  --ground-lift:#171d19;
+  --ink:#e8ede6;
+  --ink-soft:#a8b4ac;
+  --ink-faint:#6d7a73;
+  --accent:#6fbfa9;
+  --spark:#f0a93f;
+  --line:#2b332e;
+  --line-soft:#222a26;
+  --shadow:none;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Karla","Helvetica Neue",Arial,sans-serif;
+  font-weight:400;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+
+.wrap{max-width:60rem;margin:0 auto;padding:0 1.5rem}
+
+.label{
+  font-size:.6875rem;
+  font-weight:600;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--accent);
+}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(3rem,9vw,6.5rem) 0 clamp(2rem,5vw,3.5rem)}
+.hero__date{display:flex;align-items:center;gap:1rem;justify-content:center;margin-bottom:clamp(2rem,6vw,3.5rem)}
+.hero__date::before,.hero__date::after{content:"";height:1px;background:var(--line);flex:1;max-width:7rem}
+
+/* the mirror axis */
+.names{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:clamp(1rem,4vw,2.5rem);
+}
+.names__axis{width:1px;align-self:stretch;background:var(--line);min-height:3.5rem}
+.name{
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:600;
+  font-size:clamp(1.75rem,6vw,3.25rem);
+  line-height:1.05;
+  letter-spacing:-.015em;
+  margin:0;
+  text-wrap:balance;
+}
+.name--l{text-align:right}
+.name--r{text-align:left}
+
+/* the number, and its reflection */
+.number{margin:clamp(1.5rem,5vw,2.75rem) 0 0;text-align:center;position:relative}
+.number__fig{
+  display:block;
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:700;
+  font-size:clamp(8rem,32vw,18rem);
+  line-height:.8;
+  letter-spacing:-.05em;
+  color:var(--spark);
+}
+.number__echo{
+  display:block;
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:700;
+  font-size:clamp(8rem,32vw,18rem);
+  line-height:.8;
+  letter-spacing:-.05em;
+  color:var(--spark);
+  transform:scaleY(-1);
+  opacity:.18;
+  margin-top:.06em;
+  -webkit-mask-image:linear-gradient(to top,transparent 8%,#000 78%);
+  mask-image:linear-gradient(to top,transparent 8%,#000 78%);
+}
+.number__cap{
+  margin:clamp(1rem,3vw,1.75rem) auto 0;
+  max-width:32rem;
+  font-size:1.0625rem;
+  color:var(--ink-soft);
+  text-wrap:balance;
+}
+
+/* ---------- countdown ---------- */
+.count{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  padding:clamp(1.25rem,4vw,2rem) 0;
+  margin-top:clamp(2.5rem,7vw,4rem);
+}
+.count__head{text-align:center;margin-bottom:1.25rem}
+.count__grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:clamp(.5rem,2vw,1.5rem);
+  max-width:34rem;
+  margin:0 auto;
+}
+.count__cell{text-align:center}
+.count__n{
+  display:block;
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:600;
+  font-size:clamp(1.75rem,7vw,2.75rem);
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink);
+}
+.count__u{
+  display:block;
+  margin-top:.4rem;
+  font-size:.625rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+}
+.count__today{
+  text-align:center;
+  font-family:"Fraunces",Georgia,serif;
+  font-size:clamp(1.5rem,5vw,2.25rem);
+  color:var(--spark);
+  margin:0;
+}
+
+/* ---------- by the numbers ---------- */
+.tally{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  border-bottom:1px solid var(--line);
+}
+.tally__item{
+  padding:clamp(1.5rem,4vw,2.25rem) .5rem;
+  text-align:center;
+  border-right:1px solid var(--line-soft);
+}
+.tally__item:last-child{border-right:0}
+.tally__n{
+  display:block;
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:600;
+  font-size:clamp(1.375rem,4.5vw,2rem);
+  line-height:1.1;
+  font-variant-numeric:tabular-nums;
+  color:var(--accent);
+}
+.tally__t{
+  display:block;
+  margin-top:.45rem;
+  font-size:.75rem;
+  line-height:1.35;
+  color:var(--ink-soft);
+}
+
+/* ---------- memories: a matched pair ---------- */
+.memories{padding:clamp(3rem,8vw,5rem) 0}
+.memories__head{text-align:center;margin-bottom:clamp(2rem,5vw,3rem)}
+.memories__title{
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:500;
+  font-size:clamp(1.5rem,4vw,2.125rem);
+  margin:.6rem 0 0;
+  text-wrap:balance;
+}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1rem,3vw,2rem)}
+.card{
+  background:var(--ground-lift);
+  border:1px solid var(--line-soft);
+  border-radius:2px;
+  padding:clamp(1.5rem,4vw,2.25rem);
+  box-shadow:var(--shadow);
+}
+.card__k{
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:600;
+  font-size:clamp(1.25rem,3vw,1.5rem);
+  margin:.75rem 0 .75rem;
+  line-height:1.15;
+}
+.card__b{margin:0;color:var(--ink-soft);font-size:1rem}
+.card__rule{width:2.25rem;height:2px;background:var(--spark);margin-top:1.25rem}
+
+/* ---------- wish ---------- */
+.wish{
+  text-align:center;
+  padding:clamp(3rem,8vw,5rem) 0 clamp(4rem,10vw,6rem);
+  border-top:1px solid var(--line);
+}
+.wish__line{
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:400;
+  font-size:clamp(1.25rem,3.4vw,1.75rem);
+  line-height:1.35;
+  max-width:34rem;
+  margin:0 auto clamp(1.75rem,4vw,2.5rem);
+  text-wrap:balance;
+}
+.btn{
+  font-family:"Karla",sans-serif;
+  font-size:.75rem;
+  font-weight:700;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--ground);
+  background:var(--accent);
+  border:0;
+  border-radius:2px;
+  padding:.95rem 2rem;
+  cursor:pointer;
+  transition:transform .15s ease, filter .15s ease;
+}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid var(--spark);outline-offset:3px}
+.wish__said{
+  margin:1.25rem 0 0;
+  min-height:1.5rem;
+  font-size:.9375rem;
+  color:var(--ink-faint);
+  opacity:0;
+  transition:opacity .4s ease;
+}
+.wish__said.is-on{opacity:1}
+
+/* ---------- entrance: mirrored ---------- */
+.anim-l,.anim-r,.anim-u{opacity:0}
+.is-ready .anim-l{animation:inL .9s cubic-bezier(.2,.7,.2,1) forwards}
+.is-ready .anim-r{animation:inR .9s cubic-bezier(.2,.7,.2,1) forwards}
+.is-ready .anim-u{animation:inU .9s cubic-bezier(.2,.7,.2,1) .35s forwards}
+@keyframes inL{from{opacity:0;transform:translateX(-2rem)}to{opacity:1;transform:none}}
+@keyframes inR{from{opacity:0;transform:translateX(2rem)}to{opacity:1;transform:none}}
+@keyframes inU{from{opacity:0;transform:translateY(1.25rem)}to{opacity:1;transform:none}}
+
+@media (max-width:640px){
+  .names{grid-template-columns:1fr;gap:.75rem;text-align:center}
+  .names__axis{width:100%;height:1px;min-height:0;justify-self:center;max-width:6rem}
+  .name--l,.name--r{text-align:center}
+  .tally{grid-template-columns:1fr 1fr}
+  .tally__item:nth-child(2){border-right:0}
+  .tally__item:nth-child(1),.tally__item:nth-child(2){border-bottom:1px solid var(--line-soft)}
+  .pair{grid-template-columns:1fr}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .anim-l,.anim-r,.anim-u{opacity:1;animation:none !important}
+  *{transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<main>
+  <header class="hero wrap">
+    <p class="hero__date label anim-u" style="animation-delay:0s">6 September</p>
+
+    <div class="names">
+      <h1 class="name name--l anim-l"><span id="nameOne">Dad</span></h1>
+      <div class="names__axis" aria-hidden="true"></div>
+      <h1 class="name name--r anim-r"><span id="nameTwo">Uncle</span></h1>
+    </div>
+
+    <div class="number anim-u">
+      <span class="number__fig">39</span>
+      <span class="number__echo" aria-hidden="true">39</span>
+      <p class="number__cap">Same birthday, same year, same cake. Two brothers, thirty-nine apiece.</p>
+    </div>
+
+    <section class="count anim-u" aria-live="polite">
+      <p class="count__head label" id="countHead">Until the sixth</p>
+      <div class="count__grid" id="countGrid">
+        <div class="count__cell"><span class="count__n" id="cd-d">–</span><span class="count__u">Days</span></div>
+        <div class="count__cell"><span class="count__n" id="cd-h">–</span><span class="count__u">Hours</span></div>
+        <div class="count__cell"><span class="count__n" id="cd-m">–</span><span class="count__u">Minutes</span></div>
+        <div class="count__cell"><span class="count__n" id="cd-s">–</span><span class="count__u">Seconds</span></div>
+      </div>
+      <p class="count__today" id="countToday" hidden>It is the sixth. Happy birthday, both of you.</p>
+    </section>
+  </header>
+
+  <section class="wrap" aria-label="By the numbers">
+    <div class="tally">
+      <div class="tally__item"><span class="tally__n">39 &amp; 39</span><span class="tally__t">Years each</span></div>
+      <div class="tally__item"><span class="tally__n">78</span><span class="tally__t">Years of brothers, combined</span></div>
+      <div class="tally__item"><span class="tally__n">14,245</span><span class="tally__t">Days since day one</span></div>
+      <div class="tally__item"><span class="tally__n">1</span><span class="tally__t">Birthday, shared</span></div>
+    </div>
+  </section>
+
+  <section class="memories wrap">
+    <div class="memories__head">
+      <p class="label">Things worth remembering</p>
+      <h2 class="memories__title">Two of you were there for all of it.</h2>
+    </div>
+    <div class="pair">
+      <article class="card">
+        <p class="label">The road</p>
+        <h3 class="card__k">Pelogoni</h3>
+        <p class="card__b">Some places you visit. Pelogoni you came back from carrying something. One road, two brothers, and a trip that turned into a story you each tell slightly differently — and somehow you are both right.</p>
+        <div class="card__rule" aria-hidden="true"></div>
+      </article>
+      <article class="card">
+        <p class="label">The years before all this</p>
+        <h3 class="card__k">School days</h3>
+        <p class="card__b">Same classroom, same register, the same handwriting on a good day. Teachers who never quite worked out which of you was which — and two of you in absolutely no hurry to help them.</p>
+        <div class="card__rule" aria-hidden="true"></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="wish wrap">
+    <p class="wish__line">Thirty-nine looks good on both of you. Here's to the next thirty-nine — same day, same cake, same trouble.</p>
+    <button class="btn" id="wishBtn" type="button">Blow out the candles</button>
+    <p class="wish__said" id="wishSaid" role="status">Make it a good one. Both of you.</p>
+  </section>
+</main>
+
+<script>
+/* ---------------------------------------------------------------
+   Names — change these two lines to their real names.
+   --------------------------------------------------------------- */
+var TWINS = { one: "Dad", two: "Uncle" };
+var BIRTHDAY = { month: 9, day: 6 };   /* 6 September */
+
+document.getElementById("nameOne").textContent = TWINS.one;
+document.getElementById("nameTwo").textContent = TWINS.two;
+document.title = "Twins at Thirty-Nine";
+
+requestAnimationFrame(function(){ document.body.classList.add("is-ready"); });
+
+/* ---------------------------- countdown ---------------------------- */
+var elD = document.getElementById("cd-d"),
+    elH = document.getElementById("cd-h"),
+    elM = document.getElementById("cd-m"),
+    elS = document.getElementById("cd-s"),
+    grid = document.getElementById("countGrid"),
+    head = document.getElementById("countHead"),
+    today = document.getElementById("countToday");
+
+function nextBirthday(now){
+  var y = now.getFullYear();
+  var d = new Date(y, BIRTHDAY.month - 1, BIRTHDAY.day, 0, 0, 0, 0);
+  if (d.getTime() + 86400000 <= now.getTime()) {
+    d = new Date(y + 1, BIRTHDAY.month - 1, BIRTHDAY.day, 0, 0, 0, 0);
+  }
+  return d;
+}
+
+function pad(n){ return n < 10 ? "0" + n : "" + n; }
+
+function tick(){
+  var now = new Date();
+  var isBirthday = now.getMonth() === BIRTHDAY.month - 1 && now.getDate() === BIRTHDAY.day;
+
+  if (isBirthday) {
+    grid.hidden = true;
+    head.hidden = true;
+    today.hidden = false;
+    return;
+  }
+
+  grid.hidden = false;
+  head.hidden = false;
+  today.hidden = true;
+
+  var diff = Math.max(0, nextBirthday(now) - now);
+  var s = Math.floor(diff / 1000);
+  elD.textContent = Math.floor(s / 86400);
+  elH.textContent = pad(Math.floor(s % 86400 / 3600));
+  elM.textContent = pad(Math.floor(s % 3600 / 60));
+  elS.textContent = pad(s % 60);
+}
+tick();
+setInterval(tick, 1000);
+
+/* ---------------------------- confetti ---------------------------- */
+var canvas = document.getElementById("confetti"),
+    ctx = canvas.getContext("2d"),
+    bits = [],
+    raf = null,
+    reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function size(){
+  var r = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * r;
+  canvas.height = window.innerHeight * r;
+  ctx.setTransform(r, 0, 0, r, 0, 0);
+}
+size();
+window.addEventListener("resize", size);
+
+function palette(){
+  var cs = getComputedStyle(document.documentElement);
+  return [
+    cs.getPropertyValue("--spark").trim(),
+    cs.getPropertyValue("--accent").trim(),
+    cs.getPropertyValue("--ink-soft").trim()
+  ];
+}
+
+/* two bursts, one per brother — left and right of centre */
+function burst(){
+  var cols = palette();
+  var w = window.innerWidth, h = window.innerHeight;
+  [w * 0.32, w * 0.68].forEach(function(ox){
+    for (var i = 0; i < 70; i++){
+      var a = (-Math.PI / 2) + (Math.random() - 0.5) * 1.5;
+      var v = 7 + Math.random() * 9;
+      bits.push({
+        x: ox, y: h * 0.62,
+        vx: Math.cos(a) * v, vy: Math.sin(a) * v,
+        w: 4 + Math.random() * 6, h: 3 + Math.random() * 5,
+        rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+        c: cols[i % cols.length], life: 1
+      });
+    }
+  });
+  if (!raf) raf = requestAnimationFrame(frame);
+}
+
+function frame(){
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  for (var i = bits.length - 1; i >= 0; i--){
+    var b = bits[i];
+    b.vy += 0.28;
+    b.vx *= 0.99;
+    b.x += b.vx; b.y += b.vy; b.rot += b.vr;
+    b.life -= 0.006;
+    if (b.life <= 0 || b.y > window.innerHeight + 40){ bits.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, b.life));
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.rot);
+    ctx.fillStyle = b.c;
+    ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+    ctx.restore();
+  }
+  if (bits.length){ raf = requestAnimationFrame(frame); }
+  else { ctx.clearRect(0, 0, window.innerWidth, window.innerHeight); raf = null; }
+}
+
+document.getElementById("wishBtn").addEventListener("click", function(){
+  document.getElementById("wishSaid").classList.add("is-on");
+  if (!reduce) burst();
+});
+</script>
+</body>
+</html>
