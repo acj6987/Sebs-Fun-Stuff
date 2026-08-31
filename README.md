@@ -1,8 +1,8 @@
 # PokéWorld Adventure ⚡
 
 A Pokémon facts website **and** a game, all in one file. Open `index.html` in any
-browser and play — there is nothing to install and no internet needed once you
-have the file.
+browser and play — there is nothing to install. It works offline too; it just
+borrows two web fonts when you happen to be online.
 
 ## What's in it
 
