@@ -49,6 +49,7 @@
 }
 
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 body{
   margin:0;
   background:var(--ground);
@@ -277,6 +278,30 @@ body{
 @keyframes inR{from{opacity:0;transform:translateX(2rem)}to{opacity:1;transform:none}}
 @keyframes inU{from{opacity:0;transform:translateY(1.25rem)}to{opacity:1;transform:none}}
 
+/* ---------- the song ---------- */
+.lyrics{
+  margin:0 auto clamp(1.75rem,4vw,2.5rem);
+  max-width:36rem;
+  font-family:"Fraunces",Georgia,serif;
+  font-weight:400;
+  font-size:clamp(1.125rem,3.2vw,1.5rem);
+  line-height:1.9;
+  text-wrap:balance;
+}
+.lyrics__line{display:block;color:var(--ink-faint);transition:color .3s ease}
+.syl{transition:color .12s ease}
+.syl.is-sung{color:var(--ink-soft)}
+.syl.is-on{color:var(--spark);font-weight:600}
+.btn-row{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
+.btn--ghost{
+  background:transparent;
+  color:var(--ink);
+  border:1px solid var(--line);
+}
+.btn--ghost:hover{border-color:var(--accent);filter:none}
+.btn[disabled]{opacity:.55;cursor:default}
+.btn[disabled]:hover{filter:none}
+
 @media (max-width:640px){
   .names{grid-template-columns:1fr;gap:.75rem;text-align:center}
   .names__axis{width:100%;height:1px;min-height:0;justify-self:center;max-width:6rem}
@@ -355,10 +380,17 @@ body{
   </section>
 
   <section class="wish wrap">
-    <p class="wish__line">Thirty-nine looks good on both of you. Here's to the next thirty-nine — same day, same cake, same trouble.</p>
-    <button class="btn" id="wishBtn" type="button">Blow out the candles</button>
+    <p class="wish__line">Thirty-nine looks good on both of you. Here's to the next thirty-nine &mdash; same day, same cake, same trouble.</p>
+
+    <p class="lyrics" id="lyrics" aria-label="Happy Birthday to You"></p>
+
+    <div class="btn-row">
+      <button class="btn" id="singBtn" type="button">Sing it</button>
+      <button class="btn btn--ghost" id="wishBtn" type="button">Blow out the candles</button>
+    </div>
     <p class="wish__said" id="wishSaid" role="status">Make it a good one. Both of you.</p>
   </section>
+
 </main>
 
 <script>
@@ -489,6 +521,101 @@ document.getElementById("wishBtn").addEventListener("click", function(){
   document.getElementById("wishSaid").classList.add("is-on");
   if (!reduce) burst();
 });
+
+/* ------------------------- happy birthday ------------------------- */
+/* Standard melody in G major, 3/4. Each syllable: [text, note, beats,
+   startsNewWord]. The last two notes of line three carry both names. */
+var HZ = { D4:293.66, E4:329.63, Fs4:369.99, G4:392.00,
+           A4:440.00, B4:493.88, C5:523.25, D5:587.33 };
+var BEAT = 0.52;
+
+var SONG = [
+  [["Hap","D4",.75,1],["py","D4",.25,0],["birth","E4",1,1],["day","D4",1,0],["to","G4",1,1],["you","Fs4",2,1]],
+  [["Hap","D4",.75,1],["py","D4",.25,0],["birth","E4",1,1],["day","D4",1,0],["to","A4",1,1],["you","G4",2,1]],
+  [["Hap","D4",.75,1],["py","D4",.25,0],["birth","D5",1,1],["day","B4",1,0],["dear","G4",1,1],
+   [TWINS.one + " and","Fs4",1,1],[TWINS.two,"E4",1,1]],
+  [["Hap","C5",.75,1],["py","C5",.25,0],["birth","B4",1,1],["day","G4",1,0],["to","A4",1,1],["you","G4",2,1]]
+];
+
+/* lay the lyrics out and remember when each syllable is sung */
+var sung = [], at = 0, lyricBox = document.getElementById("lyrics");
+SONG.forEach(function(line){
+  var lineEl = document.createElement("span");
+  lineEl.className = "lyrics__line";
+  line.forEach(function(syl, i){
+    if (syl[3] && i > 0) lineEl.appendChild(document.createTextNode(" "));
+    var span = document.createElement("span");
+    span.className = "syl";
+    span.textContent = syl[0];
+    lineEl.appendChild(span);
+    sung.push({ el: span, t: at, dur: syl[2] * BEAT, hz: HZ[syl[1]] });
+    at += syl[2] * BEAT;
+  });
+  lyricBox.appendChild(lineEl);
+});
+var SONG_LEN = at;
+
+var actx = null, singing = false, singBtn = document.getElementById("singBtn");
+
+function note(hz, start, dur){
+  /* a warm two-voice tone: triangle lead over a quiet octave below */
+  var g = actx.createGain();
+  var lp = actx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 2200;
+  lp.connect(g);
+  g.connect(actx.destination);
+
+  [[hz, "triangle", 0.22], [hz / 2, "sine", 0.09]].forEach(function(v){
+    var o = actx.createOscillator();
+    var og = actx.createGain();
+    o.type = v[1];
+    o.frequency.value = v[0];
+    og.gain.value = v[2];
+    o.connect(og); og.connect(lp);
+    o.start(start); o.stop(start + dur);
+  });
+
+  var hold = dur * 0.88;
+  g.gain.setValueAtTime(0.0001, start);
+  g.gain.exponentialRampToValueAtTime(1, start + 0.02);
+  g.gain.setValueAtTime(1, start + hold * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, start + hold);
+}
+
+function sing(){
+  if (singing) return;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  if (!actx) actx = new AC();
+  if (actx.state === "suspended") actx.resume();
+
+  singing = true;
+  singBtn.disabled = true;
+  singBtn.textContent = "Singing\u2026";
+
+  var t0 = actx.currentTime + 0.15;
+  sung.forEach(function(s){ note(s.hz, t0 + s.t, s.dur); });
+
+  function follow(){
+    var now = actx.currentTime - t0;
+    sung.forEach(function(s){
+      var on = now >= s.t && now < s.t + s.dur;
+      s.el.classList.toggle("is-on", on);
+      s.el.classList.toggle("is-sung", now >= s.t + s.dur);
+    });
+    if (now < SONG_LEN + 0.3){ requestAnimationFrame(follow); return; }
+    sung.forEach(function(s){ s.el.classList.remove("is-on"); });
+    singing = false;
+    singBtn.disabled = false;
+    singBtn.textContent = "Sing it again";
+    document.getElementById("wishSaid").classList.add("is-on");
+    if (!reduce) burst();
+  }
+  requestAnimationFrame(follow);
+}
+
+singBtn.addEventListener("click", sing);
 </script>
 </body>
 </html>
