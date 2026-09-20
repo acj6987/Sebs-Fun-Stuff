@@ -21,6 +21,28 @@
     <p class="stats-line"><span id="wine-total">…</span> wines · 7 families · hundreds of facts</p>
   </header>
 
+  <section class="sommelier" aria-label="Ask the sommelier">
+    <div class="sommelier-inner">
+      <h2>🤵 Ask the Sommelier</h2>
+      <p class="sommelier-sub">Any question about any wine — pairings, sweetness, serving, history — answered on the spot.</p>
+      <form id="ask-form">
+        <input id="ask-input" type="text" autocomplete="off"
+               placeholder="e.g. What food goes with Malbec? How sweet is Riesling?"
+               aria-label="Ask a wine question">
+        <button type="submit" id="ask-btn">Ask</button>
+        <button type="button" id="ask-stop" hidden>Stop</button>
+      </form>
+      <div id="ask-suggestions" class="ask-suggestions" role="group" aria-label="Example questions">
+        <button type="button" data-q="What's the difference between Champagne and Prosecco?">Champagne vs Prosecco?</button>
+        <button type="button" data-q="What wine goes with steak?">What goes with steak?</button>
+        <button type="button" data-q="How should I serve Port?">How do I serve Port?</button>
+        <button type="button" data-q="Tell me an interesting fact about Malbec">A fact about Malbec</button>
+      </div>
+      <div id="ask-answer" class="ask-answer" hidden aria-live="polite"></div>
+      <div id="ask-source" class="ask-source"></div>
+    </div>
+  </section>
+
   <nav class="controls" aria-label="Search and filter">
     <div class="controls-inner">
       <input id="search" type="search" placeholder="Search wines, flavours, regions, foods…"
@@ -48,5 +70,6 @@
 
   <script src="js/wines.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/sommelier.js"></script>
 </body>
 </html>

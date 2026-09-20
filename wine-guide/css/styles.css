@@ -73,6 +73,110 @@ body.modal-open { overflow: hidden; }
   text-transform: uppercase;
 }
 
+/* ---------- Ask the Sommelier ---------- */
+.sommelier { padding: 8px 20px 34px; }
+
+.sommelier-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  background: linear-gradient(170deg, var(--card), var(--bg-soft));
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius);
+  padding: 24px clamp(18px, 4vw, 34px) 22px;
+}
+
+.sommelier-inner h2 {
+  font-weight: normal;
+  font-size: 1.4rem;
+  color: var(--gold);
+}
+
+.sommelier-sub {
+  color: var(--cream-dim);
+  font-size: 0.95rem;
+  margin: 4px 0 14px;
+}
+
+#ask-form { display: flex; gap: 10px; flex-wrap: wrap; }
+
+#ask-input {
+  flex: 1 1 260px;
+  min-width: 200px;
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--cream);
+  background: var(--bg-soft);
+  border: 1px solid var(--card-edge);
+  border-radius: 999px;
+  outline: none;
+}
+
+#ask-input:focus { border-color: var(--gold); }
+#ask-input::placeholder { color: #8a7362; }
+#ask-input:disabled { opacity: 0.6; }
+
+#ask-btn, #ask-stop {
+  font: inherit;
+  font-size: 1rem;
+  padding: 11px 26px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--wine-bright);
+  background: var(--wine);
+  color: #fff;
+  transition: background 0.15s ease;
+}
+
+#ask-btn:hover:not(:disabled) { background: var(--wine-bright); }
+#ask-btn:disabled { opacity: 0.55; cursor: wait; }
+
+#ask-stop {
+  background: transparent;
+  color: var(--cream-dim);
+  border-color: var(--card-edge);
+}
+
+#ask-stop:hover { color: var(--cream); border-color: var(--gold); }
+
+.ask-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ask-suggestions button {
+  font: inherit;
+  font-size: 0.83rem;
+  color: var(--cream-dim);
+  background: transparent;
+  border: 1px dashed var(--card-edge);
+  border-radius: 999px;
+  padding: 5px 13px;
+  cursor: pointer;
+}
+
+.ask-suggestions button:hover { color: var(--gold); border-color: var(--gold); }
+
+.ask-answer {
+  margin-top: 16px;
+  background: var(--bg-soft);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 10px 10px 0;
+  padding: 14px 18px;
+  white-space: pre-wrap;
+  font-size: 0.98rem;
+}
+
+.ask-source {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--cream-dim);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 /* ---------- Controls ---------- */
 .controls {
   position: sticky;
