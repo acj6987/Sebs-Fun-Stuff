@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creator Studio | Science Fact</title>
+<meta name="description" content="Private area for adding this week's video to the site.">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+
+<a class="sr-only" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="index.html">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <ellipse cx="24" cy="24" rx="21" ry="9" fill="none" stroke="#2ad4e0" stroke-width="3"/>
+        <ellipse cx="24" cy="24" rx="21" ry="9" fill="none" stroke="#b8f13a" stroke-width="3" transform="rotate(60 24 24)"/>
+        <ellipse cx="24" cy="24" rx="21" ry="9" fill="none" stroke="#ff5ea8" stroke-width="3" transform="rotate(120 24 24)"/>
+        <circle cx="24" cy="24" r="5" fill="#ffffff"/>
+      </svg>
+      <span>Science <em>Fact</em></span>
+    </a>
+
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="sr-only">Menu</span>&#9776;
+    </button>
+
+    <nav class="site-nav" id="site-nav" aria-label="Main">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="experiments.html">Experiments</a></li>
+        <li><a href="videos.html">Videos</a></li>
+        <li><a href="facts.html">Fact Vault</a></li>
+        <li><a href="safety.html">Safety</a></li>
+        <li class="nav-studio"><a href="studio.html">Creator Studio</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="page-head">
+  <div class="wrap">
+    <h1>Creator Studio</h1>
+    <p>The private bit. Sign in here to add this week's video to the site.</p>
+  </div>
+</div>
+
+<section class="section">
+  <div class="wrap studio-shell">
+
+    <div data-locked>
+      <div class="lock-card">
+        <div class="lock-icon" aria-hidden="true">&#128274;</div>
+        <h2>Sign in</h2>
+        <p>This area is just for whoever makes the videos. Visitors do not need it &mdash; everything else on the site is free and open.</p>
+        <div data-login-alert></div>
+        <form class="form-grid" data-login-form>
+          <div class="field">
+            <label for="studio-password">Password</label>
+            <input type="password" id="studio-password" autocomplete="current-password" required>
+          </div>
+          <div>
+            <button class="btn" type="submit">Unlock the studio</button>
+          </div>
+        </form>
+        <p class="hint">Forgotten it? See the "Changing your password" part of README.md in the website folder.</p>
+      </div>
+    </div>
+
+    <div data-unlocked hidden>
+      <div class="studio-bar">
+        <h2 style="margin:0">Add this week's video</h2>
+        <button class="btn btn-small btn-pink" type="button" data-signout>Sign out</button>
+      </div>
+
+      <div class="alert alert-info">
+        <strong>How publishing works.</strong> Fill this in and press <em>Make the code</em>. You get a small block of text to paste into <code>data/videos.js</code>, which is what puts the video on the site for everyone. Until you paste it in, it is saved here on this computer only as a draft.
+      </div>
+
+      <div class="panel">
+        <form class="form-grid" data-video-form>
+          <div class="field">
+            <label for="v-title">Video title</label>
+            <input type="text" id="v-title" placeholder="Bubbling Lava Lamp" required>
+          </div>
+
+          <div class="field">
+            <label for="v-link">YouTube link or video id</label>
+            <input type="text" id="v-link" placeholder="https://www.youtube.com/watch?v=..." required>
+            <p class="hint">Paste the whole link from the address bar. Normal videos, Shorts and youtu.be links all work.</p>
+          </div>
+
+          <div class="field">
+            <label for="v-date">Date it goes up</label>
+            <input type="date" id="v-date" required>
+          </div>
+
+          <div class="field">
+            <label for="v-experiment">Which experiment is it about?</label>
+            <select id="v-experiment"><option value="">Not about a particular one</option></select>
+            <p class="hint">Pick one and the video appears on that experiment's page automatically.</p>
+          </div>
+
+          <div class="field">
+            <label for="v-description">One or two lines about it</label>
+            <textarea id="v-description" placeholder="We build a lava lamp in a bottle and find out why oil refuses to mix with water."></textarea>
+          </div>
+
+          <div data-form-alert></div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn" type="submit">Make the code</button>
+            <button class="btn btn-small" type="button" data-reset>Start again</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel" data-output hidden>
+        <h2>Paste this into data/videos.js</h2>
+        <p>Open <code>data/videos.js</code>, find the line that says <code>window.VIDEOS = [</code>, and paste this block on the line straight after it. Save the file, upload it, and the video is live.</p>
+        <div class="codeblock" data-code></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-small" type="button" data-copy>Copy the code</button>
+          <button class="btn btn-small btn-pink" type="button" data-preview>Preview it below</button>
+        </div>
+        <div data-preview-out style="margin-top:20px"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Your drafts on this computer</h2>
+        <p class="hint">Saved in this browser so you do not lose your typing. Clearing your browser data deletes them, and nobody else can see them. Only pasting the code into <code>data/videos.js</code> puts a video on the website.</p>
+        <div data-drafts></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h4>Science Fact</h4>
+        <p>Free science experiments you can do at home with things from the kitchen cupboard, plus a new video every week.</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <ul>
+          <li><a href="experiments.html">All experiments</a></li>
+          <li><a href="videos.html">Weekly videos</a></li>
+          <li><a href="facts.html">Fact Vault</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Before you start</h4>
+        <ul>
+          <li><a href="safety.html">Safety rules</a></li>
+          <li><a href="safety.html#grown-ups">For grown-ups</a></li>
+          <li><a href="studio.html">Creator Studio</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; <span data-year>2026</span> Science Fact. Everything here is free to use.</span>
+      <span>Always do experiments with a grown-up nearby.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="data/experiments.js"></script>
+<script src="data/facts.js"></script>
+<script src="data/videos.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/sha256.js"></script>
+<script src="assets/js/studio-config.js"></script>
+<script src="assets/js/studio.js"></script>
+</body>
+</html>
