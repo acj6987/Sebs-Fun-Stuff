@@ -35,7 +35,7 @@
         <li><a href="videos.html">Videos</a></li>
         <li><a href="facts.html">Fact Vault</a></li>
         <li><a href="safety.html">Safety</a></li>
-        <li class="nav-studio"><a href="studio.html">Creator Studio</a></li>
+        <li class="nav-studio"><a href="desk.html">My area</a></li>
       </ul>
     </nav>
   </div>
@@ -45,7 +45,7 @@
 <div class="page-head">
   <div class="wrap">
     <h1>The Fact Vault</h1>
-    <p>Every fact on the site, in one place. Handy for show and tell, homework, or winning an argument at dinner.</p>
+    <p>Every fact on the site, in one place: space, animals, your own body, dinosaurs, the weather and plenty more. Handy for show and tell, homework, or winning an argument at dinner.</p>
   </div>
 </div>
 
@@ -58,13 +58,19 @@
       <footer><button class="btn btn-pink btn-small" type="button" data-fact-next>Shuffle</button></footer>
     </div>
 
-    <div class="filters" style="margin-bottom:28px">
+    <div class="filters" style="margin-bottom:20px">
+      <div class="field field-wide">
+        <label for="fact-search">Search the facts</label>
+        <input type="search" id="fact-search" placeholder="octopus, volcano, moon&hellip;" autocomplete="off">
+      </div>
       <div class="field">
         <label for="fact-topic-filter">Topic</label>
         <select id="fact-topic-filter"><option value="">All topics</option></select>
       </div>
+      <button class="btn btn-small" type="button" data-fact-clear>Clear</button>
     </div>
 
+    <p class="result-count" data-fact-count aria-live="polite"></p>
     <div class="card-grid" data-fact-list></div>
   </div>
 </section>
@@ -90,7 +96,7 @@
         <ul>
           <li><a href="safety.html">Safety rules</a></li>
           <li><a href="safety.html#grown-ups">For grown-ups</a></li>
-          <li><a href="studio.html">Creator Studio</a></li>
+          <li><a href="desk.html">My area</a></li>
         </ul>
       </div>
     </div>

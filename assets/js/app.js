@@ -131,6 +131,16 @@
     target.innerHTML = list.map(SF.cardHTML).join("");
   };
 
+  /* n different facts, picked at random */
+  SF.pickFacts = function (wanted) {
+    var pool = SF.facts.slice();
+    var picked = [];
+    while (picked.length < wanted && pool.length) {
+      picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    }
+    return picked;
+  };
+
   /* ---- fact of the day ---- */
   SF.factOfTheDay = function () {
     if (!SF.facts.length) return null;
@@ -182,9 +192,27 @@
     var links = document.querySelectorAll("#site-nav a");
     for (var i = 0; i < links.length; i++) {
       var target = (links[i].getAttribute("href") || "").toLowerCase();
-      if (target === here || (here === "experiment.html" && target === "experiments.html")) {
+      var sameSection =
+        (here === "experiment.html" && target === "experiments.html") ||
+        (here === "studio.html" && target === "desk.html");
+      if (target === here || sameSection) {
         links[i].setAttribute("aria-current", "page");
       }
+    }
+  }
+
+  /* No videos up yet? Then the Videos link is just a dead end, so it waits. */
+  function tidyNav() {
+    if (SF.videos.length) return;
+    var links = document.querySelectorAll('#site-nav a[href="videos.html"]');
+    for (var i = 0; i < links.length; i++) {
+      var item = links[i].parentNode;
+      if (item && item.parentNode) item.parentNode.removeChild(item);
+    }
+    var footerLinks = document.querySelectorAll('.site-footer a[href="videos.html"]');
+    for (var j = 0; j < footerLinks.length; j++) {
+      var row = footerLinks[j].parentNode;
+      if (row && row.parentNode) row.parentNode.removeChild(row);
     }
   }
 
@@ -196,6 +224,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     setupNav();
     markCurrentPage();
+    tidyNav();
     setYear();
     SF.mountFact(document.querySelector("[data-fact-card]"));
     if (typeof window.pageInit === "function") window.pageInit();

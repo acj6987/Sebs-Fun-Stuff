@@ -28,6 +28,10 @@
 
 * { box-sizing: border-box; }
 
+/* Class rules like .btn beat the browser's own rule for the hidden
+   attribute, so say it properly once here. */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -469,6 +473,27 @@ a.sr-only:focus {
 }
 .draft-item .draft-title { font-weight: bold; }
 .draft-item small { color: var(--ink-soft); }
+
+/* ---------- private area tabs ---------- */
+
+.studio-tabs {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  background: var(--white); border: 1px solid var(--line);
+  border-radius: 999px; padding: 8px; box-shadow: var(--shadow);
+}
+.studio-tabs a {
+  padding: 9px 18px; border-radius: 999px; text-decoration: none;
+  font-weight: bold; font-size: .95rem; color: var(--ink-soft);
+}
+.studio-tabs a:hover { background: var(--paper); color: var(--ink); }
+.studio-tabs a.is-on { background: var(--violet); color: #fff; }
+.studio-tabs [data-signout] { margin-left: auto; }
+
+@media (max-width: 560px) {
+  .studio-tabs { border-radius: var(--radius); }
+  .studio-tabs a { flex: 1; text-align: center; }
+  .studio-tabs [data-signout] { margin-left: 0; width: 100%; }
+}
 
 /* ---------- safety strip ---------- */
 

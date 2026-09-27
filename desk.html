@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Weekly videos | Science Fact</title>
-<meta name="description" content="A new science experiment filmed and explained every week. Free to watch, no sign up needed.">
+<title>My video desk | Science Fact</title>
+<meta name="description" content="Private planning area for the site owner.">
 <link rel="stylesheet" href="assets/css/style.css">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
@@ -44,15 +44,70 @@
 <main id="main">
 <div class="page-head">
   <div class="wrap">
-    <h1>Weekly videos</h1>
-    <p>A new experiment filmed every week. Nothing to pay and nothing to sign up for &mdash; press play and follow along.</p>
+    <h1>My video desk</h1>
+    <p>Your own private page. Plan the videos you want to make, tick off the bits as you film them, and see everything that is already on the site.</p>
+  </div>
+</div>
+
+<div class="wrap" style="margin-top:-26px;position:relative;z-index:2">
+  <div class="studio-tabs">
+    <a href="desk.html" class="is-on">My video desk</a>
+    <a href="studio.html">Put a video on the site</a>
+    <button class="btn btn-small btn-pink" type="button" data-signout>Sign out</button>
   </div>
 </div>
 
 <section class="section">
-  <div class="wrap">
-    <p class="result-count" data-video-count aria-live="polite"></p>
-    <div class="video-list" data-video-list></div>
+  <div class="wrap studio-shell">
+
+    <div data-locked></div>
+
+    <div data-unlocked hidden>
+
+      <div class="panel" data-plan-counts></div>
+
+      <div class="panel">
+        <h2>New video idea</h2>
+        <form class="form-grid" data-plan-form>
+          <div class="field">
+            <label for="p-title">What is the video?</label>
+            <input type="text" id="p-title" placeholder="Bubbling lava lamp" required>
+          </div>
+          <div class="field">
+            <label for="p-experiment">Which experiment?</label>
+            <select id="p-experiment"><option value="">Not one from the site</option></select>
+          </div>
+          <div class="field">
+            <label for="p-date">When do you want it to go up?</label>
+            <input type="date" id="p-date">
+          </div>
+          <div class="field">
+            <label for="p-notes">Notes to yourself</label>
+            <textarea id="p-notes" placeholder="Use the big bottle. Remember to film the bubbles close up."></textarea>
+          </div>
+          <div data-plan-alert></div>
+          <div><button class="btn" type="submit">Add it to my desk</button></div>
+        </form>
+      </div>
+
+      <h2 style="margin:34px 0 18px">What I am working on</h2>
+      <div data-plan-list></div>
+
+      <div class="panel">
+        <h2>What could I film next?</h2>
+        <p class="hint">Experiments on the site that do not have a video yet.</p>
+        <div data-suggestions></div>
+      </div>
+
+      <div class="panel">
+        <h2>Already on the site</h2>
+        <div data-live-videos></div>
+      </div>
+
+      <p class="hint">Everything on this page is saved in this browser only, so it is yours alone. Clearing your browser data clears your desk. A video only appears on the website once you have put it on the site from the next page.</p>
+
+    </div>
+
   </div>
 </section>
 </main>
@@ -92,6 +147,9 @@
 <script src="data/facts.js"></script>
 <script src="data/videos.js"></script>
 <script src="assets/js/app.js"></script>
-<script src="assets/js/videos-page.js"></script>
+<script src="assets/js/sha256.js"></script>
+<script src="assets/js/studio-config.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/desk.js"></script>
 </body>
 </html>

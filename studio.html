@@ -35,7 +35,7 @@
         <li><a href="videos.html">Videos</a></li>
         <li><a href="facts.html">Fact Vault</a></li>
         <li><a href="safety.html">Safety</a></li>
-        <li class="nav-studio"><a href="studio.html">Creator Studio</a></li>
+        <li class="nav-studio"><a href="desk.html">My area</a></li>
       </ul>
     </nav>
   </div>
@@ -44,38 +44,26 @@
 <main id="main">
 <div class="page-head">
   <div class="wrap">
-    <h1>Creator Studio</h1>
-    <p>The private bit. Sign in here to add this week's video to the site.</p>
+    <h1>Put a video on the site</h1>
+    <p>Fill this in and it gives you the code to paste, so the video shows up for everyone.</p>
+  </div>
+</div>
+
+<div class="wrap" style="margin-top:-26px;position:relative;z-index:2">
+  <div class="studio-tabs">
+    <a href="desk.html">My video desk</a>
+    <a href="studio.html" class="is-on">Put a video on the site</a>
+    <button class="btn btn-small btn-pink" type="button" data-signout>Sign out</button>
   </div>
 </div>
 
 <section class="section">
   <div class="wrap studio-shell">
 
-    <div data-locked>
-      <div class="lock-card">
-        <div class="lock-icon" aria-hidden="true">&#128274;</div>
-        <h2>Sign in</h2>
-        <p>This area is just for whoever makes the videos. Visitors do not need it &mdash; everything else on the site is free and open.</p>
-        <div data-login-alert></div>
-        <form class="form-grid" data-login-form>
-          <div class="field">
-            <label for="studio-password">Password</label>
-            <input type="password" id="studio-password" autocomplete="current-password" required>
-          </div>
-          <div>
-            <button class="btn" type="submit">Unlock the studio</button>
-          </div>
-        </form>
-        <p class="hint">Forgotten it? See the "Changing your password" part of README.md in the website folder.</p>
-      </div>
-    </div>
+    <div data-locked></div>
 
     <div data-unlocked hidden>
-      <div class="studio-bar">
-        <h2 style="margin:0">Add this week's video</h2>
-        <button class="btn btn-small btn-pink" type="button" data-signout>Sign out</button>
-      </div>
+      <h2 style="margin:0 0 20px">Put a video on the site</h2>
 
       <div class="alert alert-info">
         <strong>How publishing works.</strong> Fill this in and press <em>Make the code</em>. You get a small block of text to paste into <code>data/videos.js</code>, which is what puts the video on the site for everyone. Until you paste it in, it is saved here on this computer only as a draft.
@@ -161,7 +149,7 @@
         <ul>
           <li><a href="safety.html">Safety rules</a></li>
           <li><a href="safety.html#grown-ups">For grown-ups</a></li>
-          <li><a href="studio.html">Creator Studio</a></li>
+          <li><a href="desk.html">My area</a></li>
         </ul>
       </div>
     </div>
@@ -178,6 +166,7 @@
 <script src="assets/js/app.js"></script>
 <script src="assets/js/sha256.js"></script>
 <script src="assets/js/studio-config.js"></script>
+<script src="assets/js/auth.js"></script>
 <script src="assets/js/studio.js"></script>
 </body>
 </html>

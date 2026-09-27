@@ -1,108 +1,19 @@
 /* =========================================================
-   Creator Studio: sign in, and build the block of code that
-   publishes a new video.
+   Putting a video on the site: builds the block of code that
+   goes into data/videos.js.
    ========================================================= */
 
 window.pageInit = function () {
   "use strict";
 
   var SF = window.SF;
-  var DEFAULT_HASH = "9a121fc874029e54c9a5cdc28436af9787e1b2351bc8236a3f88b105b0c08f45";
   var DRAFT_KEY = "sciencefact.drafts";
-  var SESSION_KEY = "sciencefact.signedin";
-  var MAX_TRIES = 5;
-  var LOCK_SECONDS = 30;
+  var HANDOFF_KEY = "sciencefact.handoff";
 
-  var lockedBox = document.querySelector("[data-locked]");
-  var unlockedBox = document.querySelector("[data-unlocked]");
-  var loginForm = document.querySelector("[data-login-form]");
-  var loginAlert = document.querySelector("[data-login-alert]");
-  var passwordInput = document.getElementById("studio-password");
-
-  var tries = 0;
-  var lockedUntil = 0;
-
-  function store(kind) {
-    try {
-      var box = kind === "session" ? window.sessionStorage : window.localStorage;
-      var probe = "__test__";
-      box.setItem(probe, "1");
-      box.removeItem(probe);
-      return box;
-    } catch (error) {
-      return null;         /* private browsing, or storage turned off */
-    }
-  }
-
-  function alertHTML(kind, message) {
-    return '<div class="alert alert-' + kind + '">' + message + "</div>";
-  }
-
-  /* ---------------- signing in ---------------- */
-
-  function show(signedIn) {
-    lockedBox.hidden = signedIn;
-    unlockedBox.hidden = !signedIn;
-    if (signedIn) startStudio();
-  }
-
-  loginForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-
-    var now = Date.now();
-    if (now < lockedUntil) {
-      var wait = Math.ceil((lockedUntil - now) / 1000);
-      loginAlert.innerHTML = alertHTML("bad", "Too many wrong tries. Wait " + wait + " seconds and try again.");
-      return;
-    }
-
-    var typed = passwordInput.value;
-    if (!typed) return;
-
-    if (window.sha256Hex(typed) === window.STUDIO_PASSWORD_SHA256) {
-      var session = store("session");
-      if (session) session.setItem(SESSION_KEY, "yes");
-      passwordInput.value = "";
-      loginAlert.innerHTML = "";
-      tries = 0;
-      show(true);
-      return;
-    }
-
-    tries++;
-    passwordInput.value = "";
-    if (tries >= MAX_TRIES) {
-      lockedUntil = Date.now() + LOCK_SECONDS * 1000;
-      tries = 0;
-      loginAlert.innerHTML = alertHTML("bad", "That is " + MAX_TRIES + " wrong tries. Locked for " + LOCK_SECONDS + " seconds.");
-    } else {
-      loginAlert.innerHTML = alertHTML("bad", "That is not the password. " + (MAX_TRIES - tries) + " tries left before a short lock.");
-    }
-  });
-
-  var signOutBtn = document.querySelector("[data-signout]");
-  if (signOutBtn) {
-    signOutBtn.addEventListener("click", function () {
-      var session = store("session");
-      if (session) session.removeItem(SESSION_KEY);
-      show(false);
-    });
-  }
-
-  /* ---------------- the studio itself ---------------- */
-
-  var started = false;
+  window.SFAuth.mount({ onUnlock: startStudio });
 
   function startStudio() {
-    if (started) return;
-    started = true;
-
-    if (window.STUDIO_PASSWORD_SHA256 === DEFAULT_HASH) {
-      unlockedBox.insertAdjacentHTML("afterbegin", alertHTML("bad",
-        "<strong>You are still using the password this site came with.</strong> " +
-        "Anyone who has seen the instructions can get in here. Change it in the box at the bottom of this page."));
-    }
-
+    var unlockedBox = document.querySelector("[data-unlocked]");
     var form = document.querySelector("[data-video-form]");
     var titleEl = document.getElementById("v-title");
     var linkEl = document.getElementById("v-link");
@@ -114,7 +25,6 @@ window.pageInit = function () {
     var codeEl = document.querySelector("[data-code]");
     var previewOut = document.querySelector("[data-preview-out]");
 
-    /* experiment picker */
     SF.experiments.forEach(function (experiment) {
       var option = document.createElement("option");
       option.value = experiment.id;
@@ -122,16 +32,36 @@ window.pageInit = function () {
       experimentEl.appendChild(option);
     });
 
-    /* default the date to today */
     var today = new Date();
     dateEl.value = today.getFullYear() + "-" +
       ("0" + (today.getMonth() + 1)).slice(-2) + "-" +
       ("0" + today.getDate()).slice(-2);
 
+    /* Did you send a video over from the desk? Then fill it in. */
+    var box = window.SFAuth.store("local");
+    if (box) {
+      var waiting = null;
+      try {
+        waiting = JSON.parse(box.getItem(HANDOFF_KEY) || "null");
+      } catch (error) {
+        waiting = null;
+      }
+      if (waiting && waiting.title) {
+        titleEl.value = waiting.title;
+        if (waiting.experiment) experimentEl.value = waiting.experiment;
+        if (waiting.date) dateEl.value = waiting.date;
+        if (waiting.description) descriptionEl.value = waiting.description;
+        formAlert.innerHTML = window.SFAuth.alertHTML("good",
+          "Brought over from your desk. Just paste the YouTube link in and you are done.");
+        linkEl.focus();
+        try { box.removeItem(HANDOFF_KEY); } catch (error) { /* nothing to do */ }
+      }
+    }
+
     var lastBuilt = null;
 
     /* Text going into a .js file must not be able to close the string
-       or the comment it sits in, so quotes and backslashes are escaped. */
+       it sits in, so quotes and backslashes are escaped. */
     function forJsString(value) {
       return String(value == null ? "" : value)
         .replace(/\\/g, "\\\\")
@@ -140,7 +70,7 @@ window.pageInit = function () {
         .replace(/<\/?script/gi, "<\\/script");
     }
 
-    function nextVideoId(date) {
+    function nextVideoId() {
       var used = {};
       SF.videos.forEach(function (video) { used[video.id] = true; });
       var week = 1;
@@ -168,22 +98,22 @@ window.pageInit = function () {
       var date = dateEl.value;
 
       if (!title) {
-        formAlert.innerHTML = alertHTML("bad", "Give the video a title first.");
+        formAlert.innerHTML = window.SFAuth.alertHTML("bad", "Give the video a title first.");
         return;
       }
       if (!youtubeId) {
-        formAlert.innerHTML = alertHTML("bad",
+        formAlert.innerHTML = window.SFAuth.alertHTML("bad",
           "That does not look like a YouTube link. Copy the whole thing from the address bar, " +
           "for example <code>https://www.youtube.com/watch?v=dQw4w9WgXcQ</code>.");
         return;
       }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        formAlert.innerHTML = alertHTML("bad", "Pick a date for the video.");
+        formAlert.innerHTML = window.SFAuth.alertHTML("bad", "Pick a date for the video.");
         return;
       }
 
       lastBuilt = {
-        id: nextVideoId(date),
+        id: nextVideoId(),
         title: title,
         date: date,
         youtubeId: youtubeId,
@@ -195,7 +125,7 @@ window.pageInit = function () {
       outputBox.hidden = false;
       previewOut.innerHTML = "";
       saveDraft(lastBuilt);
-      formAlert.innerHTML = alertHTML("good", "Done. The code is below, and a draft is saved on this computer.");
+      formAlert.innerHTML = window.SFAuth.alertHTML("good", "Done. The code is below, and a draft is saved on this computer.");
       outputBox.scrollIntoView({ block: "start" });
     });
 
@@ -208,13 +138,12 @@ window.pageInit = function () {
 
     document.querySelector("[data-copy]").addEventListener("click", function (event) {
       var button = event.currentTarget;
-      var text = codeEl.textContent;
       var done = function () {
         button.textContent = "Copied";
         window.setTimeout(function () { button.textContent = "Copy the code"; }, 1800);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, function () { selectCode(); });
+        navigator.clipboard.writeText(codeEl.textContent).then(done, selectCode);
       } else {
         selectCode();
       }
@@ -226,7 +155,8 @@ window.pageInit = function () {
       var selection = window.getSelection();
       selection.removeAllRanges();
       selection.addRange(range);
-      formAlert.innerHTML = alertHTML("info", "Copying is blocked in this browser. The code is selected &mdash; press Ctrl+C (or Cmd+C).");
+      formAlert.innerHTML = window.SFAuth.alertHTML("info",
+        "Copying is blocked in this browser. The code is selected &mdash; press Ctrl+C (or Cmd+C).");
     }
 
     document.querySelector("[data-preview]").addEventListener("click", function () {
@@ -248,10 +178,10 @@ window.pageInit = function () {
     var draftsBox = document.querySelector("[data-drafts]");
 
     function readDrafts() {
-      var box = store("local");
-      if (!box) return [];
+      var store = window.SFAuth.store("local");
+      if (!store) return [];
       try {
-        var parsed = JSON.parse(box.getItem(DRAFT_KEY) || "[]");
+        var parsed = JSON.parse(store.getItem(DRAFT_KEY) || "[]");
         return Object.prototype.toString.call(parsed) === "[object Array]" ? parsed : [];
       } catch (error) {
         return [];
@@ -259,12 +189,13 @@ window.pageInit = function () {
     }
 
     function writeDrafts(drafts) {
-      var box = store("local");
-      if (!box) return;
+      var store = window.SFAuth.store("local");
+      if (!store) return;
       try {
-        box.setItem(DRAFT_KEY, JSON.stringify(drafts));
+        store.setItem(DRAFT_KEY, JSON.stringify(drafts));
       } catch (error) {
-        formAlert.innerHTML = alertHTML("info", "The draft could not be saved on this computer, but the code below is still fine to use.");
+        formAlert.innerHTML = window.SFAuth.alertHTML("info",
+          "The draft could not be saved on this computer, but the code below is still fine to use.");
       }
     }
 
@@ -277,7 +208,7 @@ window.pageInit = function () {
 
     function renderDrafts() {
       var drafts = readDrafts();
-      if (!store("local")) {
+      if (!window.SFAuth.store("local")) {
         draftsBox.innerHTML = '<p class="hint">This browser will not let the site save drafts, so copy the code as soon as you make it.</p>';
         return;
       }
@@ -310,9 +241,8 @@ window.pageInit = function () {
 
       draftsBox.querySelectorAll("[data-draft-delete]").forEach(function (button) {
         button.addEventListener("click", function () {
-          var index = Number(button.getAttribute("data-draft-delete"));
           var drafts = readDrafts();
-          drafts.splice(index, 1);
+          drafts.splice(Number(button.getAttribute("data-draft-delete")), 1);
           writeDrafts(drafts);
           renderDrafts();
         });
@@ -324,7 +254,7 @@ window.pageInit = function () {
     /* ---------------- change the password ---------------- */
 
     unlockedBox.insertAdjacentHTML("beforeend",
-      '<div class="panel">' +
+      '<div class="panel" id="password">' +
         '<h2>Change your password</h2>' +
         '<p>Type a new password and this gives you one line to paste over the last line of ' +
           '<code>assets/js/studio-config.js</code>. The password itself is never saved anywhere.</p>' +
@@ -349,18 +279,18 @@ window.pageInit = function () {
       hashAlert.innerHTML = "";
       if (typed.length < 10) {
         hashOut.hidden = true;
-        hashAlert.innerHTML = alertHTML("bad", "Make it at least 10 characters long.");
+        hashAlert.innerHTML = window.SFAuth.alertHTML("bad", "Make it at least 10 characters long.");
         return;
       }
       hashOut.textContent = 'window.STUDIO_PASSWORD_SHA256 = "' + window.sha256Hex(typed) + '";';
       hashOut.hidden = false;
-      hashAlert.innerHTML = alertHTML("good",
+      hashAlert.innerHTML = window.SFAuth.alertHTML("good",
         "Paste that over the last line of <code>assets/js/studio-config.js</code>, save it, " +
         "and upload the file. Your new password works from then on.");
     });
-  }
 
-  /* already signed in from earlier in this browser session? */
-  var session = store("session");
-  show(!!(session && session.getItem(SESSION_KEY) === "yes"));
+    if (window.location.hash === "#password") {
+      document.getElementById("password").scrollIntoView({ block: "start" });
+    }
+  }
 };

@@ -13,23 +13,50 @@ just double-click `index.html` on your own computer too.
 
 | Page | What it does |
 | --- | --- |
-| `index.html` | Home page: fact of the day, this week's video, six featured experiments |
+| `index.html` | Home page: fact of the day, featured experiments, a taste of the facts |
 | `experiments.html` | Every experiment, with search and filters |
 | `experiment.html` | One experiment: video, safety, kit list, steps, the science |
 | `videos.html` | All your weekly videos, newest first |
-| `facts.html` | The Fact Vault |
+| `facts.html` | The Fact Vault - 135 facts, searchable |
 | `safety.html` | Safety rules, and a section for grown-ups |
-| `studio.html` | **Creator Studio** - password protected, where you add a video |
+| `desk.html` | **My video desk** - password protected, where you plan your videos |
+| `studio.html` | **Put a video on the site** - password protected, where you publish one |
 
-Everything a visitor sees is free and needs no account. Only the Creator
-Studio asks for a password.
+Everything a visitor sees is free and needs no account. Only your own two
+pages ask for a password, and they are reached from **My area** in the menu.
+
+**Anything to do with videos stays hidden until you publish your first one.**
+No empty video box on the home page, and no Videos link in the menu. The
+moment a video goes into `data/videos.js`, all of it appears on its own.
+
+---
+
+## Your own two pages
+
+Click **My area** in the menu and sign in once. You get two pages:
+
+**My video desk** (`desk.html`) is your workspace. Nobody else ever sees it.
+* Write down video ideas before you film them.
+* Each idea moves along as you go: Idea, Filming, Editing, Ready to go.
+* Every idea has a "What to film" checklist you can tick off while filming.
+* It suggests experiments that do not have a video yet, so you always know
+  what to do next.
+* It shows what is already up on the site.
+* When one is finished, press **Put it on the site** and it carries the
+  title, date and notes across to the next page for you.
+
+**Put a video on the site** (`studio.html`) is the publishing bit, below.
+
+Your desk is saved in your own browser, so it stays private. Clearing your
+browser data clears it, and it does not follow you to a different computer.
 
 ---
 
 ## Putting a new video up each week
 
 1. Upload your video to YouTube as normal and copy the link.
-2. Open **Creator Studio** on the site and sign in.
+2. Open **My area** on the site and sign in, then go to **Put a video on the
+   site** (or press **Put it on the site** on an idea at your desk).
 3. Fill in the title, paste the link, pick the date, and choose which
    experiment it goes with.
 4. Press **Make the code**. You get a small block of text.
@@ -62,9 +89,10 @@ The password that this site ships with is:
 ChangeMe2026
 ```
 
-**Change it before the site goes online.** Sign in, scroll to *Change your
-password* at the bottom of the Studio, type a new one, and it gives you a
-line to paste over the last line of `assets/js/studio-config.js`.
+**Change it before the site goes online.** Sign in, go to *Put a video on
+the site*, scroll to **Change your password** at the bottom, type a new one,
+and it gives you a line to paste over the last line of
+`assets/js/studio-config.js`.
 
 ### How safe is the password?
 
@@ -76,14 +104,14 @@ websites work can see that file, and could try to guess passwords against
 that fingerprint on their own computer, or simply edit their own copy of the
 page to skip the lock.
 
-What this lock is good for: keeping the Studio out of the way of visitors,
-and stopping a curious child clicking about and changing things.
+What this lock is good for: keeping your two pages out of the way of
+visitors, and stopping a curious child clicking about and changing things.
 
 What it is not: real security. So -
 * Do not reuse a password you use anywhere else.
 * Make it long. A few random words is better than one clever word.
-* Never put anything private in the Studio. It only builds text for you to
-  paste - nothing sensitive goes in there.
+* Never put anything private on your desk or in the publisher. They only
+  hold video plans - nothing sensitive goes in there.
 
 Nothing on the public part of the site can be changed by a visitor anyway.
 The only way to change what is published is to edit the files and upload
@@ -103,7 +131,9 @@ each line. Keep the commas and quote marks where they are.
 * `videoId` can be left as `""` - if a video in `data/videos.js` points at
   this experiment, the site links them up on its own.
 
-Adding a fact is the same, in `data/facts.js`.
+Adding a fact is the same, in `data/facts.js`. There are 135 in there
+already, across 13 topics. Invent a new topic and it appears in the topic
+menu on the Fact Vault by itself.
 
 ---
 
@@ -150,7 +180,9 @@ index.html, experiments.html, ...   the pages
 assets/css/style.css                all the styling, colours at the top
 assets/js/app.js                    shared bits: nav, fact of the day, cards
 assets/js/home.js                   one file per page
-assets/js/studio.js                 the Creator Studio
+assets/js/auth.js                   the sign-in for your two private pages
+assets/js/desk.js                   My video desk
+assets/js/studio.js                 putting a video on the site
 assets/js/studio-config.js          your password fingerprint - edit this
 assets/js/sha256.js                 does the password maths
 data/experiments.js                 the experiments      <- edit these

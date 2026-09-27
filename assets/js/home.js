@@ -12,8 +12,13 @@ window.pageInit = function () {
   setText("[data-stat-videos]", SF.videos.length);
   setText("[data-stat-facts]", SF.facts.length);
   setText("[data-count-experiments]", SF.experiments.length);
+  setText("[data-fact-total]", SF.facts.length);
 
-  /* latest video, or a friendly "coming soon" box */
+  /* Everything about videos stays hidden until the first one is published.
+     Add a video to data/videos.js and it all appears on its own. */
+  var videoBits = document.querySelectorAll("[data-video-only]");
+  for (var i = 0; i < videoBits.length; i++) videoBits[i].hidden = SF.videos.length === 0;
+
   var slot = document.querySelector("[data-latest-video]");
   var latest = SF.videos[0];
   if (slot && latest) {
@@ -34,17 +39,9 @@ window.pageInit = function () {
             : '<a class="btn btn-small" href="experiments.html">Browse experiments</a>') +
         '</div>' +
       '</div>';
-  } else if (slot) {
-    slot.innerHTML =
-      '<div class="empty-state">' +
-        '<div class="big">🎥</div>' +
-        '<h3>The first video is on its way</h3>' +
-        '<p>New videos land here every week. In the meantime, every experiment below has full written instructions.</p>' +
-        '<p><a class="btn btn-small" href="experiments.html">Start experimenting</a></p>' +
-      '</div>';
   }
 
-  /* six featured experiments: prefer ones with a video, then easy ones */
+  /* six featured experiments: ones with a video first, then the easy ones */
   var featured = SF.experiments.slice().sort(function (a, b) {
     var videoDiff = (SF.experimentVideoId(b) ? 1 : 0) - (SF.experimentVideoId(a) ? 1 : 0);
     if (videoDiff !== 0) return videoDiff;
@@ -52,6 +49,23 @@ window.pageInit = function () {
     return (order[a.difficulty] || 3) - (order[b.difficulty] || 3);
   }).slice(0, 6);
   SF.renderCards(document.querySelector("[data-featured]"), featured);
+
+  /* a handful of facts, reshuffled on request */
+  var tasterBox = document.querySelector("[data-fact-taster]");
+
+  function showTaster() {
+    if (!tasterBox) return;
+    var picked = SF.pickFacts(6);
+    tasterBox.innerHTML = picked.map(function (fact) {
+      return '<div class="panel" style="margin:0">' +
+        '<span class="tag">' + SF.esc(fact.topic) + '</span>' +
+        '<p style="margin:12px 0 0">' + SF.esc(fact.text) + '</p></div>';
+    }).join("");
+  }
+  showTaster();
+
+  var reshuffle = document.querySelector("[data-fact-reshuffle]");
+  if (reshuffle) reshuffle.addEventListener("click", showTaster);
 
   /* topic links */
   var topicBox = document.querySelector("[data-topic-links]");
