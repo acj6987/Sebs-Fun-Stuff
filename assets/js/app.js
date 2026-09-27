@@ -216,6 +216,23 @@
     }
   }
 
+  /* When the members' door is on, offer a way to shut it again on
+     this device - handy for checking what a visitor would see. */
+  function addLockLink() {
+    if (!window.SITE_LOCKED || !window.SFGate) return;
+    var strip = document.querySelector(".footer-bottom");
+    if (!strip) return;
+    var link = document.createElement("a");
+    link.href = "#";
+    link.textContent = "Lock this device out again";
+    link.style.cssText = "width:100%;font-size:.82rem;opacity:.75";
+    link.addEventListener("click", function (event) {
+      event.preventDefault();
+      window.SFGate.signOut();
+    });
+    strip.appendChild(link);
+  }
+
   function setYear() {
     var slots = document.querySelectorAll("[data-year]");
     for (var i = 0; i < slots.length; i++) slots[i].textContent = new Date().getFullYear();
@@ -225,6 +242,7 @@
     setupNav();
     markCurrentPage();
     tidyNav();
+    addLockLink();
     setYear();
     SF.mountFact(document.querySelector("[data-fact-card]"));
     if (typeof window.pageInit === "function") window.pageInit();

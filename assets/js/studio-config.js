@@ -1,21 +1,20 @@
 /* =============================================================
-   CREATOR STUDIO SETTINGS
+   PASSWORD SETTINGS
    -------------------------------------------------------------
-   The studio password is not written down anywhere. What is
-   stored below is a SHA-256 "fingerprint" of it, which cannot be
-   turned back into the password.
+   Your passwords are not written down anywhere on the website.
+   What is stored below is a SHA-256 "fingerprint" of each one,
+   which cannot be turned back into the password itself.
 
-   The password that goes with the fingerprint below is:
+   The password for putting videos on the site is:
 
-       ChangeMe2026
+       654321Seb
 
-   CHANGE IT. Sign in with it once, open the "Change your
-   password" box at the bottom of the studio, type a new
-   password, and it will give you a new line to paste over the
-   one below.
+   To change it: sign in, go to "Put a video on the site", use the
+   "Change your password" box at the bottom, and paste the line it
+   gives you over the line below.
 
-   Please read the "How safe is the password?" part of README.md
-   so you know what this lock does and does not do.
+   Please read "How safe is the password?" in README.md so you
+   know what this lock does and does not do.
    =============================================================*/
 
-window.STUDIO_PASSWORD_SHA256 = "9a121fc874029e54c9a5cdc28436af9787e1b2351bc8236a3f88b105b0c08f45";
+window.STUDIO_PASSWORD_SHA256 = "1a942ec5c9b88ec42e7bf3a929481c0f5d180a669d7b3d7bb3b7cd954e30fb2d";

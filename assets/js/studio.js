@@ -268,6 +268,21 @@ window.pageInit = function () {
         '</div>' +
         '<div data-hash-alert></div>' +
         '<div class="codeblock" data-hash-out hidden></div>' +
+      '</div>' +
+      '<div class="panel" id="members-password">' +
+        '<h2>Change the members\u2019 password</h2>' +
+        '<p>This is the one people type to get into the website at all. ' +
+          'Changing it gives you a line to paste over the last line of ' +
+          '<code>assets/js/site-config.js</code>, and everybody has to type the new one next time.</p>' +
+        '<div class="form-grid">' +
+          '<div class="field">' +
+            '<label for="new-member-password">New members\u2019 password</label>' +
+            '<input type="text" id="new-member-password" autocomplete="off" placeholder="at least 6 characters">' +
+          '</div>' +
+          '<div><button class="btn" type="button" data-make-member-hash>Make the new line</button></div>' +
+        '</div>' +
+        '<div data-member-alert></div>' +
+        '<div class="codeblock" data-member-out hidden></div>' +
       '</div>');
 
     var newPasswordEl = document.getElementById("new-password");
@@ -287,6 +302,24 @@ window.pageInit = function () {
       hashAlert.innerHTML = window.SFAuth.alertHTML("good",
         "Paste that over the last line of <code>assets/js/studio-config.js</code>, save it, " +
         "and upload the file. Your new password works from then on.");
+    });
+
+    var memberOut = document.querySelector("[data-member-out]");
+    var memberAlert = document.querySelector("[data-member-alert]");
+
+    document.querySelector("[data-make-member-hash]").addEventListener("click", function () {
+      var typed = document.getElementById("new-member-password").value.replace(/^\s+|\s+$/g, "");
+      memberAlert.innerHTML = "";
+      if (typed.length < 6) {
+        memberOut.hidden = true;
+        memberAlert.innerHTML = window.SFAuth.alertHTML("bad", "Make it at least 6 characters long.");
+        return;
+      }
+      memberOut.textContent = 'window.SITE_PASSWORD_SHA256 = "' + window.sha256Hex(typed) + '";';
+      memberOut.hidden = false;
+      memberAlert.innerHTML = window.SFAuth.alertHTML("good",
+        "Paste that over the last line of <code>assets/js/site-config.js</code>. " +
+        "Remember to tell your members the new password, including anyone already signed in.");
     });
 
     if (window.location.hash === "#password") {

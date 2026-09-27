@@ -22,12 +22,68 @@ just double-click `index.html` on your own computer too.
 | `desk.html` | **My video desk** - password protected, where you plan your videos |
 | `studio.html` | **Put a video on the site** - password protected, where you publish one |
 
-Everything a visitor sees is free and needs no account. Only your own two
-pages ask for a password, and they are reached from **My area** in the menu.
+The site is currently behind a members' password (see below), and your own
+two pages then ask for a second password of their own.
 
 **Anything to do with videos stays hidden until you publish your first one.**
 No empty video box on the home page, and no Videos link in the menu. The
 moment a video goes into `data/videos.js`, all of it appears on its own.
+
+---
+
+## The members' door
+
+The whole site is locked. Anyone who arrives, including from Google, has to
+type the members' password before they can see anything:
+
+```
+Seb1234
+```
+
+Give that to the people you want to let in. Once somebody types it, their
+browser remembers, so they only do it once on that device.
+
+**To let everybody in instead** (so the experiments and facts are free for
+anyone who finds you), open `assets/js/site-config.js` and change one word:
+
+```
+window.SITE_LOCKED = false;
+```
+
+**To change the members' password:** sign in, go to *Put a video on the
+site*, and use the **Change the members' password** box at the bottom. It
+gives you a line to paste over the last line of `assets/js/site-config.js`.
+Everyone then has to type the new one, including people already let in.
+
+There is a **Lock this device out again** link at the very bottom of every
+page, so you can check what a visitor sees.
+
+### Two different passwords
+
+| Password | What it opens | Who gets it |
+| --- | --- | --- |
+| `Seb1234` | The website itself | Your members |
+| `654321Seb` | My area: your desk and putting videos up | Only you |
+
+### What a password on a website like this really does
+
+Be realistic about it, because it matters here:
+
+* **It is a curtain, not a lock.** The pages, the experiments and the facts
+  are all still sitting in the files that get sent to the visitor's browser.
+  Somebody who knows how websites work can read them without ever typing the
+  password. It keeps ordinary visitors out. It does not keep a determined
+  person out.
+* **Everyone shares one password.** Real membership, where each person signs
+  up and gets their own password that you can switch off, needs a server and
+  a database. Plain files cannot do it. If you want that, sites like Netlify
+  Identity, Firebase, Memberstack, Wix or Squarespace do the accounts part
+  for you.
+* **Google cannot show people round.** Locking the site means search results
+  send people to a password box, so you will be handing the password out
+  yourself rather than being found.
+* **Do not reuse these passwords anywhere else**, and never put anything
+  private behind them.
 
 ---
 
@@ -83,16 +139,15 @@ but it is the honest answer to "can it just save it for me".
 
 ## Your password
 
-The password that this site ships with is:
+The password for putting videos on the site is:
 
 ```
-ChangeMe2026
+654321Seb
 ```
 
-**Change it before the site goes online.** Sign in, go to *Put a video on
-the site*, scroll to **Change your password** at the bottom, type a new one,
-and it gives you a line to paste over the last line of
-`assets/js/studio-config.js`.
+**To change it:** sign in, go to *Put a video on the site*, scroll to
+**Change your password** at the bottom, type a new one, and it gives you a
+line to paste over the last line of `assets/js/studio-config.js`.
 
 ### How safe is the password?
 
@@ -180,10 +235,12 @@ index.html, experiments.html, ...   the pages
 assets/css/style.css                all the styling, colours at the top
 assets/js/app.js                    shared bits: nav, fact of the day, cards
 assets/js/home.js                   one file per page
+assets/js/gate.js                   the members' door on the whole site
+assets/js/site-config.js            the members' password  <- edit this
 assets/js/auth.js                   the sign-in for your two private pages
 assets/js/desk.js                   My video desk
 assets/js/studio.js                 putting a video on the site
-assets/js/studio-config.js          your password fingerprint - edit this
+assets/js/studio-config.js          your own password  <- edit this
 assets/js/sha256.js                 does the password maths
 data/experiments.js                 the experiments      <- edit these
 data/facts.js                       the facts            <- edit these

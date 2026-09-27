@@ -79,6 +79,53 @@ a.sr-only:focus {
 :focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
 .site-header :focus-visible { outline-color: var(--lime); }
 
+/* ---------- members' door ---------- */
+
+/* while the door is shut, nothing of the site itself is drawn */
+html.sf-gate-locked body > *:not(.sf-gate) { display: none !important; }
+html.sf-gate-locked, html.sf-gate-locked body { background: var(--navy-deep); }
+
+.sf-gate {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; overflow: auto;
+  background: radial-gradient(120% 120% at 80% 0%, #2b2f78 0%, var(--navy) 45%, var(--navy-deep) 100%);
+}
+
+.sf-gate-card {
+  width: 100%; max-width: 440px;
+  background: var(--white); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); padding: 34px 30px;
+  border-top: 8px solid var(--lime); text-align: center;
+}
+.sf-gate-logo { width: 62px; height: 62px; margin: 0 auto 14px; display: block; }
+.sf-gate-card h1 { font-size: 1.9rem; margin-bottom: 10px; }
+.sf-gate-card h1 em { font-style: normal; color: #78a30f; }
+.sf-gate-card > p { color: var(--ink-soft); }
+.sf-gate-card form { text-align: left; margin-top: 20px; }
+.sf-gate-card .btn { width: 100%; margin-top: 18px; }
+
+.sf-gate-label {
+  display: block; font-size: .8rem; font-weight: bold;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-soft); margin-bottom: 6px;
+}
+.sf-gate-card input[type="password"],
+.sf-gate-card input[type="text"] {
+  width: 100%; font: inherit; padding: 12px 14px;
+  border: 2px solid var(--line); border-radius: var(--radius-sm);
+}
+.sf-gate-card input:focus { outline: 3px solid rgba(124,92,255,.35); border-color: var(--violet); }
+
+.sf-gate-show {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px; font-size: .95rem; color: var(--ink-soft); cursor: pointer;
+}
+.sf-gate-show input { width: 20px; height: 20px; flex: none; accent-color: var(--violet); }
+.sf-gate-caps { font-size: .9rem; color: #a52463; margin: 10px 0 0; }
+.sf-gate-foot { font-size: .86rem; color: var(--ink-soft); margin: 20px 0 0; }
+.sf-gate .alert { text-align: left; }
+
 /* ---------- header ---------- */
 
 .site-header {
