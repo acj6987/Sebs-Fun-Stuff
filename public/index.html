@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Seb's Fun Stuff</title>
+<meta name="description" content="A passcode-only hangout: message your friends, jump on a group call, and play games while you talk." />
+<meta name="theme-color" content="#14121f" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎈</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ───────────────── passcode gate ───────────────── -->
+<section id="gate" class="gate">
+  <div class="gate-card">
+    <h1 class="logo">Seb's <span>Fun Stuff</span></h1>
+    <p class="tagline">Type the secret passcode and you're in. Everyone who types the
+      <em>same</em> passcode ends up in the same room.</p>
+
+    <form id="gate-form" autocomplete="off">
+      <label for="name-input">Your name</label>
+      <input id="name-input" name="name" maxlength="20" placeholder="e.g. Seb" required />
+
+      <label for="code-input">Passcode</label>
+      <input id="code-input" name="code" maxlength="40" placeholder="e.g. tree-house" required
+             autocapitalize="off" spellcheck="false" />
+
+      <p id="gate-error" class="gate-error" role="alert" hidden></p>
+      <button type="submit" class="big-btn" id="gate-submit">Let me in →</button>
+    </form>
+
+    <ul class="gate-features">
+      <li>💬 Messages</li>
+      <li>📞 Group calls</li>
+      <li>🎮 Games while you talk</li>
+    </ul>
+    <p class="gate-hint">Tip: made-up passcodes work best. Share yours with friends
+      (and nobody else) so only they can get in.</p>
+  </div>
+</section>
+
+<!-- ───────────────── the hangout ───────────────── -->
+<main id="app" class="app" hidden>
+  <header class="topbar">
+    <span class="brand">🎈 Seb's Fun Stuff</span>
+    <button id="code-chip" class="chip" title="Copy the passcode so you can send it to a friend">
+      <span class="chip-label">passcode</span>
+      <span id="code-text">—</span>
+      <span class="chip-copy">copy</span>
+    </button>
+    <span class="spacer"></span>
+    <span id="me-name" class="me"></span>
+    <button id="leave-btn" class="ghost-btn">Leave</button>
+  </header>
+
+  <div class="layout">
+    <!-- people + call controls -->
+    <aside class="people" id="people-pane">
+      <h2>Who's here <span id="people-count" class="count">0</span></h2>
+      <ul id="people-list" class="people-list"></ul>
+
+      <div class="call-box">
+        <div id="call-status" class="call-status">Nobody is on the call yet.</div>
+        <button id="call-btn" class="big-btn call">📞 Join the call</button>
+        <div id="call-controls" class="call-controls" hidden>
+          <button id="mic-btn" class="pill" aria-pressed="true">🎤 Mic on</button>
+          <button id="cam-btn" class="pill" aria-pressed="false">📷 Camera off</button>
+          <button id="hangup-btn" class="pill danger">Hang up</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- stage + panel -->
+    <section class="main-pane">
+      <div id="stage" class="stage" hidden>
+        <div id="tiles" class="tiles"></div>
+        <p id="audio-hint" class="audio-hint" hidden>
+          Tap anywhere to let your friends' audio play 🔊
+        </p>
+      </div>
+
+      <div class="panel">
+        <nav class="tabs" role="tablist">
+          <button class="tab is-active" data-tab="chat" role="tab">💬 Chat</button>
+          <button class="tab" data-tab="games" role="tab">🎮 Games</button>
+          <button class="tab tab-people" data-tab="people" role="tab">👋 People</button>
+        </nav>
+
+        <!-- chat -->
+        <div class="tab-view is-active" data-view="chat">
+          <ol id="messages" class="messages" aria-live="polite"></ol>
+          <div id="typing" class="typing"></div>
+          <div class="reactions" id="reactions"></div>
+          <form id="chat-form" class="composer" autocomplete="off">
+            <input id="chat-input" maxlength="800" placeholder="Write a message…" />
+            <button class="send-btn" type="submit" aria-label="Send">➤</button>
+          </form>
+        </div>
+
+        <!-- games -->
+        <div class="tab-view" data-view="games">
+          <div id="game-banner" class="game-banner" hidden></div>
+          <div id="game-picker" class="game-picker"></div>
+          <div id="game-view" class="game-view"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="emoji-layer" class="emoji-layer" aria-hidden="true"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
