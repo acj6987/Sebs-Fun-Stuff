@@ -474,6 +474,17 @@ a.sr-only:focus {
 .draft-item .draft-title { font-weight: bold; }
 .draft-item small { color: var(--ink-soft); }
 
+/* the "show my password" tick box, which must not pick up the
+   shouty uppercase styling the other field labels use */
+.field label.show-pass {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 12px; cursor: pointer;
+  font-size: .95rem; font-weight: normal;
+  text-transform: none; letter-spacing: 0; color: var(--ink-soft);
+}
+.field label.show-pass input { width: 20px; height: 20px; flex: none; margin: 0; accent-color: var(--violet); }
+.field label.show-pass:hover { color: var(--ink); }
+
 /* ---------- private area tabs ---------- */
 
 .studio-tabs {

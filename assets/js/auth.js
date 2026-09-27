@@ -50,16 +50,38 @@
         '<form class="form-grid" data-login-form>' +
           '<div class="field">' +
             '<label for="studio-password">Password</label>' +
-            '<input type="password" id="studio-password" autocomplete="current-password" required>' +
+            '<input type="password" id="studio-password" autocomplete="current-password" ' +
+              'autocapitalize="off" autocorrect="off" spellcheck="false" required>' +
+            '<label class="show-pass">' +
+              '<input type="checkbox" data-show-password>' +
+              '<span>Show me what I am typing</span>' +
+            '</label>' +
+            '<p class="hint" data-caps hidden><strong>Caps Lock looks like it is on.</strong></p>' +
           '</div>' +
           '<div><button class="btn" type="submit">Unlock</button></div>' +
         '</form>' +
-        '<p class="hint">Forgotten it? See "Your password" in README.md in the website folder.</p>' +
+        (SFAuth.usingDefaultPassword()
+          ? '<p class="hint" style="margin-top:16px">This site still has the password it came with: ' +
+            '<code>ChangeMe2026</code> &mdash; capital C, capital M. Change it once you are in.</p>'
+          : '<p class="hint" style="margin-top:16px">Forgotten it? See "Your password" in README.md in the website folder.</p>') +
       '</div>';
 
     var form = lockedBox.querySelector("[data-login-form]");
     var alertBox = lockedBox.querySelector("[data-login-alert]");
     var input = lockedBox.querySelector("#studio-password");
+    var showBox = lockedBox.querySelector("[data-show-password]");
+    var capsNote = lockedBox.querySelector("[data-caps]");
+
+    showBox.addEventListener("change", function () {
+      input.type = showBox.checked ? "text" : "password";
+      input.focus();
+    });
+
+    /* Caps Lock is behind a lot of "it says my password is wrong". */
+    input.addEventListener("keyup", function (event) {
+      if (!event.getModifierState) return;
+      capsNote.hidden = !event.getModifierState("CapsLock");
+    });
 
     var tries = 0;
     var lockedUntil = 0;
@@ -68,6 +90,10 @@
     function show(signedIn) {
       lockedBox.hidden = signedIn;
       unlockedBox.hidden = !signedIn;
+
+      /* no point offering Sign out to someone who is not signed in */
+      var outButtons = document.querySelectorAll("[data-signout]");
+      for (var n = 0; n < outButtons.length; n++) outButtons[n].hidden = !signedIn;
       if (signedIn && !started) {
         started = true;
         if (SFAuth.usingDefaultPassword()) {
@@ -90,7 +116,8 @@
         return;
       }
 
-      var typed = input.value;
+      /* A space picked up while copying should not lock you out. */
+      var typed = input.value.replace(/^\s+|\s+$/g, "");
       if (!typed) return;
 
       if (window.sha256Hex(typed) === window.STUDIO_PASSWORD_SHA256) {
@@ -112,7 +139,9 @@
           "That is " + MAX_TRIES + " wrong tries. Locked for " + LOCK_SECONDS + " seconds.");
       } else {
         alertBox.innerHTML = SFAuth.alertHTML("bad",
-          "That is not the password. " + (MAX_TRIES - tries) + " tries left before a short lock.");
+          "<strong>That is not the password.</strong> " + (MAX_TRIES - tries) + " tries left before a short lock." +
+          '<br>Tick "Show me what I am typing" and check the capital letters - capitals and small letters count as different.' +
+          (SFAuth.usingDefaultPassword() ? " The starter password is <code>ChangeMe2026</code>." : ""));
       }
     });
 
