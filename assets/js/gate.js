@@ -124,7 +124,9 @@
         return;
       }
 
-      var typed = input.value.replace(/^\s+|\s+$/g, "");
+      /* Stray spaces and capital letters should not keep a member out:
+         phone keyboards add both without being asked. */
+      var typed = input.value.replace(/^\s+|\s+$/g, "").toLowerCase();
       if (!typed) return;
 
       if (window.sha256Hex(typed) === window.SITE_PASSWORD_SHA256) {

@@ -43,6 +43,11 @@ Seb1234
 Give that to the people you want to let in. Once somebody types it, their
 browser remembers, so they only do it once on that device.
 
+**Capital letters do not matter on this one.** `Seb1234`, `seb1234` and
+`SEB1234` all get people in, because phone keyboards change capitals by
+themselves and this door is only there to keep ordinary visitors out. Your
+own password, `654321Seb`, is the strict one: capitals must match.
+
 **To let everybody in instead** (so the experiments and facts are free for
 anyone who finds you), open `assets/js/site-config.js` and change one word:
 

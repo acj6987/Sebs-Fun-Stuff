@@ -8,7 +8,12 @@
 
        Seb1234
 
-   Give it to the people you want to let in.
+   Capital letters do not matter here, so seb1234 and SEB1234 get
+   people in too. That is on purpose: phone keyboards change
+   capitals by themselves, and this door is only meant to keep
+   ordinary visitors out.
+
+   Give the password to the people you want to let in.
 
    To let everybody in without a password (so that anyone finding
    you on Google can look round), change true to false below:
@@ -23,4 +28,5 @@
 
 window.SITE_LOCKED = true;
 
-window.SITE_PASSWORD_SHA256 = "a48be359538fcb380e86b7fcecb35e2105d4895c51775daaed3065ce2ed81be8";
+/* the fingerprint of the password in small letters */
+window.SITE_PASSWORD_SHA256 = "bb3a052bf85b9bde35321761a5180129b3a02e33d2f1def324dba6ad9754c588";

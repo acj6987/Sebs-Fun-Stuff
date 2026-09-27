@@ -273,7 +273,8 @@ window.pageInit = function () {
         '<h2>Change the members\u2019 password</h2>' +
         '<p>This is the one people type to get into the website at all. ' +
           'Changing it gives you a line to paste over the last line of ' +
-          '<code>assets/js/site-config.js</code>, and everybody has to type the new one next time.</p>' +
+          '<code>assets/js/site-config.js</code>, and everybody has to type the new one next time. ' +
+          'Capital letters do not matter on this one.</p>' +
         '<div class="form-grid">' +
           '<div class="field">' +
             '<label for="new-member-password">New members\u2019 password</label>' +
@@ -308,7 +309,8 @@ window.pageInit = function () {
     var memberAlert = document.querySelector("[data-member-alert]");
 
     document.querySelector("[data-make-member-hash]").addEventListener("click", function () {
-      var typed = document.getElementById("new-member-password").value.replace(/^\s+|\s+$/g, "");
+      /* stored in small letters, because the door ignores capitals */
+      var typed = document.getElementById("new-member-password").value.replace(/^\s+|\s+$/g, "").toLowerCase();
       memberAlert.innerHTML = "";
       if (typed.length < 6) {
         memberOut.hidden = true;
