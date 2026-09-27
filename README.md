@@ -35,8 +35,9 @@ To play with a friend on the same Wi-Fi, tell them your computer's address
 
 ## Putting it on the internet
 
-Any host that runs Node works (Render, Railway, Fly, a Raspberry Pi at home…).
-Two things to know:
+**[DEPLOY.md](DEPLOY.md) has click-by-click instructions** for getting a real
+`https://` link you can send to friends. Any host that runs Node works (Render,
+Railway, Fly, a Raspberry Pi at home…). Two things to know:
 
 1. **It has to be HTTPS.** Browsers only hand over the microphone and camera on
    `https://` pages (or on `localhost`). Most hosts give you HTTPS for free.

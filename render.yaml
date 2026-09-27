@@ -1,0 +1,15 @@
+# One-click deploy settings for Render (https://render.com).
+# Render reads this file when you create a Blueprint from the repo, so you
+# don't have to fill anything in by hand.
+services:
+  - type: web
+    name: sebs-fun-stuff
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      # Render sets PORT itself; the server already listens on it.
+      - key: NODE_VERSION
+        value: "22"
