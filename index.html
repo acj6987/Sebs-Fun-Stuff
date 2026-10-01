@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animal Care Club</title>
+<style>
+  :root { --bg:#eaf6ea; --card:#fff; --ink:#1e3324; --green:#2f8f4e; --muted:#5b6f60; --warn:#fff3e0; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Comic Sans MS","Trebuchet MS",system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  .lock { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .box { background:var(--card); padding:32px 24px; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,.12); text-align:center; max-width:380px; width:100%; }
+  .box h1 { margin:.2em 0; color:var(--green); }
+  .badge { display:inline-block; background:#1e3324; color:#fff; padding:4px 12px; border-radius:99px; font-size:.8rem; letter-spacing:2px; }
+  input[type=password] { font-size:1.6rem; letter-spacing:6px; text-align:center; width:100%; padding:12px; margin:16px 0 8px; border:3px solid var(--green); border-radius:12px; }
+  button { font:inherit; font-size:1.1rem; background:var(--green); color:#fff; border:0; padding:12px 24px; border-radius:12px; cursor:pointer; width:100%; }
+  .err { color:#c0392b; min-height:1.4em; }
+  header { background:var(--green); color:#fff; padding:20px 16px; text-align:center; position:relative; }
+  header h1 { margin:0; font-size:2rem; }
+  header .logout { position:absolute; right:12px; top:12px; width:auto; padding:6px 12px; font-size:.9rem; background:rgba(0,0,0,.25); }
+  main { max-width:820px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  .card { background:var(--card); border-radius:16px; padding:16px 20px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  .card h2 { margin-top:0; color:var(--green); }
+  .card.warn { background:var(--warn); }
+  table { border-collapse:collapse; width:100%; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid #e3ece4; vertical-align:top; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chips span { background:#e2f3e5; padding:6px 12px; border-radius:99px; }
+  .map { position:relative; height:260px; border-radius:12px; background:repeating-linear-gradient(45deg,#cfe8c6,#cfe8c6 12px,#c4e1b9 12px,#c4e1b9 24px); border:3px dashed var(--green); }
+  .spot { position:absolute; background:#fff; padding:6px 10px; border-radius:10px; font-size:.9rem; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+  .spot.secret { background:#1e3324; color:#fff; }
+  .small { color:var(--muted); font-size:.85rem; }
+  .score input { font:inherit; width:80px; padding:4px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="lock" id="lock">
+  <form class="box" id="form">
+    <div class="badge">🔒 TOP SECRET</div>
+    <h1>🐾 Animal Care Club</h1>
+    <p>Members only. Enter the secret password.</p>
+    <input type="password" id="pw" inputmode="numeric" autocomplete="off" placeholder="••• •••" autofocus>
+    <div class="err" id="err"></div>
+    <button type="submit">Unlock</button>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="badge">🔒 TOP SECRET</div>
+    <h1>🐾 Animal Care Club</h1>
+    <button class="logout" id="logout">Lock 🔒</button>
+  </header>
+  <main id="content"></main>
+</div>
+
+<script>
+const DATA = {"s":"c67sg7e2B8SxkydbiapRWg==","i":"Ljh3orQ4XxBcdMOb","c":"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"};
+const b = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+
+async function unlock(pw) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({name:'PBKDF2', salt:b(DATA.s), iterations:300000, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:b(DATA.i)}, key, b(DATA.c));
+  return new TextDecoder().decode(plain);
+}
+
+document.getElementById('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = document.getElementById('err');
+  const pw = document.getElementById('pw').value.replace(/\s/g, '');
+  err.textContent = 'Checking…';
+  try {
+    document.getElementById('content').innerHTML = await unlock(pw);
+    document.getElementById('lock').hidden = true;
+    document.getElementById('app').hidden = false;
+    err.textContent = '';
+    const score = document.getElementById('bugScore');
+    if (score) {
+      try { score.value = localStorage.getItem('bugScore') || 0; } catch (_) {}
+      score.addEventListener('input', () => { try { localStorage.setItem('bugScore', score.value); } catch (_) {} });
+    }
+  } catch (_) {
+    err.textContent = '❌ Wrong password! Access denied.';
+  }
+  document.getElementById('pw').value = '';
+});
+
+document.getElementById('logout').addEventListener('click', () => {
+  document.getElementById('content').innerHTML = '';
+  document.getElementById('app').hidden = true;
+  document.getElementById('lock').hidden = false;
+});
+</script>
+</body>
+</html>
