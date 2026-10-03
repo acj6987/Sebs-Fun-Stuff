@@ -1,0 +1,216 @@
+<title>Animal Care Club PB Videos</title>
+<style>
+  /* One column: header, add-video panel, then a grid of video cards */
+  :root { --bg:#eaf6ea; --card:#fff; --ink:#1e3324; --green:#2f8f4e; --muted:#5b6f60; --chip:#e2f3e5; --dark:#1e3324; --onDark:#fff; --line:#e3ece4; --err:#c0392b; --bee:#f6c431; --stripe:#2a2418; --wing:#dff1fb;
+    --display:"Comic Sans MS","Trebuchet MS",system-ui,sans-serif; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#121c15; --card:#1c2a20; --ink:#e3efe5; --green:#5cc07c; --muted:#9bb0a0; --chip:#25392b; --dark:#0b120d; --onDark:#e3efe5; --line:#2c3f31; --err:#ff7b6b; --wing:#bcd9e8; color-scheme:dark; } }
+  :root[data-theme="dark"] { --bg:#121c15; --card:#1c2a20; --ink:#e3efe5; --green:#5cc07c; --muted:#9bb0a0; --chip:#25392b; --dark:#0b120d; --onDark:#e3efe5; --line:#2c3f31; --err:#ff7b6b; --wing:#bcd9e8; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:var(--display); background:var(--bg); color:var(--ink); }
+  header { background:var(--green); color:var(--onDark); padding:20px 16px; text-align:center; }
+  header h1 { margin:0; font-size:1.9rem; text-wrap:balance; }
+  header p { margin:6px 0 0; }
+  .bee { width:70px; height:auto; display:block; margin:0 auto 4px; animation:buzz 2.4s ease-in-out infinite; }
+  @keyframes buzz { 0%,100% { transform:translate(0,0) rotate(-3deg); } 50% { transform:translate(6px,-6px) rotate(3deg); } }
+  @media (prefers-reduced-motion: reduce) { .bee { animation:none; } }
+  main { max-width:900px; margin:0 auto; padding-block:16px; padding-inline:16px; display:grid; gap:16px; }
+  .panel { background:var(--card); border-radius:16px; padding:16px 20px; box-shadow:0 2px 10px rgba(0,0,0,.06); display:grid; gap:10px; }
+  .panel h2 { margin:0; color:var(--green); }
+  button, .btn { font:inherit; font-size:1rem; background:var(--green); color:var(--onDark); border:0; padding:10px 18px; border-radius:12px; cursor:pointer; justify-self:start; }
+  button.ghost { background:var(--chip); color:var(--ink); }
+  button:focus-visible, input:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  button:disabled { opacity:.6; cursor:wait; }
+  input[type=password], input[type=text] { font:inherit; font-size:1.1rem; padding:10px 12px; border:3px solid var(--green); border-radius:12px; background:var(--card); color:var(--ink); width:100%; max-width:320px; }
+  input[type=file] { font:inherit; max-width:100%; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .msg { min-height:1.3em; color:var(--muted); }
+  .msg.bad { color:var(--err); }
+  .small { color:var(--muted); font-size:.85rem; margin:0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; }
+  .vid { background:var(--card); border-radius:16px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.06); display:grid; min-width:0; }
+  .vid video { width:100%; aspect-ratio:16/9; background:var(--dark); display:block; max-width:100%; }
+  .vid .info { padding:10px 14px 14px; display:grid; gap:4px; }
+  .vid h3 { margin:0; font-size:1.05rem; overflow-wrap:anywhere; }
+  .who { display:inline-block; background:var(--chip); padding:2px 10px; border-radius:99px; font-size:.85rem; justify-self:start; }
+  .vid .del { font-size:.85rem; padding:6px 12px; background:var(--chip); color:var(--err); }
+  .empty { text-align:center; padding:28px 16px; color:var(--muted); background:var(--card); border-radius:16px; border:3px dashed var(--line); }
+  [hidden] { display:none !important; }
+</style>
+
+<header>
+  <svg class="bee" viewBox="0 0 120 90" role="img" aria-label="A friendly bee">
+    <ellipse cx="50" cy="22" rx="20" ry="14" fill="var(--wing)" stroke="var(--stripe)" stroke-width="2"/>
+    <ellipse cx="74" cy="20" rx="17" ry="12" fill="var(--wing)" stroke="var(--stripe)" stroke-width="2"/>
+    <ellipse cx="60" cy="54" rx="38" ry="26" fill="var(--bee)" stroke="var(--stripe)" stroke-width="3"/>
+    <path d="M48 30 Q42 54 48 78 L60 80 Q54 54 60 28 Z M70 29 Q64 54 70 79 L80 76 Q75 54 80 32 Z" fill="var(--stripe)"/>
+    <path d="M22 54 L8 54" stroke="var(--stripe)" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="88" cy="48" r="5" fill="var(--stripe)"/><circle cx="90" cy="46" r="1.6" fill="var(--bee)"/>
+    <path d="M84 60 Q90 65 95 59" fill="none" stroke="var(--stripe)" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M86 30 Q90 16 98 12 M92 32 Q100 22 108 22" fill="none" stroke="var(--stripe)" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="98" cy="12" r="3" fill="var(--stripe)"/><circle cx="108" cy="22" r="3" fill="var(--stripe)"/>
+  </svg>
+  <h1>📺 Animal Care Club PB Videos</h1>
+  <p>Videos made by Seb and Danny</p>
+</header>
+
+<main>
+  <section class="panel" id="addPanel">
+    <h2>Add a video</h2>
+    <form id="codeForm" class="row">
+      <input type="password" id="vcode" inputmode="numeric" autocomplete="off" placeholder="Your video passcode" aria-label="Video passcode">
+      <button type="submit">Unlock adding videos</button>
+    </form>
+    <form id="upForm" hidden>
+      <div class="row"><strong id="hello"></strong></div>
+      <div class="row"><input type="text" id="vtitle" maxlength="80" placeholder="Video name, e.g. Bug look in Pre-Prep" aria-label="Video name"></div>
+      <div class="row"><input type="file" id="vfile" accept="video/mp4,video/webm" aria-label="Choose a video"></div>
+      <div class="row"><button type="submit" id="upBtn">Put video up</button><button type="button" class="ghost" id="doneBtn">Finish adding</button></div>
+      <p class="small">MP4 or WebM videos up to 20 MB (about 30 seconds on most phones).</p>
+    </form>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <section>
+    <div class="empty" id="status">Loading videos…</div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<script>
+function sha256(m) {
+  const K = [], H = [];
+  let n = 2, c = 0;
+  const f = x => ((x - (x | 0)) * 4294967296) | 0;
+  while (c < 64) { let p = true; for (let d = 2; d * d <= n; d++) if (n % d === 0) { p = false; break; }
+    if (p) { if (c < 8) H[c] = f(Math.sqrt(n)); K[c++] = f(Math.cbrt(n)); } n++; }
+  const l = m.length, w = new Uint8Array(((l + 72) >> 6) << 6);
+  w.set(m); w[l] = 128; const dv = new DataView(w.buffer); dv.setUint32(w.length - 4, l * 8);
+  const W = new Int32Array(64), r = (x, y) => (x >>> y) | (x << (32 - y));
+  for (let o = 0; o < w.length; o += 64) {
+    for (let i = 0; i < 64; i++) W[i] = i < 16 ? dv.getInt32(o + i * 4)
+      : (r(W[i-2],17) ^ r(W[i-2],19) ^ (W[i-2] >>> 10)) + W[i-7] + (r(W[i-15],7) ^ r(W[i-15],18) ^ (W[i-15] >>> 3)) + W[i-16] | 0;
+    let [a, b, cc, d, e, g, h, k] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = k + (r(e,6) ^ r(e,11) ^ r(e,25)) + ((e & g) ^ (~e & h)) + K[i] + W[i] | 0;
+      const t2 = (r(a,2) ^ r(a,13) ^ r(a,22)) + ((a & b) ^ (a & cc) ^ (b & cc)) | 0;
+      k = h; h = g; g = e; e = d + t1 | 0; d = cc; cc = b; b = a; a = t1 + t2 | 0;
+    }
+    [a, b, cc, d, e, g, h, k].forEach((v, i) => H[i] = H[i] + v | 0);
+  }
+  const out = new Uint8Array(32), ov = new DataView(out.buffer);
+  H.forEach((v, i) => ov.setInt32(i * 4, v)); return out;
+}
+function cat(a, b) { const o = new Uint8Array(a.length + b.length); o.set(a); o.set(b, a.length); return o; }
+function crypt(pw, salt, data) {
+  let key = cat(salt, new TextEncoder().encode(pw));
+  for (let i = 0; i < 20000; i++) key = sha256(cat(key, salt));
+  const out = new Uint8Array(data.length);
+  for (let i = 0; i < data.length; i += 32) {
+    const ks = sha256(cat(key, new Uint8Array([i >>> 24, i >>> 16 & 255, i >>> 8 & 255, i & 255])));
+    for (let j = 0; j < 32 && i + j < data.length; j++) out[i + j] = data[i + j] ^ ks[j];
+  }
+  return out;
+}
+
+const CODES = {"59aea716c18dc689c3d5049b57546b8543e966748afed2318b5a27e8840b5959":"Seb","a52f7b6c6b9d44c3fb3c2eb933cd595c5de43b65e3d3488eb73b50daf7485bcc":"Danny"};
+let who = null, db = null, assets = null;
+const $ = id => document.getElementById(id);
+function hex(u) { return Array.from(u, x => x.toString(16).padStart(2, '0')).join(''); }
+function say(text, bad) { $('msg').textContent = text; $('msg').classList.toggle('bad', !!bad); }
+
+$('codeForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const code = $('vcode').value.replace(/\D/g, '');
+  $('vcode').value = '';
+  const name = CODES[hex(sha256(new TextEncoder().encode('acc-videos:' + code)))];
+  if (!name) { say('That passcode is wrong.', true); return; }
+  if (!assets) { say('Hi ' + name + '! Videos can only be added from Seb\'s Claude account on this page.', true); return; }
+  who = name;
+  $('hello').textContent = 'Hi ' + name + '! Choose a video to put up.';
+  $('codeForm').hidden = true; $('upForm').hidden = false; say('');
+  render(lastDocs);
+});
+
+$('doneBtn').addEventListener('click', () => {
+  who = null; $('upForm').hidden = true; $('codeForm').hidden = false; say(''); render(lastDocs);
+});
+
+$('upForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const file = $('vfile').files[0];
+  if (!file) { say('Choose a video first.', true); return; }
+  const type = file.type || (/\.webm$/i.test(file.name) ? 'video/webm' : 'video/mp4');
+  if (type !== 'video/mp4' && type !== 'video/webm') { say('This kind of video can\'t go up. Try saving it as an MP4 video.', true); return; }
+  if (file.size > 20 * 1024 * 1024) { say('This video is too big. Use a video under 20 MB (try a shorter one).', true); return; }
+  $('upBtn').disabled = true; say('Putting the video up… this can take a minute.');
+  try {
+    const up = await assets.upload(file, { type });
+    await db.collection('videos').add({
+      asset: up.id,
+      title: $('vtitle').value.trim() || 'Club video',
+      by: who,
+      added: new Date().toISOString()
+    });
+    $('vtitle').value = ''; $('vfile').value = '';
+    say('Your video is up! 🎉');
+  } catch (err) {
+    const c = err && err.code;
+    say(c === 'too_large' ? 'This video is too big. Use a video under 20 MB.'
+      : c === 'unsupported_type' ? 'This kind of video can\'t go up. Try saving it as an MP4 video.'
+      : c === 'quota_or_state' || c === 'quota_exceeded' ? 'The video space is full. Delete an old video first.'
+      : c === 'rate_limited' ? 'Too many videos at once. Wait a minute and try again.'
+      : 'The video did not go up. Check your internet and try again.', true);
+  }
+  $('upBtn').disabled = false;
+});
+
+let lastDocs = [];
+function render(docs) {
+  lastDocs = docs;
+  const grid = $('grid');
+  grid.textContent = '';
+  $('status').hidden = docs.length > 0;
+  if (!docs.length) $('status').textContent = 'No videos yet. Seb or Danny can add the first one with their video passcode.';
+  docs.forEach(d => {
+    const v = d.data();
+    const card = document.createElement('article'); card.className = 'vid';
+    const video = document.createElement('video');
+    video.controls = true; video.preload = 'metadata'; video.playsInline = true;
+    video.src = '/_blob/' + v.asset;
+    const info = document.createElement('div'); info.className = 'info';
+    const h = document.createElement('h3'); h.textContent = v.title || 'Club video';
+    const tag = document.createElement('span'); tag.className = 'who';
+    const day = v.added ? new Date(v.added).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+    tag.textContent = 'By ' + (v.by || 'the club') + (day ? ' · ' + day : '');
+    info.append(h, tag);
+    if (who && assets) {
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'del';
+      del.textContent = 'Delete video';
+      let armed = false;
+      del.addEventListener('click', async () => {
+        if (!armed) { armed = true; del.textContent = 'Tap again to delete for good'; return; }
+        del.disabled = true;
+        try {
+          await db.collection('videos').doc(d.id).delete();
+          await assets.delete(v.asset).catch(() => {});
+          say('Video deleted.');
+        } catch (_) { del.disabled = false; say('The video could not be deleted. Try again.', true); }
+      });
+      info.append(del);
+    }
+    card.append(video, info);
+    grid.append(card);
+  });
+}
+
+(async () => {
+  const c = window.claude;
+  if (!c || !c.use) { $('status').textContent = 'Videos only work on the Animal Care Club PB page on Claude.'; return; }
+  [db, assets] = await Promise.all([c.use('db'), c.use('assets')]);
+  if (!db) { $('status').textContent = 'Sign in to Claude to watch the club videos.'; return; }
+  db.collection('videos').orderBy('added', 'desc').onSnapshot(
+    snap => render(snap.docs),
+    () => { $('status').hidden = false; $('status').textContent = 'The videos could not load. Refresh the page to try again.'; }
+  );
+})();
+</script>
