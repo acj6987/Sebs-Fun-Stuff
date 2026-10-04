@@ -34,6 +34,9 @@
   .who { display:inline-block; background:var(--chip); padding:2px 10px; border-radius:99px; font-size:.85rem; justify-self:start; }
   .vid .del { font-size:.85rem; padding:6px 12px; background:var(--chip); color:var(--err); }
   .empty { text-align:center; padding:28px 16px; color:var(--muted); background:var(--card); border-radius:16px; border:3px dashed var(--line); }
+  .pick { display:inline-block; }
+  .ghostlbl { background:var(--chip); color:var(--ink); }
+  .pick:focus-within { outline:3px solid var(--ink); outline-offset:2px; }
   [hidden] { display:none !important; }
 </style>
 
@@ -63,9 +66,13 @@
     <form id="upForm" hidden>
       <div class="row"><strong id="hello"></strong></div>
       <div class="row"><input type="text" id="vtitle" maxlength="80" placeholder="Video name, e.g. Bug look in Pre-Prep" aria-label="Video name"></div>
-      <div class="row"><input type="file" id="vfile" accept="video/mp4,video/webm" aria-label="Choose a video"></div>
+      <div class="row">
+        <label class="btn pick">🎥 Record a video now<input type="file" id="vrec" accept="video/*" capture="user" hidden></label>
+        <label class="btn pick ghostlbl">📁 Choose a video I already made<input type="file" id="vfile" accept="video/*" hidden></label>
+      </div>
+      <div class="row"><span id="picked" class="small">No video chosen yet.</span></div>
       <div class="row"><button type="submit" id="upBtn">Put video up</button><button type="button" class="ghost" id="doneBtn">Finish adding</button></div>
-      <p class="small">MP4 or WebM videos up to 20 MB (about 30 seconds on most phones).</p>
+      <p class="small">Keep videos short: under 20 MB, which is about 10 to 20 seconds on most phones.</p>
     </form>
     <div class="msg" id="msg"></div>
   </section>
@@ -135,13 +142,22 @@ $('doneBtn').addEventListener('click', () => {
   who = null; $('upForm').hidden = true; $('codeForm').hidden = false; say(''); render(lastDocs);
 });
 
+let chosen = null;
+['vrec', 'vfile'].forEach(id => $(id).addEventListener('change', e => {
+  chosen = e.target.files[0] || null;
+  $('picked').textContent = chosen ? 'Ready: ' + (chosen.name || 'your video') + ' (' + (chosen.size / 1048576).toFixed(1) + ' MB)' : 'No video chosen yet.';
+  if (chosen && chosen.size > 20 * 1024 * 1024) say('This video is too big. Record a shorter one, about 10 to 20 seconds.', true); else say('');
+}));
+
 $('upForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const file = $('vfile').files[0];
-  if (!file) { say('Choose a video first.', true); return; }
-  const type = file.type || (/\.webm$/i.test(file.name) ? 'video/webm' : 'video/mp4');
-  if (type !== 'video/mp4' && type !== 'video/webm') { say('This kind of video can\'t go up. Try saving it as an MP4 video.', true); return; }
-  if (file.size > 20 * 1024 * 1024) { say('This video is too big. Use a video under 20 MB (try a shorter one).', true); return; }
+  const file = chosen;
+  if (!file) { say('Record or choose a video first.', true); return; }
+  // iPhone and iPad videos are MOV files, which use the same container as MP4.
+  const isWebm = file.type === 'video/webm' || /\.webm$/i.test(file.name);
+  const type = isWebm ? 'video/webm' : 'video/mp4';
+  if (file.type && !file.type.startsWith('video/')) { say('That file is not a video. Choose a video instead.', true); return; }
+  if (file.size > 20 * 1024 * 1024) { say('This video is too big. Record a shorter one, about 10 to 20 seconds.', true); return; }
   $('upBtn').disabled = true; say('Putting the video up… this can take a minute.');
   try {
     const up = await assets.upload(file, { type });
@@ -151,7 +167,8 @@ $('upForm').addEventListener('submit', async e => {
       by: who,
       added: new Date().toISOString()
     });
-    $('vtitle').value = ''; $('vfile').value = '';
+    $('vtitle').value = ''; $('vfile').value = ''; $('vrec').value = ''; chosen = null;
+    $('picked').textContent = 'No video chosen yet.';
     say('Your video is up! 🎉');
   } catch (err) {
     const c = err && err.code;
@@ -159,7 +176,7 @@ $('upForm').addEventListener('submit', async e => {
       : c === 'unsupported_type' ? 'This kind of video can\'t go up. Try saving it as an MP4 video.'
       : c === 'quota_or_state' || c === 'quota_exceeded' ? 'The video space is full. Delete an old video first.'
       : c === 'rate_limited' ? 'Too many videos at once. Wait a minute and try again.'
-      : 'The video did not go up. Check your internet and try again.', true);
+      : 'The video did not go up. Check your internet and try again.' + (c ? ' (problem: ' + c + ')' : ''), true);
   }
   $('upBtn').disabled = false;
 });
