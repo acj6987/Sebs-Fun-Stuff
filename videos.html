@@ -37,6 +37,8 @@
   .pick { display:inline-block; }
   .ghostlbl { background:var(--chip); color:var(--ink); }
   .pick:focus-within { outline:3px solid var(--ink); outline-offset:2px; }
+  .load { aspect-ratio:16/9; background:var(--dark); display:flex; align-items:center; justify-content:center; padding:16px; max-width:100%; }
+  .load button { justify-self:center; }
   [hidden] { display:none !important; }
 </style>
 
@@ -72,7 +74,7 @@
       </div>
       <div class="row"><span id="picked" class="small">No video chosen yet.</span></div>
       <div class="row"><button type="submit" id="upBtn">Put video up</button><button type="button" class="ghost" id="doneBtn">Finish adding</button></div>
-      <p class="small">Keep videos short: under 20 MB, which is about 10 to 20 seconds on most phones.</p>
+      <p class="small">Videos can be up to about 10 minutes. Long videos go up in parts and can take several minutes, so keep this page open until it says your video is up.</p>
     </form>
     <div class="msg" id="msg"></div>
   </section>
@@ -142,44 +144,78 @@ $('doneBtn').addEventListener('click', () => {
   who = null; $('upForm').hidden = true; $('codeForm').hidden = false; say(''); render(lastDocs);
 });
 
+const MB = 1048576;
+const PART = 19 * MB;          // each stored part stays under the 20 MB limit
+const MAX_SIZE = 1500 * MB;    // about 10 minutes of phone video
+const mb = n => (n / MB).toFixed(n < 10 * MB ? 1 : 0) + ' MB';
+
 let chosen = null;
 ['vrec', 'vfile'].forEach(id => $(id).addEventListener('change', e => {
   chosen = e.target.files[0] || null;
-  $('picked').textContent = chosen ? 'Ready: ' + (chosen.name || 'your video') + ' (' + (chosen.size / 1048576).toFixed(1) + ' MB)' : 'No video chosen yet.';
-  if (chosen && chosen.size > 20 * 1024 * 1024) say('This video is too big. Record a shorter one, about 10 to 20 seconds.', true); else say('');
+  if (!chosen) { $('picked').textContent = 'No video chosen yet.'; say(''); return; }
+  const parts = Math.ceil(chosen.size / PART);
+  $('picked').textContent = 'Ready: ' + (chosen.name || 'your video') + ' (' + mb(chosen.size) + ')' +
+    (parts > 1 ? ' – this goes up in ' + parts + ' parts.' : '');
+  if (chosen.size > MAX_SIZE) say('This video is too big. Videos can be up to about 10 minutes (1.5 GB).', true); else say('');
 }));
+
+function uploadMessage(err) {
+  const c = err && err.code;
+  return c === 'too_large' ? 'A part of this video is too big to go up.'
+    : c === 'unsupported_type' ? 'This kind of video can\'t go up. Try saving it as an MP4 video.'
+    : c === 'quota_or_state' || c === 'quota_exceeded' || c === 'space' ? 'The video space is full. Delete an old video first.'
+    : c === 'rate_limited' ? 'Too many uploads at once. Wait a minute and try again.'
+    : 'The video did not go up. Check your internet and try again.' + (c ? ' (problem: ' + c + ')' : '');
+}
 
 $('upForm').addEventListener('submit', async e => {
   e.preventDefault();
   const file = chosen;
   if (!file) { say('Record or choose a video first.', true); return; }
+  if (file.type && !file.type.startsWith('video/')) { say('That file is not a video. Choose a video instead.', true); return; }
+  if (file.size > MAX_SIZE) { say('This video is too big. Videos can be up to about 10 minutes (1.5 GB).', true); return; }
   // iPhone and iPad videos are MOV files, which use the same container as MP4.
   const isWebm = file.type === 'video/webm' || /\.webm$/i.test(file.name);
   const type = isWebm ? 'video/webm' : 'video/mp4';
-  if (file.type && !file.type.startsWith('video/')) { say('That file is not a video. Choose a video instead.', true); return; }
-  if (file.size > 20 * 1024 * 1024) { say('This video is too big. Record a shorter one, about 10 to 20 seconds.', true); return; }
-  $('upBtn').disabled = true; say('Putting the video up… this can take a minute.');
+  const total = Math.ceil(file.size / PART);
+  const done = [];
+  $('upBtn').disabled = true;
   try {
-    const up = await assets.upload(file, { type });
-    await db.collection('videos').add({
-      asset: up.id,
-      title: $('vtitle').value.trim() || 'Club video',
-      by: who,
-      added: new Date().toISOString()
-    });
+    try {
+      const { usage } = await assets.list();
+      if (usage && usage.maxBytes && usage.bytes + file.size > usage.maxBytes) throw { code: 'space' };
+    } catch (err) { if (err && err.code === 'space') throw err; }
+    for (let i = 0; i < total; i++) {
+      say(total > 1 ? 'Putting part ' + (i + 1) + ' of ' + total + ' up… keep this page open.' : 'Putting the video up… this can take a minute.');
+      const piece = file.slice(i * PART, Math.min(file.size, (i + 1) * PART));
+      const up = await assets.upload(piece, { type });
+      done.push(up.id);
+    }
+    const row = { title: $('vtitle').value.trim() || 'Club video', by: who, added: new Date().toISOString(), type, size: file.size };
+    if (done.length === 1) row.asset = done[0]; else row.parts = done;
+    await db.collection('videos').add(row);
     $('vtitle').value = ''; $('vfile').value = ''; $('vrec').value = ''; chosen = null;
     $('picked').textContent = 'No video chosen yet.';
     say('Your video is up! 🎉');
   } catch (err) {
-    const c = err && err.code;
-    say(c === 'too_large' ? 'This video is too big. Use a video under 20 MB.'
-      : c === 'unsupported_type' ? 'This kind of video can\'t go up. Try saving it as an MP4 video.'
-      : c === 'quota_or_state' || c === 'quota_exceeded' ? 'The video space is full. Delete an old video first.'
-      : c === 'rate_limited' ? 'Too many videos at once. Wait a minute and try again.'
-      : 'The video did not go up. Check your internet and try again.' + (c ? ' (problem: ' + c + ')' : ''), true);
+    for (const id of done) await assets.delete(id).catch(() => {});
+    say(uploadMessage(err), true);
   }
   $('upBtn').disabled = false;
 });
+
+// Long videos are stored in parts; join them once per visit and reuse the result.
+const joined = new Map();
+async function joinParts(v, onStep) {
+  const blobs = [];
+  for (let i = 0; i < v.parts.length; i++) {
+    onStep(i + 1, v.parts.length);
+    const r = await fetch('/_blob/' + v.parts[i]);
+    if (!r.ok) throw new Error('missing part');
+    blobs.push(await r.blob());
+  }
+  return URL.createObjectURL(new Blob(blobs, { type: v.type || 'video/mp4' }));
+}
 
 let lastDocs = [];
 function render(docs) {
@@ -193,7 +229,26 @@ function render(docs) {
     const card = document.createElement('article'); card.className = 'vid';
     const video = document.createElement('video');
     video.controls = true; video.preload = 'metadata'; video.playsInline = true;
-    video.src = '/_blob/' + v.asset;
+    let media = video;
+    if (v.parts) {
+      if (joined.has(d.id)) video.src = joined.get(d.id);
+      else {
+        media = document.createElement('div'); media.className = 'load';
+        const btn = document.createElement('button'); btn.type = 'button';
+        btn.textContent = '▶ Load this long video (' + mb(v.size || 0) + ')';
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          try {
+            const url = await joinParts(v, (n, t) => { btn.textContent = 'Loading part ' + n + ' of ' + t + '…'; });
+            joined.set(d.id, url);
+            video.src = url; media.replaceWith(video); video.play().catch(() => {});
+          } catch (_) { btn.disabled = false; btn.textContent = 'The video did not load. Tap to try again.'; }
+        });
+        media.append(btn);
+      }
+    } else {
+      video.src = '/_blob/' + v.asset;
+    }
     const info = document.createElement('div'); info.className = 'info';
     const h = document.createElement('h3'); h.textContent = v.title || 'Club video';
     const tag = document.createElement('span'); tag.className = 'who';
@@ -209,13 +264,13 @@ function render(docs) {
         del.disabled = true;
         try {
           await db.collection('videos').doc(d.id).delete();
-          await assets.delete(v.asset).catch(() => {});
+          for (const id of (v.parts || [v.asset])) await assets.delete(id).catch(() => {});
           say('Video deleted.');
         } catch (_) { del.disabled = false; say('The video could not be deleted. Try again.', true); }
       });
       info.append(del);
     }
-    card.append(video, info);
+    card.append(media, info);
     grid.append(card);
   });
 }
