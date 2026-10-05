@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animal Care Club PB</title>
+<style>
+  :root { --bg:#eaf6ea; --card:#fff; --ink:#1e3324; --green:#2f8f4e; --muted:#5b6f60; --warn:#fff3e0; --chip:#e2f3e5; --dark:#1e3324; --onDark:#fff; --line:#e3ece4; --map1:#cfe8c6; --map2:#c4e1b9; --err:#c0392b; --bee:#f6c431; --stripe:#2a2418; --wing:#dff1fb; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#121c15; --card:#1c2a20; --ink:#e3efe5; --green:#5cc07c; --muted:#9bb0a0; --warn:#3a2e1c; --chip:#25392b; --dark:#0b120d; --onDark:#e3efe5; --line:#2c3f31; --map1:#22382a; --map2:#1d3124; --err:#ff7b6b; --wing:#bcd9e8; color-scheme:dark; } }
+  :root[data-theme="dark"] { --bg:#121c15; --card:#1c2a20; --ink:#e3efe5; --green:#5cc07c; --muted:#9bb0a0; --warn:#3a2e1c; --chip:#25392b; --dark:#0b120d; --onDark:#e3efe5; --line:#2c3f31; --map1:#22382a; --map2:#1d3124; --err:#ff7b6b; --wing:#bcd9e8; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Comic Sans MS","Trebuchet MS",system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  .lock { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .box { background:var(--card); padding:32px 24px; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,.12); text-align:center; max-width:380px; width:100%; }
+  .box h1 { margin:.2em 0; color:var(--green); }
+  .badge { display:inline-block; background:var(--dark); color:var(--onDark); padding:4px 12px; border-radius:99px; font-size:.8rem; letter-spacing:2px; }
+  input[type=password] { font-size:1.6rem; letter-spacing:6px; text-align:center; width:100%; padding:12px; margin:16px 0 8px; border:3px solid var(--green); border-radius:12px; background:var(--card); color:var(--ink); }
+  button { font:inherit; font-size:1.1rem; background:var(--green); color:#fff; border:0; padding:12px 24px; border-radius:12px; cursor:pointer; width:100%; }
+  .err { color:var(--err); min-height:1.4em; }
+  header { background:var(--green); color:#fff; padding:20px 16px; text-align:center; position:relative; }
+  header h1 { margin:0; font-size:2rem; }
+  header .logout { position:absolute; right:12px; top:12px; width:auto; padding:6px 12px; font-size:.9rem; background:rgba(0,0,0,.25); }
+  main { max-width:820px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  .card { background:var(--card); border-radius:16px; padding:16px 20px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  .card h2 { margin-top:0; color:var(--green); }
+  .card.warn { background:var(--warn); }
+  table { border-collapse:collapse; width:100%; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chips span { background:var(--chip); padding:6px 12px; border-radius:99px; }
+  .map { position:relative; height:380px; touch-action:none; border-radius:12px; background:repeating-linear-gradient(45deg,var(--map1),var(--map1) 12px,var(--map2) 12px,var(--map2) 24px); border:3px dashed var(--green); }
+  .spot { position:absolute; cursor:grab; user-select:none; white-space:nowrap; background:var(--card); color:var(--ink); padding:6px 10px; border-radius:10px; font-size:.9rem; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+  .spot.secret { background:var(--dark); color:var(--onDark); }
+  .small { color:var(--muted); font-size:.85rem; }
+  .score input { font:inherit; width:80px; padding:4px; }
+  .bee { width:110px; height:auto; display:block; margin:0 auto 8px; animation:buzz 2.4s ease-in-out infinite; }
+  .small-bee { width:70px; margin-bottom:4px; }
+  @keyframes buzz { 0%,100% { transform:translate(0,0) rotate(-3deg); } 50% { transform:translate(6px,-6px) rotate(3deg); } }
+  @media (prefers-reduced-motion: reduce) { .bee { animation:none; } }
+  .maplink { display:inline-block; margin-top:12px; background:var(--green); color:var(--onDark); padding:10px 16px; border-radius:12px; text-decoration:none; font-weight:bold; }
+  .maplink:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  .spot.dragging { cursor:grabbing; outline:3px solid var(--green); z-index:2; }
+  .reset { width:auto; margin-top:10px; font-size:.9rem; padding:8px 14px; background:var(--chip); color:var(--ink); }
+  .copy { user-select:all; background:var(--chip); padding:2px 6px; border-radius:6px; word-break:break-all; }
+  .tries { color:var(--muted); font-size:.9rem; min-height:1.2em; margin-bottom:8px; }
+  #lockedForm h1 { color:var(--err); font-size:1.5rem; }
+  #lockedForm input { font-size:1.2rem; letter-spacing:2px; text-align:center; width:100%; padding:12px; margin:16px 0 8px; border:3px solid var(--err); border-radius:12px; background:var(--card); color:var(--ink); }
+  .videos-link { display:block; margin-top:12px; padding:12px; border-radius:12px; border:3px solid var(--green); color:var(--green); text-decoration:none; font-weight:bold; }
+  .videos-link:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="lock" id="lock">
+  <form class="box" id="form">
+    <svg class="bee" viewBox="0 0 120 90" role="img" aria-label="A friendly bee">
+      <ellipse cx="50" cy="22" rx="20" ry="14" fill="var(--wing)" stroke="var(--stripe)" stroke-width="2"/>
+      <ellipse cx="74" cy="20" rx="17" ry="12" fill="var(--wing)" stroke="var(--stripe)" stroke-width="2"/>
+      <ellipse cx="60" cy="54" rx="38" ry="26" fill="var(--bee)" stroke="var(--stripe)" stroke-width="3"/>
+      <path d="M48 30 Q42 54 48 78 L60 80 Q54 54 60 28 Z M70 29 Q64 54 70 79 L80 76 Q75 54 80 32 Z" fill="var(--stripe)"/>
+      <path d="M22 54 L8 54" stroke="var(--stripe)" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="88" cy="48" r="5" fill="var(--stripe)"/><circle cx="90" cy="46" r="1.6" fill="var(--bee)"/>
+      <path d="M84 60 Q90 65 95 59" fill="none" stroke="var(--stripe)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M86 30 Q90 16 98 12 M92 32 Q100 22 108 22" fill="none" stroke="var(--stripe)" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="98" cy="12" r="3" fill="var(--stripe)"/><circle cx="108" cy="22" r="3" fill="var(--stripe)"/>
+    </svg>
+    <div class="badge">🔒 TOP SECRET</div>
+    <h1>🐾 Animal Care Club PB</h1>
+    <p>Members only. Enter the secret password.</p>
+    <input type="password" id="pw" inputmode="numeric" autocomplete="off" placeholder="••• •••" autofocus>
+    <div class="err" id="err"></div>
+    <div class="tries" id="tries"></div>
+    <button type="submit">Unlock</button>
+    <a class="videos-link" href="https://claude.ai/artifact/AYd5xC9YhbYRAbmGPmJ4WP" target="_blank" rel="noopener">📺 Watch the club videos</a>
+    <p class="small">The videos don't need the password and don't show any secrets. If the button doesn't open, copy this into the bar at the top of your browser:</p>
+    <p class="small"><span class="copy">claude.ai/artifact/AYd5xC9YhbYRAbmGPmJ4WP</span></p>
+  </form>
+  <form class="box" id="lockedForm" hidden>
+    <div class="badge">🚫 LOCKED</div>
+    <h1>Too many wrong tries</h1>
+    <p>This page is locked. Ask Seb for the unlock code, then type it here to get 6 more tries.</p>
+    <input type="password" id="unlockCode" autocomplete="off" placeholder="Unlock code">
+    <div class="err" id="lockErr"></div>
+    <button type="submit">Use unlock code</button>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <svg class="bee small-bee" viewBox="0 0 120 90" role="img" aria-label="A friendly bee">
+      <ellipse cx="50" cy="22" rx="20" ry="14" fill="var(--wing)" stroke="var(--stripe)" stroke-width="2"/>
+      <ellipse cx="74" cy="20" rx="17" ry="12" fill="var(--wing)" stroke="var(--stripe)" stroke-width="2"/>
+      <ellipse cx="60" cy="54" rx="38" ry="26" fill="var(--bee)" stroke="var(--stripe)" stroke-width="3"/>
+      <path d="M48 30 Q42 54 48 78 L60 80 Q54 54 60 28 Z M70 29 Q64 54 70 79 L80 76 Q75 54 80 32 Z" fill="var(--stripe)"/>
+      <path d="M22 54 L8 54" stroke="var(--stripe)" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="88" cy="48" r="5" fill="var(--stripe)"/><circle cx="90" cy="46" r="1.6" fill="var(--bee)"/>
+      <path d="M84 60 Q90 65 95 59" fill="none" stroke="var(--stripe)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M86 30 Q90 16 98 12 M92 32 Q100 22 108 22" fill="none" stroke="var(--stripe)" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="98" cy="12" r="3" fill="var(--stripe)"/><circle cx="108" cy="22" r="3" fill="var(--stripe)"/>
+    </svg>
+    <div class="badge">🔒 TOP SECRET</div>
+    <h1>🐾 Animal Care Club PB</h1>
+    <button class="logout" id="logout">Lock 🔒</button>
+  </header>
+  <main id="content"></main>
+</div>
+
+<script>
+const DATA = {"s":"oR4Jiy7lhNLgYnDBMXDP9A==","c":"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"};
+function sha256(m) {
+  const K = [], H = [];
+  let n = 2, c = 0;
+  const f = x => ((x - (x | 0)) * 4294967296) | 0;
+  while (c < 64) { let p = true; for (let d = 2; d * d <= n; d++) if (n % d === 0) { p = false; break; }
+    if (p) { if (c < 8) H[c] = f(Math.sqrt(n)); K[c++] = f(Math.cbrt(n)); } n++; }
+  const l = m.length, w = new Uint8Array(((l + 72) >> 6) << 6);
+  w.set(m); w[l] = 128; const dv = new DataView(w.buffer); dv.setUint32(w.length - 4, l * 8);
+  const W = new Int32Array(64), r = (x, y) => (x >>> y) | (x << (32 - y));
+  for (let o = 0; o < w.length; o += 64) {
+    for (let i = 0; i < 64; i++) W[i] = i < 16 ? dv.getInt32(o + i * 4)
+      : (r(W[i-2],17) ^ r(W[i-2],19) ^ (W[i-2] >>> 10)) + W[i-7] + (r(W[i-15],7) ^ r(W[i-15],18) ^ (W[i-15] >>> 3)) + W[i-16] | 0;
+    let [a, b, cc, d, e, g, h, k] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = k + (r(e,6) ^ r(e,11) ^ r(e,25)) + ((e & g) ^ (~e & h)) + K[i] + W[i] | 0;
+      const t2 = (r(a,2) ^ r(a,13) ^ r(a,22)) + ((a & b) ^ (a & cc) ^ (b & cc)) | 0;
+      k = h; h = g; g = e; e = d + t1 | 0; d = cc; cc = b; b = a; a = t1 + t2 | 0;
+    }
+    [a, b, cc, d, e, g, h, k].forEach((v, i) => H[i] = H[i] + v | 0);
+  }
+  const out = new Uint8Array(32), ov = new DataView(out.buffer);
+  H.forEach((v, i) => ov.setInt32(i * 4, v)); return out;
+}
+function cat(a, b) { const o = new Uint8Array(a.length + b.length); o.set(a); o.set(b, a.length); return o; }
+function crypt(pw, salt, data) {
+  let key = cat(salt, new TextEncoder().encode(pw));
+  for (let i = 0; i < 20000; i++) key = sha256(cat(key, salt));
+  const out = new Uint8Array(data.length);
+  for (let i = 0; i < data.length; i += 32) {
+    const ks = sha256(cat(key, new Uint8Array([i >>> 24, i >>> 16 & 255, i >>> 8 & 255, i & 255])));
+    for (let j = 0; j < 32 && i + j < data.length; j++) out[i + j] = data[i + j] ^ ks[j];
+  }
+  return out;
+}
+
+const b = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+function unlock(pw) {
+  const out = new TextDecoder().decode(crypt(pw, b(DATA.s), b(DATA.c)));
+  if (!out.startsWith('ACC:')) throw new Error('wrong');
+  return out.slice(4);
+}
+
+const UNLOCK = {"s":"a566444445382d54","h":"62b1fbc399569ce06435ee1c07002963559ba98f6346122fa29f88adcea318b9"};
+const mem = {};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : Number(v); } catch (_) { return k in mem ? mem[k] : d; } },
+  set(k, v) { mem[k] = v; try { localStorage.setItem(k, v); } catch (_) {} }
+};
+function hex(u) { return Array.from(u, x => x.toString(16).padStart(2, '0')).join(''); }
+function showTries() {
+  const left = store.get('allowed', 2) - store.get('wrong', 0);
+  const locked = left <= 0;
+  document.getElementById('form').hidden = locked;
+  document.getElementById('lockedForm').hidden = !locked;
+  document.getElementById('tries').textContent = store.get('wrong', 0) > 0 ? 'Tries left: ' + left : '';
+}
+showTries();
+
+document.getElementById('lockedForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const code = document.getElementById('unlockCode').value.trim().toUpperCase();
+  document.getElementById('unlockCode').value = '';
+  if (hex(sha256(new TextEncoder().encode(UNLOCK.s + code))) === UNLOCK.h) {
+    store.set('allowed', store.get('wrong', 0) + 6);
+    document.getElementById('lockErr').textContent = '';
+    document.getElementById('err').textContent = 'You have 6 more tries.';
+    showTries();
+  } else {
+    document.getElementById('lockErr').textContent = 'That unlock code is wrong. Ask Seb for the right one.';
+  }
+});
+
+document.getElementById('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = document.getElementById('err');
+  const pw = document.getElementById('pw').value.replace(/\D/g, '');
+  err.textContent = 'Checking…';
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    document.getElementById('content').innerHTML = unlock(pw);
+    document.getElementById('lock').hidden = true;
+    document.getElementById('app').hidden = false;
+    err.textContent = '';
+    store.set('wrong', 0); store.set('allowed', 2); showTries();
+    initMap();
+    const score = document.getElementById('bugScore');
+    if (score) {
+      try { score.value = localStorage.getItem('bugScore') || 0; } catch (_) {}
+      score.addEventListener('input', () => { try { localStorage.setItem('bugScore', score.value); } catch (_) {} });
+    }
+  } catch (e) {
+    store.set('wrong', store.get('wrong', 0) + 1);
+    err.textContent = '❌ Wrong password! Access denied.';
+    showTries();
+  }
+  document.getElementById('pw').value = '';
+});
+
+function initMap() {
+  const map = document.getElementById('map');
+  if (!map) return;
+  const start = {};
+  map.querySelectorAll('.spot').forEach(el => {
+    start[el.dataset.id] = [el.style.left, el.style.top];
+    try { const p = JSON.parse(localStorage.getItem('spot-' + el.dataset.id)); if (p) { el.style.left = p[0]; el.style.top = p[1]; } } catch (_) {}
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('dragging');
+      const r = map.getBoundingClientRect(), er = el.getBoundingClientRect();
+      const dx = e.clientX - er.left, dy = e.clientY - er.top;
+      const move = ev => {
+        const x = Math.min(Math.max(ev.clientX - r.left - dx, 0), r.width - er.width);
+        const y = Math.min(Math.max(ev.clientY - r.top - dy, 0), r.height - er.height);
+        el.style.left = (x / r.width * 100).toFixed(1) + '%'; el.style.top = (y / r.height * 100).toFixed(1) + '%';
+      };
+      const up = () => {
+        el.classList.remove('dragging'); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up);
+        try { localStorage.setItem('spot-' + el.dataset.id, JSON.stringify([el.style.left, el.style.top])); } catch (_) {}
+      };
+      el.addEventListener('pointermove', move); el.addEventListener('pointerup', up);
+    });
+  });
+  document.getElementById('resetMap').addEventListener('click', () => {
+    map.querySelectorAll('.spot').forEach(el => {
+      [el.style.left, el.style.top] = start[el.dataset.id];
+      try { localStorage.removeItem('spot-' + el.dataset.id); } catch (_) {}
+    });
+  });
+}
+
+document.getElementById('logout').addEventListener('click', () => {
+  document.getElementById('content').innerHTML = '';
+  document.getElementById('app').hidden = true;
+  document.getElementById('lock').hidden = false;
+});
+</script>
+</body>
+</html>
