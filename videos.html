@@ -39,6 +39,10 @@
   .pick:focus-within { outline:3px solid var(--ink); outline-offset:2px; }
   .load { aspect-ratio:16/9; background:var(--dark); display:flex; align-items:center; justify-content:center; padding:16px; max-width:100%; }
   .load button { justify-self:center; }
+  .secrets-link { display:inline-block; margin-top:12px; background:var(--card); color:var(--green); padding:10px 18px; border-radius:12px; text-decoration:none; font-weight:bold; }
+  .secrets-link:focus-visible { outline:3px solid var(--onDark); outline-offset:2px; }
+  header .addr { font-size:.8rem; opacity:.9; margin-top:8px; }
+  .copy { user-select:all; background:var(--card); color:var(--ink); padding:2px 6px; border-radius:6px; word-break:break-all; }
   [hidden] { display:none !important; }
 </style>
 
@@ -56,6 +60,8 @@
   </svg>
   <h1>📺 Animal Care Club PB Videos</h1>
   <p>Videos made by Seb and Danny</p>
+  <a class="secrets-link" href="https://claude.ai/artifact/SsgmMAS9xdVdYw668AxoNH" target="_blank" rel="noopener">🔒 Go to the club secrets</a>
+  <p class="addr">If the button doesn't open, copy this into the bar at the top of your browser: <span class="copy">claude.ai/artifact/SsgmMAS9xdVdYw668AxoNH</span></p>
 </header>
 
 <main>
