@@ -11,8 +11,9 @@
     --accent: #ff6b6b; --accent2: #4ecdc4; --shadow: 0 6px 20px rgba(43,33,64,.12);
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #1b1726; --card: #2a2438; --text: #f4efff; --muted: #b5abc9; --shadow: 0 6px 20px rgba(0,0,0,.4); }
+    :root:not([data-theme="light"]) { --bg: #1b1726; --card: #2a2438; --text: #f4efff; --muted: #b5abc9; --shadow: 0 6px 20px rgba(0,0,0,.4); }
   }
+  :root[data-theme="dark"] { --bg: #1b1726; --card: #2a2438; --text: #f4efff; --muted: #b5abc9; --shadow: 0 6px 20px rgba(0,0,0,.4); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font-family: "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif; }
