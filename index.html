@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Seb's Fun Stuff</title>
+<style>
+  :root {
+    --bg: #fff8ec; --card: #ffffff; --text: #2b2140; --muted: #6d6480;
+    --accent: #ff6b6b; --accent2: #4ecdc4; --shadow: 0 6px 20px rgba(43,33,64,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1b1726; --card: #2a2438; --text: #f4efff; --muted: #b5abc9; --shadow: 0 6px 20px rgba(0,0,0,.4); }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif; }
+  header { text-align: center; padding: 32px 16px 8px; }
+  h1 { font-size: clamp(2rem, 7vw, 3.2rem); margin: 0; color: var(--accent); }
+  header p { color: var(--muted); font-size: 1.1rem; margin: 8px 0 0; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px;
+         display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+  .card video { width: 100%; display: block; background: #000; aspect-ratio: 16/9; }
+  .card .info { padding: 12px 16px 16px; }
+  .card h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  .card .date { color: var(--accent2); font-weight: bold; font-size: .9rem; }
+  .card p { margin: 6px 0 0; color: var(--muted); }
+  .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: 1.2rem; padding: 40px 0; }
+  footer { text-align: center; color: var(--muted); padding: 24px 16px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎬 Seb's Fun Stuff</h1>
+  <p>Videos for Mum and Dad ❤️</p>
+</header>
+<main id="videos"></main>
+<footer>Made by Seb</footer>
+<script src="videos.js"></script>
+<script>
+  const list = document.getElementById('videos');
+  const items = (window.VIDEOS || []).slice().reverse(); // newest first
+  if (!items.length) {
+    list.innerHTML = '<div class="empty">No videos yet — check back soon! 📹</div>';
+  }
+  for (const v of items) {
+    const card = document.createElement('article');
+    card.className = 'card';
+    const video = document.createElement('video');
+    video.src = 'videos/' + v.file;
+    video.controls = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+    const info = document.createElement('div');
+    info.className = 'info';
+    const h2 = document.createElement('h2'); h2.textContent = v.title || v.file;
+    info.append(h2);
+    if (v.date) { const d = document.createElement('div'); d.className = 'date'; d.textContent = v.date; info.append(d); }
+    if (v.note) { const p = document.createElement('p'); p.textContent = v.note; info.append(p); }
+    card.append(video, info);
+    list.append(card);
+  }
+</script>
+</body>
+</html>
