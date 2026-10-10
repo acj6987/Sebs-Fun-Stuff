@@ -4,6 +4,11 @@ A little hangout website for you and your friends. You pick a secret passcode,
 give it to your mates, and everyone who types it in lands in the same room —
 where you can send messages, jump on a group call, and play games while you talk.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/acj6987/Sebs-Fun-Stuff&branch=claude/funny-pasteur-3okvv8)
+
+Press that button to put it online and get a link you can send to friends —
+[DEPLOY.md](DEPLOY.md) walks through what you'll see.
+
 ## What's inside
 
 - **A passcode door.** The passcode *is* the room. Type `tree-house` and so do

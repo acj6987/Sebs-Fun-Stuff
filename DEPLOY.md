@@ -6,6 +6,14 @@ This guide uses **Render**, which has a free plan and takes about ten minutes.
 When you're done you'll have a link like `https://sebs-fun-stuff.onrender.com`
 that you can send to your friends, along with your passcode.
 
+## The quick way
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/acj6987/Sebs-Fun-Stuff&branch=claude/funny-pasteur-3okvv8)
+
+Press the button, sign in with GitHub, and let Render do the rest. If it asks
+which repository it may see, choose **Sebs-Fun-Stuff**. Prefer doing it by hand?
+The steps below are the same thing, slower.
+
 ## Step by step
 
 1. Go to **<https://render.com>** and click **Get Started** — sign in with your
