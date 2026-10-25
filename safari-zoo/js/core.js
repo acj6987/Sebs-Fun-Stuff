@@ -20,7 +20,7 @@ const HAB={
   polar:{name:'Polar Ice',c:'#d6eef9',i:'🧊'},
   dino:{name:'Dino Zone',c:'#5a7a3a',i:'🦕'},
   carnivore:{name:'Carnivore Dino Zone',c:'#7a3a2a',i:'🦖'},
-  ocean:{name:'Ocean',c:'#2a9ad0',i:'🐠'},
+  ocean:{name:'Deep Blue Sea',c:'#2a9ad0',i:'🐠'},
   dream:{name:'Mummy Dream',c:'#ff7ac0',i:'💖'},
 };
 // how each habitat looks in 3D
@@ -126,7 +126,7 @@ const CONT=[
 ];
 // the sea: islands, loads of fish, and the one and only Sparkle Zebraffe
 const FISHES=['Clownfish','Blue Tang','Yellow Tang','Angelfish','Pufferfish'];
-CONT.push({id:'ocean',name:'Ocean Islands',place:'Tropical sea with islands',hab:'ocean',sea:1,deco:['🏝️','🐠','✨'],
+CONT.push({id:'ocean',name:'🌊 Deep Blue Sea',place:'Deep blue sea with islands',hab:'ocean',sea:1,deco:['🏝️','🐠','✨'],
   animals:[
    ['Clownfish','🐠',1,1.6,{swim:1,herd:[4,6],sz:2,plan:'fish',s:.5,tall:.42,wide:.17,col:'#ff7a12',tex:'stripes',col2:'#ffffff',freq:6,thin:.6,noBelly:1,fin:'#ff8a2a'}],
    ['Blue Tang','🐟',1,1.8,{swim:1,herd:[5,8],sz:2,plan:'fish',s:.55,tall:.5,wide:.15,col:'#2a5fe0',tex:'spots',col2:'#0e1a40',noBelly:1,fin:'#ffd23a'}],
@@ -142,7 +142,7 @@ CONT.push({id:'ocean',name:'Ocean Islands',place:'Tropical sea with islands',hab
   ]});
 // the Mummy Dreams: only two in the whole world, a girl and a boy who always stay together
 {const girl=CONT.at(-1).animals[10];CONT.at(-1).animals.push(['Mummy Dream (boy)','💙',3,2,Object.assign({},girl[4],{female:0,male:1,mate:'ocean:10',top:'#2f6fe0',nails:['#2fd1ff','#2f6fe0'],tuftCol:'#2f8fff',mane:'#ff3d9a'})])}
-const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=1000000;
+const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=2000000;
 function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.areas.some(a=>a.animals.some(x=>x.k===k))}
 const SP={};
 ENV.carnivore=ENV.dino;
@@ -173,7 +173,7 @@ function toast(m,ms=2800){const t=$('#toast');t.textContent=m;t.hidden=false;cle
 function checkDream(){
   if(S.dreamBonus||!DREAM.every(owns))return;
   S.dreamBonus=1;S.coins+=DREAM_PRIZE;S.freeDomes=(S.freeDomes||0)+60;save();coins();
-  toast('💖💙 YOU CAUGHT BOTH MUMMY DREAMS! You win 1,000,000 coins, 60 free domes, a giant Mummy Dream Dome where they can have babies, and 6 million visitors are coming to your zoo!',12000)}
+  toast('💖💙 YOU CAUGHT BOTH MUMMY DREAMS! You win 2,000,000 coins (1 million for each!), 60 free domes, a giant Mummy Dream Dome where they can have babies, and 6 million visitors are coming to your zoo!',12000)}
 function smallUsed(){return S.cages.filter(c=>c.pen==null).length}
 function pensUsed(){return new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen)).size}
 function coins(){document.querySelectorAll('.coinTxt').forEach(e=>e.textContent='🪙 '+S.coins);const c=$('#cagesTxt');if(c)c.textContent='🧺 '+smallUsed()+'/'+CAGES+' cages · '+pensUsed()+'/'+PENS+' pens'}
