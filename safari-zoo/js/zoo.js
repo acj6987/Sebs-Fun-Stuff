@@ -1,11 +1,18 @@
 // Your zoo in 3D: big glass domes you can drive into, paths, lamps and signs, with your animals living inside.
 const ZOO_ENV={zen:'#4a88d0',hor:'#e2ecf0',fog:'#d3e0e6',ground:'#5f8a3c',patch:'#4c7530',rock:'#7a7c78',water:'#3f7896',grass:['#3a6a22','#8cbc54'],grassH:.32,grassN:70000,sunEl:.75};
-const SLOT=78,COLS=4,DOME=30,DOOR=.24; // DOOR: half-width of the doorway, in radians around the dome
-const zoo={scene:null,running:false,areas:new Map(),animals:[],grounds:[],waters:[],cols:[],cam:{yaw:.5,pitch:.72,dist:190,tx:0,tz:-80,w:{yaw:.5,pitch:.72,dist:190,tx:0,tz:-80}},sel:null,mask:null};
-function slotXZ(i){const r=Math.floor(i/COLS),c=i%COLS;return{x:(c-(COLS-1)/2)*SLOT,z:-52-r*SLOT}}
-function zooRows(){return Math.ceil((S.areas.length+1)/COLS)}
-const ZTOP=-52+SLOT/2,PATH_X=[-2,-1,0,1,2].map(i=>i*SLOT);
-function zooBottom(){return-52-(zooRows()-1)*SLOT-SLOT/2}
+// ginormous domes so every animal can be its real size; the Dino Zone dome is the biggest of all
+const ROAD=7,GAP=24,MASK={x0:-1400,z0:-2700,size:2800};
+function domeR(hab){return hab==='dino'?100:50}
+const doorAng=R=>9/R; // half-width of the doorway, in radians around the dome
+const zoo={scene:null,running:false,areas:new Map(),animals:[],grounds:[],waters:[],cols:[],cam:{yaw:.5,pitch:.7,dist:330,tx:0,tz:-160,w:{yaw:.5,pitch:.7,dist:330,tx:0,tz:-160}},sel:null,mask:null};
+// domes line both sides of one long road that starts at the gate
+function zooLayout(){
+  const zs=[-16,-16],list=[];
+  const place=(R,i)=>{const k=i%2,side=k?1:-1,z=zs[k]-R;zs[k]=z-R-GAP;return{x:side*(R+ROAD+10),z,R,side}};
+  S.areas.forEach((a,i)=>list.push(place(domeR(a.hab),i)));
+  const next=place(50,S.areas.length);
+  return{list,next,end:Math.min(zs[0],zs[1])-20};
+}
 
 function signTexture(lines,bg='#4a3020',fg='#fdf3dc'){
   const [c,g]=NATURE.canvas(512,160);g.fillStyle=bg;g.fillRect(0,0,512,160);
@@ -26,20 +33,21 @@ function pavingTexture(){
 function buildZoo(){
   const scene=new T.Scene();zoo.scene=scene;
   zoo.sky=NATURE.setupSky(R,scene,ZOO_ENV,{fogNear:240,fogFar:1100,az:2.2});
-  const gt=NATURE.groundTextures('woodland'),map=gt.map.clone(),nm=gt.normal.clone();map.needsUpdate=nm.needsUpdate=true;map.repeat.set(240,240);nm.repeat.set(240,240);
-  const gg=new T.PlaneGeometry(1800,1800,90,90);gg.rotateX(-Math.PI/2);
+  const gt=NATURE.groundTextures('woodland'),map=gt.map.clone(),nm=gt.normal.clone();map.needsUpdate=nm.needsUpdate=true;map.repeat.set(430,430);nm.repeat.set(430,430);
+  const gg=new T.PlaneGeometry(3200,3200,100,100);gg.rotateX(-Math.PI/2);gg.translate(0,0,-1200);
   const pc=gg.attributes.position,col=new Float32Array(pc.count*3),a=new T.Color(ZOO_ENV.ground),b=new T.Color(ZOO_ENV.patch),t=new T.Color();
   for(let i=0;i<pc.count;i++){t.copy(a).lerp(b,MESHER.fbm(pc.getX(i)*.02,0,pc.getZ(i)*.02));col.set([t.r*1.2,t.g*1.2,t.b*1.2],i*3)}
   gg.setAttribute('color',new T.BufferAttribute(col,3));
   const ground=new T.Mesh(gg,new T.MeshStandardMaterial({vertexColors:true,map,normalMap:nm,roughness:1}));ground.receiveShadow=true;scene.add(ground);
   // grass everywhere except on paths and inside the domes
   const [mc,mg]=NATURE.canvas(1024);zoo.mask={c:mc,g:mg,tex:NATURE.toTex(mc,false)};zoo.mask.tex.wrapS=zoo.mask.tex.wrapT=T.ClampToEdgeWrapping;
-  zoo.grass=NATURE.makeGrass(ZOO_ENV,[],{flat:1,tile:120,maskTex:zoo.mask.tex,maskRect:new T.Vector3(-450,-750,900)});scene.add(zoo.grass);
+  zoo.grass=NATURE.makeGrass(ZOO_ENV,[],{flat:1,tile:120,maskTex:zoo.mask.tex,maskRect:new T.Vector3(MASK.x0,MASK.z0,MASK.size)});scene.add(zoo.grass);
   zoo.paths=new T.Group();scene.add(zoo.paths);
   // woods around the zoo, leaving room for lots more domes
   const types=NATURE.treeTypes('woodland'),r=rng(5);
-  zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1100*QUALITY.trees),rr=>{const x=(rr()-.5)*800,z=(rr()-.5)*900-300;
-    const inside=Math.abs(x)<SLOT*2+30&&z<45&&z>-52-6*SLOT-60;return inside?null:V(x,0,z)},r));
+  zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
+    return Math.abs(x)<300&&z<60?null:V(x,0,z)},r));
+  NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*700,z=60+rr()*300;return Math.abs(x)<20?null:V(x,0,z)},r);
   // entrance gate
   const gate=new T.Group();gate.position.set(0,0,30);scene.add(gate);
   const stone=NATURE.rockMat('#b8a890'),wood=NATURE.barkMat(false);
@@ -51,98 +59,98 @@ function buildZoo(){
 }
 function rebuildPaths(){
   const P=zoo.paths;while(P.children.length)P.remove(P.children[0]);
-  const pv=zoo.pave||(zoo.pave=pavingTexture());
-  const rows=zooRows(),zEnd=zooBottom();
+  const pv=zoo.pave||(zoo.pave=pavingTexture()),L=zooLayout();
   const strip=(x0,z0,x1,z1)=>{const w=Math.abs(x1-x0),d=Math.abs(z1-z0),m=pv.map.clone(),n=pv.normal.clone();m.needsUpdate=n.needsUpdate=true;m.repeat.set(w/4,d/4);n.repeat.set(w/4,d/4);
     const o=new T.Mesh(new T.PlaneGeometry(w,d),new T.MeshStandardMaterial({map:m,normalMap:n,roughness:.9}));o.rotation.x=-Math.PI/2;o.position.set((x0+x1)/2,.04,(z0+z1)/2);o.receiveShadow=true;P.add(o)};
-  for(let rr=0;rr<=rows;rr++){const z=ZTOP-rr*SLOT;strip(PATH_X[0]-4,z-4,PATH_X[4]+4,z+4)}
-  for(const x of PATH_X)strip(x-4,zEnd,x+4,ZTOP);
-  strip(-8,ZTOP,8,34);
+  strip(-ROAD,L.end,ROAD,40);
+  for(const d of L.list)strip(d.side>0?ROAD:-ROAD-11,d.z-6,d.side>0?ROAD+11:-ROAD,d.z+6);
   const pole=new T.MeshStandardMaterial({color:'#2a2c2e',metalness:.7,roughness:.4}),glow=new T.MeshStandardMaterial({color:'#fff6d8',emissive:'#ffe8b0',emissiveIntensity:1.2});
-  for(let rr=0;rr<=rows;rr++)for(let x=PATH_X[0]+13;x<PATH_X[4];x+=26){const z=ZTOP-rr*SLOT+4.8;const l=new T.Group();l.position.set(x,0,z);
-    const p=new T.Mesh(new T.CylinderGeometry(.08,.12,4.2,8),pole);p.position.y=2.1;p.castShadow=true;l.add(p);
-    const h=new T.Mesh(new T.SphereGeometry(.3,12,8),glow);h.position.y=4.3;l.add(h);P.add(l)}
+  for(let z=20;z>L.end;z-=30)for(const sx of[-1,1]){const l=new T.Group();l.position.set(sx*(ROAD+1.2),0,z+(sx>0?15:0));
+    const p=new T.Mesh(new T.CylinderGeometry(.1,.14,5,8),pole);p.position.y=2.5;p.castShadow=true;l.add(p);
+    const h=new T.Mesh(new T.SphereGeometry(.35,12,8),glow);h.position.y=5.1;l.add(h);P.add(l)}
   // the next empty plot
-  const n=S.areas.length,{x,z}=slotXZ(n),out=new T.Group();out.position.set(x,0,z);
+  const n=L.next,out=new T.Group();out.position.set(n.x,0,n.z);
   const dm=new T.MeshStandardMaterial({color:'#e8dcc0',roughness:.9});
-  for(let i=0;i<40;i++){const a=i/40*Math.PI*2;if(i%2)continue;const s=new T.Mesh(new T.BoxGeometry(2.4,.06,.3),dm);s.position.set(Math.sin(a)*DOME,.06,Math.cos(a)*DOME);s.rotation.y=a+Math.PI/2;out.add(s)}
-  const st=new T.Mesh(new T.PlaneGeometry(6,1.9),new T.MeshStandardMaterial({map:signTexture(['Empty plot','Build a new dome here'],'#6a5a40'),roughness:.8}));st.position.set(0,1.8,DOME+3.6);out.add(st);
+  for(let i=0;i<80;i+=2){const a=i/80*Math.PI*2;const sg=new T.Mesh(new T.BoxGeometry(3,.06,.35),dm);sg.position.set(Math.sin(a)*n.R,.06,Math.cos(a)*n.R);sg.rotation.y=a+Math.PI/2;out.add(sg)}
+  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:signTexture(['Empty plot','Build a new dome here'],'#6a5a40'),roughness:.8,side:T.DoubleSide}));
+  st.position.set(-n.side*(n.R-4),2.2,0);st.rotation.y=-n.side*Math.PI/2;out.add(st);
   P.add(out);
   drawMask();refreshZooWorld();if(zoo.people&&zoo.people.length)zoo.graph=pathGraph();
 }
 function drawMask(){
-  const {g,tex}=zoo.mask,W=1024,k=W/900,X=x=>(x+450)*k,Z=z=>(z+750)*k;
+  const {g,tex}=zoo.mask,W=1024,k=W/MASK.size,X=x=>(x-MASK.x0)*k,Z=z=>(z-MASK.z0)*k,L=zooLayout();
   g.fillStyle='#fff';g.fillRect(0,0,W,W);g.fillStyle='#000';
-  const rows=zooRows(),zEnd=zooBottom();
-  for(let rr=0;rr<=rows;rr++){const z=ZTOP-rr*SLOT;g.fillRect(X(PATH_X[0]-4.5),Z(z-4.5),(PATH_X[4]-PATH_X[0]+9)*k,9*k)}
-  for(const x of PATH_X)g.fillRect(X(x-4.5),Z(zEnd),9*k,(ZTOP-zEnd)*k);
-  g.fillRect(X(-9),Z(ZTOP),18*k,(34-ZTOP)*k);
-  S.areas.forEach((a,i)=>{const p=slotXZ(i);g.beginPath();g.arc(X(p.x),Z(p.z),(DOME+1.2)*k,0,7);g.fill()});
+  g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);
+  for(const d of L.list){g.fillRect(X(d.side>0?ROAD:-ROAD-12),Z(d.z-7),12*k,14*k);g.beginPath();g.arc(X(d.x),Z(d.z),(d.R+1.5)*k,0,7);g.fill()}
   tex.needsUpdate=true;
 }
 
 const habTypes={};
 function buildArea(area,i){
-  const {x,z}=slotXZ(i),grp=new T.Group();grp.position.set(x,0,z);zoo.scene.add(grp);
-  const E=ENV[area.hab],R0=DOME;
+  const D=zooLayout().list[i],{x,z,R:R0,side}=D,grp=new T.Group();grp.position.set(x,0,z);grp.rotation.y=-side*Math.PI/2;zoo.scene.add(grp);
+  const E=ENV[area.hab];
   const gt=NATURE.groundTextures(area.hab),map=gt.map.clone(),nm=gt.normal.clone();map.needsUpdate=nm.needsUpdate=true;map.repeat.set(R0/3.5,R0/3.5);nm.repeat.set(R0/3.5,R0/3.5);
   const gc=new T.Color(E.ground).multiplyScalar(1.15);
-  const gm=new T.Mesh(new T.CircleGeometry(R0,72),new T.MeshStandardMaterial({color:gc,map,normalMap:nm,roughness:area.hab==='polar'?.55:1}));
+  const gm=new T.Mesh(new T.CircleGeometry(R0,96),new T.MeshStandardMaterial({color:gc,map,normalMap:nm,roughness:area.hab==='polar'?.55:1}));
   gm.rotation.x=-Math.PI/2;gm.position.y=.06;gm.receiveShadow=true;gm.userData.area=area.id;grp.add(gm);zoo.grounds.push(gm);
   const cols=[];
-  // pond
-  const pr=6,px=-11,pz=-8;
+  // a big pond
+  const pr=R0*.13,px=-R0*.32,pz=-R0*.25;
   const w=NATURE.waterMesh(pr,E.water);w.position.set(px,.12,pz);grp.add(w);zoo.waters.push(w);
-  const rim=new T.Mesh(new T.TorusGeometry(pr,.4,8,48),NATURE.rockMat(E.rock));rim.rotation.x=-Math.PI/2;rim.position.set(px,.1,pz);rim.scale.z=.4;rim.receiveShadow=true;grp.add(rim);
-  // plants and rocks from that habitat, keeping a clear track to drive on
+  const rim=new T.Mesh(new T.TorusGeometry(pr,.5,8,64),NATURE.rockMat(E.rock));rim.rotation.x=-Math.PI/2;rim.position.set(px,.1,pz);rim.scale.z=.4;rim.receiveShadow=true;grp.add(rim);
+  // full-size plants and rocks from that habitat, with a clear ring to drive round
   const types=habTypes[area.hab]||(habTypes[area.hab]=NATURE.treeTypes(area.hab));
-  const rr=rng(area.id*97+3),lim=R0-3,scale=.7;
-  const scaled=types.map(t=>Object.assign({},t,{s:[t.s[0]*scale,Math.min(t.s[1]*scale,t.col>3?1.1:t.s[1]*scale)],col:t.col?Math.min(t.col,1.2):0}));
-  cols.push(...NATURE.scatter(grp,scaled,26,q=>{const a=q()*6.28,d=Math.sqrt(q())*lim;const p=V(Math.sin(a)*d,0,Math.cos(a)*d);
-    if(Math.hypot(p.x-px,p.z-pz)<pr+2||d<9||(d>17&&d<23)||Math.abs(p.x)<7&&p.z>0)return null;return p},rr));
-  const doors=buildDome(grp);
-  // sign at the doorway
-  const st=new T.Mesh(new T.PlaneGeometry(6,1.9),new T.MeshStandardMaterial({map:signTexture([(i+1)+'. '+HAB[area.hab].name,'Big Glass Dome']),roughness:.7}));
-  st.position.set(10,2,R0+3);st.rotation.y=-.2;grp.add(st);
-  const bw=NATURE.barkMat(false);for(const s of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.2,2.4,.2),bw);p.position.set(10+s*2.55,1.2,R0+3-s*.5);p.castShadow=true;grp.add(p)}
-  // the glass wall is solid except for the doorway; pond and trees block the jeep too
-  for(let a=0;a<Math.PI*2;a+=.06){const d=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(d)<DOOR)continue;cols.push({x:Math.sin(a)*R0,z:Math.cos(a)*R0,r:.9})}
+  const rr=rng(area.id*97+3),lim=R0-4;
+  const sized=types.map(t=>Object.assign({},t,{col:t.col?Math.min(t.col,2):0}));
+  cols.push(...NATURE.scatter(grp,sized,Math.round((R0>60?150:60)*Math.max(.5,QUALITY.trees)),q=>{const a=q()*6.28,d=Math.sqrt(q())*lim;const p=V(Math.sin(a)*d,0,Math.cos(a)*d);
+    if(Math.hypot(p.x-px,p.z-pz)<pr+3||d<R0*.22||(d>R0*.55&&d<R0*.72)||Math.abs(p.x)<10&&p.z>0)return null;return p},rr));
+  const doors=buildDome(grp,R0);
+  // sign beside the doorway
+  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:signTexture([(i+1)+'. '+HAB[area.hab].name,area.hab==='dino'?'Ginormous Dino Dome':'Giant Glass Dome']),roughness:.7}));
+  st.position.set(13,2.6,R0+3);st.rotation.y=-.25;grp.add(st);
+  const bw=NATURE.barkMat(false);for(const sd of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.25,3.2,.25),bw);p.position.set(13+sd*3.4,1.6,R0+3-sd*.85);p.castShadow=true;grp.add(p)}
+  // the glass wall is solid except for the doorway; pond and trees block the truck too
+  const da=doorAng(R0);
+  for(let a=0;a<Math.PI*2;a+=1.8/R0){const d=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(d)<da)continue;cols.push({x:Math.sin(a)*R0,z:Math.cos(a)*R0,r:1})}
   cols.push({x:px,z:pz,r:pr});
-  zoo.areas.set(area.id,{grp,area,x,z,R0,doors,open:0,cols:cols.map(c=>({x:c.x+x,z:c.z+z,r:c.r})),pond:{x:px,z:pz,r:pr}});
+  grp.updateMatrixWorld(true);const W=(lx,lz)=>{const v=grp.localToWorld(V(lx,0,lz));return{x:v.x,z:v.z}};
+  zoo.areas.set(area.id,{grp,area,x,z,R0,side,doors,open:0,cols:cols.map(c=>Object.assign(W(c.x,c.z),{r:c.r})),
+    pond:Object.assign(W(px,pz),{r:pr}),door:W(0,R0),inside:W(0,R0-16)});
 }
-let domeCache=null;
-function domeGeometry(){
-  if(domeCache)return domeCache;
-  const ico=new T.IcosahedronGeometry(DOME,3).toNonIndexed(),p=ico.attributes.position,keep=[],edges=new Map();
+const domeCache={};
+function domeGeometry(R){
+  if(domeCache[R])return domeCache[R];
+  const da=doorAng(R),dh=R>60?15:11;
+  const ico=new T.IcosahedronGeometry(R,R>60?5:4).toNonIndexed(),p=ico.attributes.position,keep=[],edges=new Map();
   const key=v=>v.toArray().map(n=>n.toFixed(2)).join(',');
-  const door=v=>v.z>0&&Math.abs(Math.atan2(v.x,v.z))<DOOR+.04&&v.y<9;
+  const door=v=>v.z>0&&Math.abs(Math.atan2(v.x,v.z))<da+.02&&v.y<dh;
   for(let i=0;i<p.count;i+=3){const a=V(p.getX(i),p.getY(i),p.getZ(i)),b=V(p.getX(i+1),p.getY(i+1),p.getZ(i+1)),c=V(p.getX(i+2),p.getY(i+2),p.getZ(i+2));
     if(Math.min(a.y,b.y,c.y)<-.01)continue;const cen=a.clone().add(b).add(c).divideScalar(3);if(door(cen))continue;keep.push(a,b,c);
     for(const[u,v]of[[a,b],[b,c],[c,a]]){const k=[key(u),key(v)].sort().join('|');if(!edges.has(k))edges.set(k,[u,v])}}
   const g=new T.BufferGeometry().setFromPoints(keep);g.computeVertexNormals();
-  return domeCache={glass:g,edges:[...edges.values()]};
+  return domeCache[R]={glass:g,edges:[...edges.values()],dh};
 }
-function buildDome(grp){
-  const D=domeGeometry();
-  const glass=new T.Mesh(D.glass,new T.MeshPhysicalMaterial({color:'#eaf7ff',transparent:true,opacity:.13,roughness:.03,metalness:.1,clearcoat:1,envMapIntensity:2.2,side:T.DoubleSide,depthWrite:false}));
+function buildDome(grp,R){
+  const D=domeGeometry(R),da=doorAng(R);
+  const glass=new T.Mesh(D.glass,new T.MeshPhysicalMaterial({color:'#eaf7ff',transparent:true,opacity:.12,roughness:.03,metalness:.1,clearcoat:1,envMapIntensity:2.2,side:T.DoubleSide,depthWrite:false}));
   glass.renderOrder=2;grp.add(glass);
   const frame=new T.MeshStandardMaterial({color:'#f2f2ee',metalness:.6,roughness:.3});
-  const cg=new T.CylinderGeometry(.11,.11,1,6),im=new T.InstancedMesh(cg,frame,D.edges.length),m4=new T.Matrix4();
+  const cg=new T.CylinderGeometry(.14,.14,1,6),im=new T.InstancedMesh(cg,frame,D.edges.length),m4=new T.Matrix4();
   D.edges.forEach(([a,b],j)=>{const d=b.clone().sub(a),L=d.length();m4.compose(a.clone().addScaledVector(d,.5),new T.Quaternion().setFromUnitVectors(V(0,1,0),d.normalize()),V(1,L,1));im.setMatrixAt(j,m4)});
   im.castShadow=true;grp.add(im);
-  const base=new T.Mesh(new T.CylinderGeometry(DOME+.4,DOME+.6,.7,96,1,true,DOOR,Math.PI*2-DOOR*2),NATURE.rockMat('#c8c0b0'));base.position.y=.35;base.receiveShadow=base.castShadow=true;grp.add(base);
+  const base=new T.Mesh(new T.CylinderGeometry(R+.4,R+.6,.8,160,1,true,da,Math.PI*2-da*2),NATURE.rockMat('#c8c0b0'));base.position.y=.4;base.receiveShadow=base.castShadow=true;grp.add(base);
   // doorway frame
-  const dx=Math.sin(DOOR)*DOME,dz=Math.cos(DOOR)*DOME;
-  for(const s of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.6,8.5,.6),frame);p.position.set(s*dx,4.25,dz);p.castShadow=true;grp.add(p)}
-  const top=new T.Mesh(new T.BoxGeometry(dx*2+.6,.7,.6),frame);top.position.set(0,8.5,dz);top.castShadow=true;grp.add(top);
+  const dx=Math.sin(da)*R,dz=Math.cos(da)*R,dh=D.dh-1.5;
+  for(const s of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.7,dh,.7),frame);p.position.set(s*dx,dh/2,dz);p.castShadow=true;grp.add(p)}
+  const top=new T.Mesh(new T.BoxGeometry(dx*2+.7,.8,.7),frame);top.position.set(0,dh,dz);top.castShadow=true;grp.add(top);
   // two sliding gates that open when someone comes near
   const doors=[];
   const pane=new T.MeshPhysicalMaterial({color:'#dff2fa',transparent:true,opacity:.25,roughness:.05,clearcoat:1,side:T.DoubleSide,depthWrite:false});
-  for(const sd of[-1,1]){const d=new T.Group();d.position.set(sd*dx/2,0,dz+.5);grp.add(d);
-    const w=dx;const f=(x,y,sx,sy)=>{const m=new T.Mesh(new T.BoxGeometry(sx,sy,.25),frame);m.position.set(x,y,0);m.castShadow=true;d.add(m)};
-    f(-w/2,4,.25,8);f(w/2,4,.25,8);f(0,8,w,.25);f(0,.15,w,.3);f(0,3,w,.15);
-    for(let i=1;i<6;i++)f(-w/2+i*w/6,4,.08,8);
-    const g=new T.Mesh(new T.PlaneGeometry(w,8),pane);g.position.y=4;d.add(g);
+  for(const sd of[-1,1]){const d=new T.Group();d.position.set(sd*dx/2,0,dz+.6);grp.add(d);
+    const w=dx,h=dh-.5;const f=(x,y,sx,sy)=>{const m=new T.Mesh(new T.BoxGeometry(sx,sy,.28),frame);m.position.set(x,y,0);m.castShadow=true;d.add(m)};
+    f(-w/2,h/2,.28,h);f(w/2,h/2,.28,h);f(0,h,w,.28);f(0,.15,w,.3);f(0,h*.38,w,.16);
+    for(let i=1;i<6;i++)f(-w/2+i*w/6,h/2,.09,h);
+    const g=new T.Mesh(new T.PlaneGeometry(w,h),pane);g.position.y=h/2;d.add(g);
     d.userData={sd,w};doors.push(d)}
   return doors;
 }
@@ -155,7 +163,7 @@ function syncZooAnimals(){
       const p=randomSpot(A,r);const o={an,A,inst,x:p.x,z:p.z,tx:p.x,tz:p.z,yaw:r()*6.28,t:r()*3};
       inst.g.position.set(o.x,0,o.z);zoo.scene.add(inst.g);zoo.animals.push(o)}}
 }
-function randomSpot(A,r=Math.random){const lim=A.R0-4;for(let i=0;i<30;i++){const x=(r()-.5)*2*lim,z=(r()-.5)*2*lim;if(Math.hypot(x,z)>lim)continue;if(Math.hypot(x-A.pond.x,z-A.pond.z)<A.pond.r+1.5)continue;return{x:A.x+x,z:A.z+z}}return{x:A.x,z:A.z}}
+function randomSpot(A,r=Math.random){const lim=A.R0-5;for(let i=0;i<30;i++){const x=(r()-.5)*2*lim,z=(r()-.5)*2*lim;if(Math.hypot(x,z)>lim)continue;if(Math.hypot(A.x+x-A.pond.x,A.z+z-A.pond.z)<A.pond.r+2)continue;return{x:A.x+x,z:A.z+z}}return{x:A.x,z:A.z}}
 function updateZooAnimals(dt,time){
   const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const o of zoo.animals){
@@ -165,7 +173,7 @@ function updateZooAnimals(dt,time){
     if(d>.4){spd=Math.min(SP[o.an.k].s*(driving&&o.t===2?1.4:.55),d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
       const ty=Math.atan2(dx,dz);let dy=ty-o.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.yaw+=dy*Math.min(1,dt*4)}
     else{o.t-=dt;if(o.t<=0){o.t=3+Math.random()*6;const p=randomSpot(o.A);o.tx=p.x;o.tz=p.z}}
-    const far=Math.hypot(o.x-cam.position.x,o.z-cam.position.z)>90;if(far!==o.far){o.far=far;ANIMALS.setLOD(o.inst,far)}
+    const far=Math.hypot(o.x-cam.position.x,o.z-cam.position.z)>110;if(far!==o.far){o.far=far;ANIMALS.setLOD(o.inst,far)}
     ANIMALS.animate(o.inst,dt,spd,time,{graze:spd<.1&&Math.sin(time*.3+o.an.uid)>.3});
     o.inst.g.position.set(o.x,.06+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
   }
@@ -178,13 +186,13 @@ function zooCamera(dt){
   const cp=Math.cos(c.pitch);cam.position.set(c.tx+Math.sin(c.yaw)*cp*c.dist,Math.sin(c.pitch)*c.dist+1,c.tz+Math.cos(c.yaw)*cp*c.dist);
   cam.lookAt(c.tx,1,c.tz);
 }
-function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;w.tx=A.x;w.tz=A.z;w.dist=85;w.pitch=Math.max(.45,Math.min(w.pitch,.8))}
+function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;w.tx=A.x;w.tz=A.z;w.dist=A.R0*2.6;w.pitch=Math.max(.45,Math.min(w.pitch,.8))}
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);
   const driving=curView==='drive'&&world&&world.zoo;
-  for(const A of zoo.areas.values()){const gx=A.x,gz=A.z+DOME;let near=false;
-    if(driving&&Math.hypot((mode==='car'?car.x:me.x)-gx,(mode==='car'?car.z:me.z)-gz)<16)near=true;
-    if(!near&&zoo.people)for(const v of zoo.people)if(Math.abs(v.x-gx)<9&&Math.abs(v.z-gz)<9){near=true;break}
+  for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
+    if(driving&&Math.hypot((mode==='car'?car.x:me.x)-gx,(mode==='car'?car.z:me.z)-gz)<20)near=true;
+    if(!near&&zoo.people)for(const v of zoo.people)if(Math.hypot(v.x-gx,v.z-gz)<9){near=true;break}
     A.open+=((near?1:0)-A.open)*Math.min(1,dt*2.5);
     for(const d of A.doors){const{sd,w}=d.userData;d.position.x=sd*(w/2+A.open*w*.95)}}
   for(const w of zoo.waters){w.userData.water.offset.x+=dt*.015;w.userData.water.offset.y+=dt*.01}
@@ -217,7 +225,7 @@ function refreshZooWorld(){
   if(!zoo.world)return;const w=zoo.world;w.cols=new Map();
   const add=c=>{const k=Math.floor(c.x/20)+','+Math.floor(c.z/20);if(!w.cols.has(k))w.cols.set(k,[]);w.cols.get(k).push(c)};
   zoo.cols.forEach(add);for(const A of zoo.areas.values())A.cols.forEach(add);
-  w.bounds={x0:PATH_X[0]-40,x1:PATH_X[4]+40,z0:zooBottom()-40,z1:60};
+  w.bounds={x0:-290,x1:290,z0:zooLayout().end-40,z1:80};
   w.domes=[...zoo.areas.values()].map(A=>({x:A.x,z:A.z,r:A.R0}));
 }
 function zooDriveWorld(){
@@ -249,15 +257,15 @@ const LOOKS=[
 const personSps=[];
 function personSp(i){return personSps[i]||(personSps[i]={k:'person'+i,n:'Visitor',def:Object.assign({plan:'person'},LOOKS[i])})}
 function pathGraph(){
-  const rows=zooRows(),nodes=[],at=(x,z)=>nodes.find(n=>Math.abs(n.x-x)<.1&&Math.abs(n.z-z)<.1),link=(a,b)=>{a.nb.push(b);b.nb.push(a)};
-  for(let r=0;r<=rows;r++)for(const x of PATH_X)nodes.push({x,z:ZTOP-r*SLOT,nb:[]});
-  for(let r=0;r<=rows;r++)for(let c=0;c<PATH_X.length;c++){const n=at(PATH_X[c],ZTOP-r*SLOT);
-    if(c<PATH_X.length-1)link(n,at(PATH_X[c+1],ZTOP-r*SLOT));if(r<rows)link(n,at(PATH_X[c],ZTOP-(r+1)*SLOT))}
-  const gate={x:0,z:44,nb:[],gate:1};nodes.push(gate);link(gate,at(0,ZTOP));
-  // spots in front of every dome doorway where people stop and look in
-  S.areas.forEach((a,i)=>{const p=slotXZ(i),pz=p.z+SLOT/2,v={x:p.x,z:p.z+DOME+4,nb:[],view:1};nodes.push(v);
-    const l=at(p.x-SLOT/2,pz),r=at(p.x+SLOT/2,pz);if(l)link(v,l);if(r)link(v,r);
-    const inside={x:p.x+(Math.random()-.5)*6,z:p.z+DOME-10,nb:[],inside:1};nodes.push(inside);link(v,inside)});
+  const nodes=[],link=(a,b)=>{a.nb.push(b);b.nb.push(a)},L=zooLayout();
+  const gate={x:0,z:44,nb:[],gate:1};nodes.push(gate);
+  // nodes down the middle of the road, one level with every dome
+  const zs=[...new Set([10,...L.list.map(d=>Math.round(d.z)),Math.round(L.end+10)])].sort((a,b)=>b-a);
+  const road=zs.map(z=>{const n={x:0,z,nb:[]};nodes.push(n);return n});link(gate,road[0]);for(let i=1;i<road.length;i++)link(road[i-1],road[i]);
+  S.areas.forEach((a,i)=>{const A=zoo.areas.get(a.id);if(!A)return;const d=L.list[i],rn=road.find(n=>n.z===Math.round(d.z));
+    // a spot at the dome gate to look in, and a spot inside the dome
+    const v={x:d.side*(ROAD+6),z:d.z,nb:[],view:1,face:d.side*Math.PI/2};nodes.push(v);link(rn,v);
+    const ins={x:A.inside.x,z:A.inside.z+(Math.random()-.5)*8,nb:[],inside:1};ins.face=Math.atan2(A.x-ins.x,A.z-ins.z);nodes.push(ins);link(v,ins)});
   return{nodes,gate};
 }
 function syncVisitors(){
@@ -275,7 +283,7 @@ function updateVisitors(dt,time){
   const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const v of zoo.people){
     let spd=0,look=0;
-    if(v.wait>0){v.wait-=dt;if(v.from.view||v.from.inside){const ty=Math.PI;let d=ty-v.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));v.yaw+=d*Math.min(1,dt*3);look=Math.sin(time*.7+v.off)*.4}}
+    if(v.wait>0){v.wait-=dt;if(v.from.view||v.from.inside){const ty=v.from.face??Math.PI;let d=ty-v.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));v.yaw+=d*Math.min(1,dt*3);look=Math.sin(time*.7+v.off)*.4}}
     else{
       const dx=v.to.x-v.from.x,dz=v.to.z-v.from.z,L=Math.hypot(dx,dz)||1,ox=-dz/L*v.off,oz=dx/L*v.off;
       const tx=v.to.x+(v.to.view||v.to.inside?0:ox),tz=v.to.z+(v.to.view||v.to.inside?0:oz),ex=tx-v.x,ez=tz-v.z,d=Math.hypot(ex,ez);

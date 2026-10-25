@@ -116,6 +116,7 @@ const CONT=[
    ['Dilophosaurus','🦖',2,2.2,{hunts:['Parasaurolophus'],herd:[2,3],plan:'theropod',hip:1.35,L:2.2,W:.6,Hb:.8,neck:.8,neckW:.18,headL:.6,headW:.24,headH:.26,tail:2.6,arm:.6,legW:.16,col:'#7a7a3a',col2:'#2a4a6a',belly:'#d8d0a0',tex:'stripes',freq:7,thin:.4,dcrest:1}],
    ['Spinosaurus','🦖',2,2,{hunts:['Parasaurolophus', 'Stegosaurus'],plan:'theropod',hip:2.6,L:4.6,W:1.3,Hb:1.7,neck:1.2,neckW:.42,headL:1.7,headW:.5,headH:.5,tail:5,arm:1.2,legW:.36,col:'#6a5a48',col2:'#a84a2a',belly:'#b8a888',sail:1}],
    ['T-Rex','🦖',3,2.2,{hunts:['Triceratops', 'Stegosaurus', 'Parasaurolophus'],plan:'theropod',hip:3,L:4.2,W:1.6,Hb:1.9,neck:1,neckW:.55,headL:1.5,headW:.8,headH:.9,tail:5.5,arm:.8,legW:.45,col:'#5a5040',col2:'#3a3428',belly:'#a89878',tex:'stripes',freq:4,thin:.55,chase:1}],
+   ['Diplodocus','🦕',2,1.1,{herd:[2,3],L:6,W:2.1,Hb:2.3,leg:2.5,legW:.4,neck:7.5,neckW:.45,neckAng:1.0,headL:.8,headW:.32,headH:.34,hp:.25,col:'#8a8a72',col2:'#6a6a58',belly:'#b8b8a0',tex:'stripes',freq:2,thin:.7,ears:'none',tail:'dino',tl:9,scaly:1,graze:1,hoof:'#5a5a50'}],
   ]},
 ];
 const SP={};

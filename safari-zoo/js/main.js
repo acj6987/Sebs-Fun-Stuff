@@ -130,17 +130,17 @@ cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return
   if(curView==='drive'){look.yaw-=dx*.005;look.pitch=clamp(look.pitch-dy*.004,-1.2,1.1);look.idle=0;return}
   if(curView!=='zoo')return;const w=zoo.cam.w;
   if(ptrs.size>=2&&pinch){const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-    w.dist=clamp(w.dist*pinch.d/Math.max(d,1),14,280);panZoo(mx-pinch.mx,my-pinch.my);pinch={d,mx,my};return}
+    w.dist=clamp(w.dist*pinch.d/Math.max(d,1),14,900);panZoo(mx-pinch.mx,my-pinch.my);pinch={d,mx,my};return}
   if(downAt&&(downAt.btn===2||downAt.shift))panZoo(dx,dy);
   else{w.yaw-=dx*.006;w.pitch=clamp(w.pitch+dy*.004,.12,1.4)}});
 function panZoo(dx,dy){const w=zoo.cam.w,s=w.dist*.0016,c=Math.cos(w.yaw),n=Math.sin(w.yaw);
-  w.tx=clamp(w.tx-c*dx*s-n*dy*s,-170,170);w.tz=clamp(w.tz+n*dx*s-c*dy*s,-80-zooRows()*SLOT,60)}
+  w.tx=clamp(w.tx-c*dx*s-n*dy*s,-400,400);w.tz=clamp(w.tz+n*dx*s-c*dy*s,zooLayout().end-60,120)}
 const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;look.drag=false;look.idle=0;
   if(curView==='zoo'&&downAt&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<7&&performance.now()-downAt.t<500&&ptrs.size===0){const id=zooPick(e.clientX,e.clientY);if(id!=null)tapArea(id)}
   if(ptrs.size===0)downAt=null};
 cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
 cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('wheel',e=>{if(curView!=='zoo')return;e.preventDefault();const w=zoo.cam.w;w.dist=clamp(w.dist*Math.pow(1.0015,e.deltaY),14,280)},{passive:false});
+cv.addEventListener('wheel',e=>{if(curView!=='zoo')return;e.preventDefault();const w=zoo.cam.w;w.dist=clamp(w.dist*Math.pow(1.0015,e.deltaY),14,900)},{passive:false});
 document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;
   b.addEventListener('pointerdown',e=>{keys[k]=true;b.setPointerCapture(e.pointerId);e.preventDefault()});
   ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
@@ -203,7 +203,7 @@ $('#acList').addEventListener('click',e=>{const area=S.areas.find(a=>a.id===zoo.
     toast('Bye bye '+SP[an.k].n+'! It went back to the wild.')}});
 $('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0).map(c=>(delete c.pen,c)));const made=autoHome();
   [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are back in their domes!')});
-$('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=150;w.tx=0;w.tz=-60};
+$('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=330;w.tx=0;w.tz=-160};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
 function build(type){const cost=250;
   if(S.coins<cost){toast('You need '+cost+' coins. Catch more animals!');return}
@@ -226,9 +226,9 @@ async function startZooDrive(id){
   buildCar(zoo.scene);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
   mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
-  if(A){car.x=A.x;car.z=A.z+A.R0-10;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}
+  if(A){car.x=A.inside.x;car.z=A.inside.z;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}
   else{car.x=0;car.z=48;$('#where').textContent='My Zoo'}
-  car.yaw=0;footRig.visible=false;setDriveUI();
+  car.yaw=A?Math.atan2(-(A.x-car.x),-(A.z-car.z)):0;footRig.visible=false;setDriveUI();
   $('#cagesTxt').hidden=true;$('#toZoo2').textContent='🏛️ Zoo view';
   show('drive');safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
 }
