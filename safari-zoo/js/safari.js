@@ -63,7 +63,7 @@ async function buildSafari(c,progress){
   NATURE.scatter(scene,types,Math.round(count*QUALITY.trees),place,r).forEach(addCol);
   world.grass=NATURE.makeGrass(E,world.ponds,{half:HALF});if(world.grass)scene.add(world.grass);
   buildCar(scene);buildFootRig();scene.add(cam);
-  sub.on=false;sub.g=null;if(c.sea){const m=subModel();m.scale.setScalar(.5/TS*1.7);m.position.set(0,2.3,0);car.trailer.add(m);car.miniSub=m}
+  sub.on=false;sub.g=null;
   // build each animal shape once, showing progress
   const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]));
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
@@ -216,6 +216,7 @@ function buildFootRig(){
   footRig=new T.Group();footRig.position.set(.1,-.12,0);footRig.scale.setScalar(.8);cam.add(footRig);
   const skin=new T.MeshPhysicalMaterial({color:'#d39a74',roughness:.5,sheen:.4}),sleeve=new T.MeshPhysicalMaterial({color:'#5f6a40',roughness:.95,sheen:.6}),pole=new T.MeshStandardMaterial({color:'#8a6a3a',roughness:.6});
   const CY=new T.CylinderGeometry(1,1,1,12);
+  footRig.userData.sleeve=sleeve;
   const s=new T.Mesh(CY,sleeve);s.position.set(.32,-.38,-.25);s.scale.set(.06,.5,.06);s.rotation.set(-1.1,0,.25);footRig.add(s);
   const h=new T.Mesh(new T.SphereGeometry(1,14,10),skin);h.position.set(.26,-.27,-.5);h.scale.set(.05,.06,.05);footRig.add(h);
   netRig=new T.Group();netRig.position.set(.26,-.27,-.5);netRig.rotation.set(-.75,0,-.25);footRig.add(netRig);
@@ -307,8 +308,8 @@ function updateAnimals(dt,time){
       if(r>=2&&(d<scareR||herdRun)&&a.stam>0){if(G&&d<scareR)G.fleeT=3;
         const chase=a.sp.def.chase&&d>4;if(chase&&a.state!=='flee'&&mode==='foot')toast('ROAR! The '+a.sp.n+' is chasing you! Run back to the truck!');
         if(a.sp.def.mate&&a.state==='wander'&&d<scareR&&G&&G.members[0]===a)toast('✨ Something glittery just flew away! Sneak up slowly…');
-        a.state='flee';const fs=Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
-        if(a.stam<=0){a.state='tired';a.tired=6;if(d<45&&(!G||G.members[0]===a))toast('The '+a.sp.n+(G?'s are':' is')+' tired! Quick, throw your net!')}}
+        a.state='flee';const fs=a.sp.def.mate?17:Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
+        if(a.stam<=0){a.state='tired';a.tired=a.sp.def.mate?12:6;if(d<45&&(!G||G.members[0]===a))toast('The '+a.sp.n+(G?'s are':' is')+' tired! Quick, throw your net!')}}
       else{if(a.state==='flee')a.state='wander';a.stam=Math.min(1,a.stam+dt*.15);
         const lead=G&&G.members[0];
         if(lead&&lead!==a){
@@ -362,6 +363,7 @@ function throwNet(){
   const t=aimTarget();
   if(!t){toast('Look right at an animal to aim your net');return}
   if(t.dist>(mode==='sub'?26:16)){toast('Too far away! Get closer to the '+t.a.sp.n);return}
+  if(t.a.sp.def.mate&&Math.hypot(t.a.x-me.x,t.a.z-me.z)-t.a.m.rad>2){toast('💖 Mummy Dreams are super shy! Creep up until you are only 2 metres away, then throw.');return}
   const a=t.a,dur=.45,tx=a.x+a.vx*dur,tz=a.z+a.vz*dur;
   world.net={a,t:0,dur,start:cam.position.clone().add(V(.3,-.2,0).applyQuaternion(cam.quaternion)),end:V(tx,H(tx,tz)+a.alt+a.m.h*.5,tz),mesh:makeNetMesh()};
   netRig.visible=false;
@@ -406,7 +408,12 @@ function cageIt(own=me){
 function releaseLeash(){if(!me.pack.length)return;for(const a of me.pack){world.scene.remove(a.net);a.net=null;world.scene.remove(a.rope);a.rope=null;a.state='wander'}
   toast(me.pack.length>1?'Your animals wriggled out of the nets!':'The '+me.pack[0].sp.n+' wriggled out of the net!');me.pack=[]}
 function pressE(){
-  if(!safari.running)return;if(mode==='sub'){toggleSub();return}
+  if(!safari.running)return;
+  if(mode==='sub'){const q=V(sub.x+Math.cos(sub.yaw)*3.5,0,sub.z-Math.sin(sub.yaw)*3.5);me.x=q.x;me.z=q.z;me.y=Math.max(H(me.x,me.z)+.3,sub.y-1);me.vy=0;
+    look.yaw=sub.yaw+look.yaw;look.pitch=0;mode='foot';footRig.visible=true;netRig.visible=true;setDriveUI();toast('🤿 You jumped out in your snorkel, mask and flippers! Space to swim up, Shift to dive, E by the submarine to get back in.',6000);return}
+  if(mode==='foot'&&sub.on){
+    if(Math.hypot(me.x-sub.x,me.z-sub.z)<9){if(me.pack.length)cageIt();mode='sub';footRig.visible=false;look.yaw=0;look.pitch=0;setDriveUI()}
+    else toast('Swim back to your submarine to get in');return}
   if(mode==='car'){
     if(Math.abs(car.v)>3){toast('Slow down to jump out!');return}
     const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=HW(me.x,me.z);me.vy=0;
@@ -419,13 +426,14 @@ function pressE(){
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
 function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&world.zoo);rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#foodBtn').hidden=!(world&&world.zoo);$('#cross').hidden=mode==='car';
-  const sb=$('#subBtn');sb.hidden=!(world&&world.sea&&mode!=='foot');sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
-  $('#upBtn').hidden=$('#downBtn').hidden=mode!=='sub';$('#eBtn').hidden=$('#jumpBtn').hidden=mode==='sub'}
+  const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&mode!=='foot');sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
+  $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub';
+  if(mode==='sub')$('#eBtn').firstChild.textContent='SNORKEL';else if(mode==='foot'&&sub.on)$('#eBtn').firstChild.textContent='GET IN SUB'}
 
 /* ---------- your pet dinosaurs: they follow you, and you can ride them ---------- */
 const PET_KEYS=['dino:0']; // your Velociraptor
 function ensurePets(){
-  if(world.pets||world.zoo)return;world.pets=[];
+  if(world.pets||world.zoo||world.sea)return;world.pets=[];
   PET_KEYS.forEach((k,i)=>{const inst=ANIMALS.make(SP[k]);world.scene.add(inst.g);
     const tag=makeIcon();tag.material=tag.material.clone();tag.material.map=iconTex('🦖','#8a2a14');tag.visible=true;tag.scale.set(1.1,1.1,1);tag.position.y=inst.h+1;inst.g.add(tag);
     world.pets.push({sp:SP[k],inst,x:car.x,z:car.z,yaw:car.yaw,side:-1,fast:true,saddle:inst.h*.8,tag})});
@@ -437,7 +445,7 @@ function placePets(){ensurePets();if(!world.pets)return;for(const p of world.pet
 function rideToggle(){
   if(!safari.running||mode==='sub')return;if(mode==='car'){toast('Jump out of the truck first, then press R to ride a dinosaur!');return}
   if(me.mount){dismount();return}
-  ensurePets();if(!world.pets){toast('Your pet dinosaurs are waiting on safari!');return}
+  ensurePets();if(!world.pets){toast(world.sea?'No raptors in the Deep Blue Sea! Your Velociraptor is waiting on land.':'Your pet dinosaurs are waiting on safari!');return}
   const p=world.pets.map(p=>[p,Math.hypot(p.x-me.x,p.z-me.z)]).sort((a,b)=>a[1]-b[1])[0];
   if(p[1]>9){toast('Walk closer to your '+p[0].sp.n+' to ride it');return}
   me.mount=p[0];p[0].tag.visible=false;me.x=p[0].x;me.z=p[0].z;toast('You jumped on your '+p[0].sp.n+'! Hold Shift to go even faster. Press R to get off.');setDriveUI();
@@ -499,11 +507,12 @@ function updateCar(dt){
 function updateFoot(dt){
   const turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;look.yaw+=turn*2.2*dt;
   const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),run=keys.run||pad.run,spd=me.mount?(me.mount.fast?(run?22:16):(run?15:11)):(run?8:5.5);
-  const swim=world.sea&&!me.mount&&H(me.x,me.z)<-1.2?.6:1;
+  const deepW=world.sea&&!me.mount&&H(me.x,me.z)<-1.2,swim=deepW?.85:1;
   me.x-=Math.sin(look.yaw)*mv*spd*swim*dt;me.z-=Math.cos(look.yaw)*mv*spd*swim*dt;keepIn(me);collide(me,.5);
   const cl=o=>{const dx=me.x-o.x,dz=me.z-o.z,d=Math.hypot(dx,dz);if(d<o.r){me.x=o.x+dx/d*o.r;me.z=o.z+dz/d*o.r}};
-  cl({x:car.x,z:car.z,r:2.1*TS});for(const z of[-3.2,-1.1,1.1,3.2]){const p=car.trailer.localToWorld(V(0,0,z));cl({x:p.x,z:p.z,r:1.5*TS})}
-  const gh=HW(me.x,me.z);me.vy-=18*dt;me.y+=me.vy*dt;if(me.y<=gh){me.y=gh;me.vy=0;me.ground=true}
+  if(sub.on)cl({x:sub.x,z:sub.z,r:2.6});else{cl({x:car.x,z:car.z,r:2.1*TS});for(const z of[-3.2,-1.1,1.1,3.2]){const p=car.trailer.localToWorld(V(0,0,z));cl({x:p.x,z:p.z,r:1.5*TS})}}
+  if(world.sea&&!me.mount&&H(me.x,me.z)<-1.2){const vy=(keys.rise||pad.rise?1:0)-(keys.run||keys.dive||pad.dive?1:0);me.y=clamp(me.y+vy*2.6*dt,H(me.x,me.z)+.2,-1.15);me.vy=0;me.ground=true}
+  else{const gh=HW(me.x,me.z);me.vy-=18*dt;me.y+=me.vy*dt;if(me.y<=gh){me.y=gh;me.vy=0;me.ground=true}}
   if(mv&&me.ground)me.bob+=dt*spd*1.6;
   ropes(me,cam.localToWorld(V(.26,-.35,-.5)));
 }
@@ -547,10 +556,11 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;
-  if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>B</b> back to truck';
+  if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
   else if(world.zoo)msg=foodHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
+  else if(world.sea&&H(me.x,me.z)<-1.2&&!target)msg='🤿 Swimming! <b>Space</b> up · <b>Shift</b> dive · <b>F</b> net · <b>E</b> by the '+(sub.on?'submarine':'truck')+' to get in';
   else msg=target?(target.dist<=16?`Press <b>F</b> to throw your net at the ${target.a.sp.n}`:`Walk closer to the ${target.a.sp.n}`):'Look at an animal · <b>F</b> net · <b>Space</b> jump · <b>E</b> by the truck to get in';
   if(pr.dataset.m!==msg){pr.innerHTML=msg;pr.dataset.m=msg}
   if((hudT++)%3)return;
@@ -563,7 +573,7 @@ function hud(){
   c.fillStyle=world.E.water;for(const p of world.ponds){c.beginPath();c.arc(W/2+(p.x-cx)*k,W/2+(p.z-cz)*k,p.r*k,0,7);c.fill()}
   for(const a of world.animals){if(a.sp.def.mate)continue;c.fillStyle=a.sp.r===3?'#ffc93c':a.sp.r===2?'#d4602f':'#1d2116';c.beginPath();c.arc(W/2+(a.x-cx)*k,W/2+(a.z-cz)*k,a.sp.r===3?9:7,0,7);c.fill();if(a.sp.r===3){c.strokeStyle='#fff';c.lineWidth=2;c.stroke()}}
   const arrow=(x,z,yaw,col)=>{c.save();c.translate(W/2+(x-cx)*k,W/2+(z-cz)*k);c.rotate(-yaw);c.fillStyle=col;c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-14);c.lineTo(10,10);c.lineTo(0,5);c.lineTo(-10,10);c.closePath();c.fill();c.stroke();c.restore()};
-  arrow(car.x,car.z,car.yaw,'#d38a2c');if(mode==='foot')arrow(me.x,me.z,look.yaw,'#2f6fa8');if(mode==='sub')arrow(sub.x,sub.z,sub.yaw,'#ffcf1f');
+  if(!sub.on)arrow(car.x,car.z,car.yaw,'#d38a2c');if(mode==='foot')arrow(me.x,me.z,look.yaw,'#2f6fa8');if(mode==='sub')arrow(sub.x,sub.z,sub.yaw,'#ffcf1f');
   c.restore();
 }
 
@@ -595,13 +605,15 @@ function toggleSub(){
   if(!safari.running||!world.sea)return;
   if(mode==='sub'){
     // back to the truck
-    world.scene.remove(sub.g);sub.on=false;if(car.miniSub)car.miniSub.visible=true;mode='car';me.x=car.x;me.z=car.z;look.yaw=0;look.pitch=-.12;setDriveUI();toast('🚢 The submarine is back on your truck.');return}
-  if(mode!=='car'){toast('Get in your truck first, then launch the submarine!');return}
-  if(H(car.x,car.z)>-1){toast('Drive the truck into the deep blue water, then launch the submarine!');return}
-  if(!sub.g)sub.g=subModel();world.scene.add(sub.g);sub.on=true;if(car.miniSub)car.miniSub.visible=false;
-  const p=car.g.localToWorld(V(5,0,0));sub.x=p.x;sub.z=p.z;sub.yaw=car.yaw;sub.v=0;sub.y=Math.max(H(sub.x,sub.z)+1.5,-2.5);car.v=0;
+    // the submarine turns back into your truck, floating on the water
+    world.scene.remove(sub.g);sub.on=false;car.g.visible=true;car.x=sub.x;car.z=sub.z;car.yaw=sub.yaw;car.v=0;mode='car';me.x=car.x;me.z=car.z;look.yaw=0;look.pitch=-.12;setDriveUI();toast('🚚 Your submarine turned back into your truck!');return}
+  if(mode==='foot'&&sub.on){toast('Swim back to your submarine and press E to get in');return}
+  if(mode!=='car'){toast('Get in your truck first, then turn it into a submarine!');return}
+  if(H(car.x,car.z)>-1){toast('Drive the truck into the deep blue water, then turn it into a submarine!');return}
+  if(!sub.g)sub.g=subModel();world.scene.add(sub.g);sub.on=true;car.g.visible=false;
+  sub.x=car.x;sub.z=car.z;sub.yaw=car.yaw;sub.v=0;sub.y=-1.2;car.v=0;
   mode='sub';me.x=sub.x;me.z=sub.z;look.yaw=0;look.pitch=0;setDriveUI();
-  toast('🚢 Submarine launched! W to go, A D to turn, Space to go up, Shift to dive. Press F to catch fish!',6000);
+  toast('🚢 Your truck turned into a submarine! W to go, A D to turn, Space up, Shift dive, F to catch fish, E to jump out snorkelling!',7000);
 }
 function updateSub(dt){
   const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
@@ -610,7 +622,7 @@ function updateSub(dt){
   const ox=sub.x,oz=sub.z;sub.x-=Math.sin(sub.yaw)*sub.v*dt;sub.z-=Math.cos(sub.yaw)*sub.v*dt;keepIn(sub);
   if(H(sub.x,sub.z)>sub.y-1.1){sub.x=ox;sub.z=oz;if(Math.abs(sub.v)>3)toast('Bonk! The submarine hit the sea floor.');sub.v*=-.3}
   const vy=(keys.rise||pad.rise?1:0)-(keys.run||keys.dive||pad.dive?1:0);sub.y=clamp(sub.y+vy*3.2*dt,H(sub.x,sub.z)+1.1,-.9);
-  me.x=sub.x;me.z=sub.z;
+  me.x=sub.x;me.z=sub.z;car.x=sub.x;car.z=sub.z;car.yaw=sub.yaw;
   const g=sub.g;g.position.set(sub.x,sub.y-1.2+Math.sin(performance.now()*.002)*.05,sub.z);g.rotation.set(0,sub.yaw+Math.PI,0);g.rotation.z=-turn*.12*Math.min(1,Math.abs(sub.v)/4);
   g.userData.prop.rotation.z+=sub.v*dt*3;
 }
@@ -620,4 +632,6 @@ function underwater(){
   if(u){const d=clamp(-cam.position.y/7,0,1);f.color.set('#1a7fa8').lerp(new T.Color('#06304f'),d);f.near=1;f.far=70-d*30;world.scene.background.copy(f.color)}
   else{f.color.copy(world.fog0.c);f.near=world.fog0.n;f.far=world.fog0.x;world.scene.background.copy(world.fog0.b)}
   world.sky.sky.visible=!u;const el=$('#under');if(el&&el.hidden===u)el.hidden=!u;
+  const sn=world.sea&&mode==='foot'&&!me.mount&&H(me.x,me.z)<-.4,se=$('#snorkel');if(se&&se.hidden===sn)se.hidden=!sn;
+  if(footRig&&footRig.userData.sleeve)footRig.userData.sleeve.color.set(world.sea?'#1d4f8a':'#5f6a40');
 }

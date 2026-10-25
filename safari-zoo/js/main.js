@@ -230,7 +230,7 @@ async function startZooDrive(id,opts={}){
   if(!zoo.built||curView!=='zoo'){show('zoo');loading(true,'Opening your zoo…');await nextFrame();await enterZoo(t=>$('#loadTxt').textContent=t);loading(false)}
   world=zooDriveWorld();
   if(zoo.carG)zoo.scene.remove(zoo.carG);
-  buildCar(zoo.scene,opts);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
+  sub.on=false;buildCar(zoo.scene,opts);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
   mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
   if(A){car.x=A.inside.x;car.z=A.inside.z;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}

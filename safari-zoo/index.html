@@ -55,6 +55,8 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 #cv:active{cursor:grabbing}
 #drive,#zoo{padding:0;overflow:hidden;background:transparent;pointer-events:none}
 #drive>*,#zoo>*{pointer-events:auto}
+#snorkel{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 47% 43% at 50% 48%,transparent 90%,#141a24 95%)}
+#snorkel::after{content:'';position:absolute;right:7%;top:-3%;width:26px;height:50%;background:linear-gradient(90deg,#ff8a2a,#ffb35a);border:3px solid #1a1a1a;border-radius:14px}
 #under{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% -10%,rgba(150,230,255,.28),rgba(0,50,100,.35) 70%)}
 #drive>#tag,#drive>.cross,#drive>#prompt,#drive>#mm,#zoo>.hint{pointer-events:none}
 .hud{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
@@ -167,6 +169,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 
 <section id="drive" class="screen" hidden>
   <div id="under" hidden></div>
+  <div id="snorkel" hidden></div>
   <div class="cross" id="cross" hidden></div>
   <div id="tag" hidden></div>
   <div class="hud">
