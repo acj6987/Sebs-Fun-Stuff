@@ -508,7 +508,7 @@ function syncRides(){
   if(!owned){if(!zoo.rideNote){toast('Catch a Triceratops in the 🦖 Dino Zone to open Triceratops Rides!');zoo.rideNote=1}return}
   for(let i=0;i<3;i++){const inst=ANIMALS.make(SP['dino:1']);zoo.scene.add(inst.g);
     // two visitors sit on its back
-    const riders=[];for(const z of[.3,-.9]){const r=ANIMALS.make(personSp((i*2+(z>0?0:1))%LOOKS.length));seat(r);r.g.position.set(0,inst.h*.86-.95*LOOKS[(i*2+(z>0?0:1))%LOOKS.length].s,z);inst.inner.add(r.g);riders.push(r)}
+    const riders=[];for(const z of[.3,-.9]){const r=ANIMALS.make(personSp((i*2+(z>0?0:1))%LOOKS.length));seat(r);r.g.position.set(0,inst.h*.92-.95*LOOKS[(i*2+(z>0?0:1))%LOOKS.length].s,z-.6);inst.inner.add(r.g);riders.push(r)}
     zoo.rides.push({inst,a:i*Math.PI*2/3,riders,laps:0})}
   // baby triceratops play in the middle
   for(let i=0;i<2;i++){const inst=ANIMALS.make(SP['dino:1']);inst.g.scale.setScalar(.4);zoo.scene.add(inst.g);zoo.rides.push({inst,baby:1,x:RIDE.x-10+i*20,z:RIDE.z,tx:RIDE.x,tz:RIDE.z,t:0,yaw:0})}

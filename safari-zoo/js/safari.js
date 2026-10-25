@@ -386,7 +386,7 @@ function ensurePets(){
   if(world.pets||world.zoo)return;world.pets=[];
   PET_KEYS.forEach((k,i)=>{const inst=ANIMALS.make(SP[k]);world.scene.add(inst.g);
     const tag=makeIcon();tag.material=tag.material.clone();tag.material.map=iconTex(i?'🦖':'🦕',i?'#8a2a14':'#2f6a32');tag.visible=true;tag.scale.set(1.1,1.1,1);tag.position.y=inst.h+1;inst.g.add(tag);
-    world.pets.push({sp:SP[k],inst,x:car.x,z:car.z,yaw:car.yaw,side:i?1:-1,fast:i===1,saddle:i?inst.h*.75:inst.h*.82,tag})});
+    world.pets.push({sp:SP[k],inst,x:car.x,z:car.z,yaw:car.yaw,side:i?1:-1,fast:i===1,saddle:i?inst.h*.8:inst.h*1.15,tag})});
 }
 function placePets(){ensurePets();if(!world.pets)return;for(const p of world.pets){const q=car.g.localToWorld(V(p.side*3.5,0,-1));p.x=q.x;p.z=q.z;p.yaw=car.yaw+Math.PI}}
 function rideToggle(){
@@ -402,7 +402,7 @@ function updatePets(dt,time){
   if(!world.pets)return;
   world.pets.forEach((p,i)=>{
     let tx,tz,spd=0;
-    if(me.mount===p){const ox=p.x,oz=p.z;p.x=me.x;p.z=me.z;spd=Math.hypot(p.x-ox,p.z-oz)/Math.max(dt,1e-3);p.yaw=look.yaw+Math.PI}
+    if(me.mount===p){const ox=p.x,oz=p.z,fw=p.fast?.4:1.6;p.x=me.x-Math.sin(look.yaw)*fw;p.z=me.z-Math.cos(look.yaw)*fw;spd=Math.hypot(p.x-ox,p.z-oz)/Math.max(dt,1e-3);p.yaw=look.yaw+Math.PI}
     else{
       // follow you, or run along behind the truck
       if(mode==='car'){const q=car.g.localToWorld(V(p.side*3.5,0,11));tx=q.x;tz=q.z}else{tx=me.x+Math.cos(look.yaw)*p.side*3.5+Math.sin(look.yaw)*3;tz=me.z-Math.sin(look.yaw)*p.side*3.5+Math.cos(look.yaw)*3}
