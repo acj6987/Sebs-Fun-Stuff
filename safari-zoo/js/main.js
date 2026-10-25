@@ -130,17 +130,17 @@ cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return
   if(curView==='drive'){look.yaw-=dx*.005;look.pitch=clamp(look.pitch-dy*.004,-1.2,1.1);look.idle=0;return}
   if(curView!=='zoo')return;const w=zoo.cam.w;
   if(ptrs.size>=2&&pinch){const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
-    w.dist=clamp(w.dist*pinch.d/Math.max(d,1),14,900);panZoo(mx-pinch.mx,my-pinch.my);pinch={d,mx,my};return}
+    w.dist=clamp(w.dist*pinch.d/Math.max(d,1),14,1600);panZoo(mx-pinch.mx,my-pinch.my);pinch={d,mx,my};return}
   if(downAt&&(downAt.btn===2||downAt.shift))panZoo(dx,dy);
   else{w.yaw-=dx*.006;w.pitch=clamp(w.pitch+dy*.004,.12,1.4)}});
 function panZoo(dx,dy){const w=zoo.cam.w,s=w.dist*.0016,c=Math.cos(w.yaw),n=Math.sin(w.yaw);
-  w.tx=clamp(w.tx-c*dx*s-n*dy*s,-400,400);w.tz=clamp(w.tz+n*dx*s-c*dy*s,zooLayout().end-60,120)}
+  w.tx=clamp(w.tx-c*dx*s-n*dy*s,-700,800);w.tz=clamp(w.tz+n*dx*s-c*dy*s,zooLayout().end-60,120)}
 const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;look.drag=false;look.idle=0;
   if(curView==='zoo'&&downAt&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<7&&performance.now()-downAt.t<500&&ptrs.size===0){const id=zooPick(e.clientX,e.clientY);if(id!=null)tapArea(id)}
   if(ptrs.size===0)downAt=null};
 cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
 cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('wheel',e=>{if(curView!=='zoo')return;e.preventDefault();const w=zoo.cam.w;w.dist=clamp(w.dist*Math.pow(1.0015,e.deltaY),14,900)},{passive:false});
+cv.addEventListener('wheel',e=>{if(curView!=='zoo')return;e.preventDefault();const w=zoo.cam.w;w.dist=clamp(w.dist*Math.pow(1.0015,e.deltaY),14,1600)},{passive:false});
 document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;
   b.addEventListener('pointerdown',e=>{keys[k]=true;b.setPointerCapture(e.pointerId);e.preventDefault()});
   ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
@@ -166,7 +166,6 @@ function renderZooUI(){
   $('#holding').innerHTML=S.holding.length?S.holding.map(an=>{const s=SP[an.k];
     return `<button class="chip ${selected===an.uid?'sel':''}" data-uid="${an.uid}"><span class="e">${s.e}</span>${s.n}<small>${HAB[s.hab].i}</small></button>`}).join('')
     :'<span class="empty">The truck is empty. Go on safari to catch more animals!</span>';
-  $('#dinoTour').hidden=!S.areas.some(a=>a.hab==='dino');
   $('#placeHint').hidden=selected===null;
   if(selected!==null){const an=S.holding.find(x=>x.uid===selected);if(an)$('#placeHint').textContent='Now tap an area in the zoo to move the '+SP[an.k].n+' in. It likes '+HAB[SP[an.k].hab].name+' areas best.'}
   renderAreaCard();
@@ -204,7 +203,7 @@ $('#acList').addEventListener('click',e=>{const area=S.areas.find(a=>a.id===zoo.
     toast('Bye bye '+SP[an.k].n+'! It went back to the wild.')}});
 $('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0).map(c=>(delete c.pen,c)));const made=autoHome();
   [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are back in their domes!')});
-$('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=330;w.tx=0;w.tz=-160};
+$('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=700;w.tx=0;w.tz=-400};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
 function build(type){const cost=250;
   if(S.coins<cost){toast('You need '+cost+' coins. Catch more animals!');return}
@@ -234,7 +233,7 @@ async function startZooDrive(id){
   show('drive');safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
 }
 $('#driveZoo').onclick=()=>{endDinoTour();startZooDrive(null)};
-$('#dinoTour').onclick=async()=>{if(!S.areas.some(a=>a.hab==='dino')){toast('Catch a dinosaur in the 🦖 Dino Zone first, so you have an Ultra Dino Dome!');return}endDinoTour();await startZooDrive(null);startDinoTour()};
+$('#dinoTour').onclick=async()=>{endDinoTour();await startZooDrive(null);startDinoTour()};
 $('#goEnc').onclick=()=>{renderEncPick();$('#encPick').hidden=false};
 $('#encClose').onclick=()=>$('#encPick').hidden=true;
 $('#encGrid').addEventListener('click',e=>{const b=e.target.closest('[data-enc]');if(!b)return;endDinoTour();startZooDrive(b.dataset.enc==='gate'?null:+b.dataset.enc)});

@@ -351,7 +351,7 @@ function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':
 /* ---------- moving ---------- */
 function updateCar(dt){
   const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,up=gas>.05,dn=brk>.05,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
-  const wet=inPond(car.x,car.z)&&world.c.hab!=='polar',max=wet?7:21;
+  const wet=inPond(car.x,car.z)&&world.c.hab!=='polar',max=wet?7:world.zoo?34:21;
   if(up)car.v+=(car.v<0?16:8)*gas*dt;if(dn)car.v-=(car.v>0?16:7)*brk*dt;
   if(!up&&!dn)car.v*=Math.pow(.35,dt);
   car.v=clamp(car.v,-7,max);
