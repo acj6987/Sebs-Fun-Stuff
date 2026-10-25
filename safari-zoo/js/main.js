@@ -175,9 +175,9 @@ function renderAreaCard(){
   if(!area){card.hidden=true;return}
   card.hidden=false;
   $('#acTitle').textContent=(S.areas.indexOf(area)+1)+'. '+HAB[area.hab].i+' '+HAB[area.hab].name+' Dome';
-  $('#acCount').textContent=area.animals.length+' animal'+(area.animals.length===1?'':'s')+' live here · room for as many as you catch';
+  $('#acCount').textContent=area.animals.length+' animal'+(area.animals.length===1?'':'s')+' live here'+(area.eggs.length?' · 🥚 '+area.eggs.length+' egg'+(area.eggs.length>1?'s':'')+' waiting to hatch':'')+' · room for as many as you catch';
   $('#acList').innerHTML=area.animals.length?area.animals.map(an=>{const s=SP[an.k],ok=happy(an,area);
-    return `<li><span class="e">${s.e}</span><span><b>${s.n}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span><span class="two"><button class="mini" data-load="${an.uid}">🚚 Truck</button><button class="mini" data-free="${an.uid}">🌿 Set free</button></span></li>`}).join('')
+    return `<li><span class="e">${s.e}</span><span><b>${s.n}${an.born?' (baby)':''}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span><span class="two"><button class="mini" data-load="${an.uid}">🚚 Truck</button><button class="mini" data-free="${an.uid}">🌿 Set free</button></span></li>`}).join('')
     :'<li class="empty">No animals here yet. Catch some '+HAB[area.hab].name+' animals on safari!</li>';
 }
 function tapArea(id){

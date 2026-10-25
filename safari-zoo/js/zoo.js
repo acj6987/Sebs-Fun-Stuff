@@ -99,7 +99,7 @@ function buildArea(area,i){
   gm.rotation.x=-Math.PI/2;gm.position.y=.06;gm.receiveShadow=true;gm.userData.area=area.id;grp.add(gm);zoo.grounds.push(gm);
   const cols=[];
   // a big pond
-  const pr=R0*.13,px=-R0*.32,pz=-R0*.25;
+  const pr=R0*.12,px=-R0*.35,pz=R0*.05;
   const w=NATURE.waterMesh(pr,E.water);w.position.set(px,.12,pz);grp.add(w);zoo.waters.push(w);
   const rim=new T.Mesh(new T.TorusGeometry(pr,.5,8,64),NATURE.rockMat(E.rock));rim.rotation.x=-Math.PI/2;rim.position.set(px,.1,pz);rim.scale.z=.4;rim.receiveShadow=true;grp.add(rim);
   // full-size plants and rocks from that habitat, with a clear ring to drive round
@@ -107,7 +107,7 @@ function buildArea(area,i){
   const rr=rng(area.id*97+3),lim=R0-4;
   const sized=types.map(t=>Object.assign({},t,{col:t.col?Math.min(t.col,2):0}));
   cols.push(...NATURE.scatter(grp,sized,Math.round((R0>250?650:R0>150?380:60)*Math.max(.5,QUALITY.trees)),q=>{const a=q()*6.28,d=Math.sqrt(q())*lim;const p=V(Math.sin(a)*d,0,Math.cos(a)*d);
-    if(Math.hypot(p.x-px,p.z-pz)<pr+3||d<R0*.22||(d>R0*.55&&d<R0*.72)||Math.abs(p.x)<10&&p.z>0)return null;return p},rr));
+    if(Math.hypot(p.x-px,p.z-pz)<pr+3||d<R0*.22||(d>R0*.55&&d<R0*.72)||Math.abs(p.x)<10&&p.z>0||Math.hypot(p.x,p.z-(R0-Math.min(R0*.3,R0>250?75:45)-22))<Math.min(R0*.3,R0>250?75:45)+6)return null;return p},rr));
   if(R0>250){const vg=new T.CylinderGeometry(10,70,80,48,8,true),p=vg.attributes.position;for(let i=0;i<p.count;i++){const k=1+(MESHER.noise3(p.getX(i)*.05,p.getY(i)*.05,p.getZ(i)*.05)-.5)*.3;p.setX(i,p.getX(i)*k);p.setZ(i,p.getZ(i)*k)}vg.computeVertexNormals();
     const [lc,lg]=NATURE.canvas(256);lg.fillStyle='#000';lg.fillRect(0,0,256,256);for(let i=0;i<7;i++){let x=Math.random()*256;lg.strokeStyle='#ff6a14';lg.lineWidth=3+Math.random()*4;lg.beginPath();lg.moveTo(x,0);for(let y=0;y<120+Math.random()*130;y+=8){x+=(Math.random()-.5)*6;lg.lineTo(x,y)}lg.stroke()}
     const vo=new T.Mesh(vg,new T.MeshStandardMaterial({color:'#3a3330',roughness:.95,emissive:'#ff5a14',emissiveMap:NATURE.toTex(lc,true),emissiveIntensity:1.3}));vo.position.set(-R0*.45,40,-R0*.4);vo.castShadow=true;grp.add(vo);
@@ -171,7 +171,8 @@ function syncZooAnimals(){
       const p=randomSpot(A,r);const o={an,A,inst,x:p.x,z:p.z,tx:p.x,tz:p.z,yaw:r()*6.28,t:r()*3};
       inst.g.position.set(o.x,0,o.z);zoo.scene.add(inst.g);zoo.animals.push(o)}}
 }
-function randomSpot(A,r=Math.random){const lim=A.R0-5;for(let i=0;i<30;i++){const x=(r()-.5)*2*lim,z=(r()-.5)*2*lim;if(Math.hypot(x,z)>lim)continue;if(Math.hypot(A.x+x-A.pond.x,A.z+z-A.pond.z)<A.pond.r+2)continue;return{x:A.x+x,z:A.z+z}}return{x:A.x,z:A.z}}
+function homeOf(A){const r=Math.min(A.R0*.3,A.R0>250?75:45),k=(A.R0-r-22)/A.R0;return{x:A.x+(A.door.x-A.x)*k,z:A.z+(A.door.z-A.z)*k,r}}
+function randomSpot(A,r=Math.random){const h=homeOf(A);for(let i=0;i<30;i++){const a=r()*6.28,d=Math.sqrt(r())*h.r,x=h.x+Math.sin(a)*d,z=h.z+Math.cos(a)*d;if(Math.hypot(x-A.pond.x,z-A.pond.z)<A.pond.r+2)continue;return{x,z}}return{x:h.x,z:h.z}}
 function updateZooAnimals(dt,time){
   const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const o of zoo.animals){
@@ -184,7 +185,9 @@ function updateZooAnimals(dt,time){
     const far=Math.hypot(o.x-cam.position.x,o.z-cam.position.z)>110;if(far!==o.far){o.far=far;ANIMALS.setLOD(o.inst,far)}
     ANIMALS.animate(o.inst,dt,spd,time,{graze:spd<.1&&Math.sin(time*.3+o.an.uid)>.3});
     o.inst.g.position.set(o.x,.06+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
+    if(o.an.born){const g=Math.min(1,(Date.now()-o.an.born)/GROW);o.inst.g.scale.setScalar(.35+.65*g);if(g>=1)delete o.an.born}
   }
+  breed(dt);
 }
 
 /* ---------- camera you can fly around ---------- */
@@ -220,7 +223,7 @@ async function enterZoo(progress){
   rebuildPaths();
   const need=[...new Set(S.areas.flatMap(a=>a.animals.map(x=>x.k)))].filter(k=>!ANIMALS.isBuilt(SP[k]));
   for(let i=0;i<need.length;i++){progress('Getting the animals ready… '+(i+1)+'/'+need.length);await nextFrame();ANIMALS.species(SP[need[i]])}
-  syncZooAnimals();
+  syncZooAnimals();syncEggs();
   // pterodactyls flying inside the Ultra Dino Dome
   for(const f of zoo.flyers||[])zoo.scene.remove(f.inst.g);zoo.flyers=[];
   const U=[...zoo.areas.values()].find(a=>a.R0>250);if(U){if(!ANIMALS.isBuilt(SP['dino:3']))ANIMALS.species(SP['dino:3']);zoo.flyers=makeFlyers(zoo.scene,SP['dino:3'],6,{x:U.x,z:U.z},[60,150],[30,70],1.4)}
@@ -445,4 +448,37 @@ function buildFence(L){
   const pm=new T.MeshStandardMaterial({map:meshTex,transparent:true,alphaTest:.3,side:T.DoubleSide,roughness:.6});
   for(const[a,b,c,d]of segs){const len=Math.hypot(c-a,d-b);const t=meshTex.clone();t.needsUpdate=true;t.repeat.set(len/1.2,H/1.2);const m=pm.clone();m.map=t;
     const pl=new T.Mesh(new T.PlaneGeometry(len,H),m);pl.position.set((a+c)/2,H/2,(b+d)/2);pl.rotation.y=Math.atan2(-(d-b),c-a);f.add(pl)}
+}
+
+/* ---------- eggs and babies ---------- */
+const eggMeshes=new Map();
+function eggMesh(e,A){
+  const g=new T.Group(),r=rng(e.uid*31),sp=SP[e.k],big=sp.hab==='dino'?2.2:1;
+  const nest=new T.Mesh(new T.TorusGeometry(.55*big,.22*big,8,20),new T.MeshStandardMaterial({color:'#7a5a32',roughness:1}));nest.rotation.x=-Math.PI/2;nest.position.y=.15*big;nest.scale.z=.6;g.add(nest);
+  const [c,cg]=NATURE.canvas(64);cg.fillStyle=sp.hab==='dino'?'#e8dcc0':'#f4efe4';cg.fillRect(0,0,64,64);cg.fillStyle='rgba(120,90,60,.5)';for(let i=0;i<30;i++){cg.beginPath();cg.arc(r()*64,r()*64,1+r()*3,0,7);cg.fill()}
+  const em=new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.5});
+  const n=1+Math.floor(r()*3);for(let i=0;i<n;i++){const egg=new T.Mesh(new T.SphereGeometry(.22*big,14,10),em);egg.scale.set(1,1.3,1);egg.position.set((i-(n-1)/2)*.32*big,.32*big,(r()-.5)*.2);egg.castShadow=true;g.add(egg)}
+  const p=randomSpot(A,r);g.position.set(p.x,0,p.z);zoo.scene.add(g);return g;
+}
+function syncEggs(){
+  for(const m of eggMeshes.values())zoo.scene.remove(m);eggMeshes.clear();
+  for(const a of S.areas){const A=zoo.areas.get(a.id);if(A)for(const e of a.eggs)eggMeshes.set(e.uid,eggMesh(e,A))}
+}
+function breed(dt){
+  const now=Date.now();let changed=false;
+  // eggs hatch
+  for(const a of S.areas)for(const e of a.eggs.slice())if(now>=e.hatch){a.eggs.splice(a.eggs.indexOf(e),1);a.animals.push({uid:S.uid++,k:e.k,born:now});changed=true;
+    const m=eggMeshes.get(e.uid);if(m){zoo.scene.remove(m);eggMeshes.delete(e.uid)}toast('🐣 A baby '+SP[e.k].n+' hatched!')}
+  zoo.breedT=(zoo.breedT??45)-dt;
+  if(zoo.breedT<=0){zoo.breedT=75;
+    for(const a of S.areas){const A=zoo.areas.get(a.id);if(!A)continue;
+      const grown={};for(const an of a.animals)if(!an.born)grown[an.k]=(grown[an.k]||0)+1;
+      const total={};for(const an of a.animals)total[an.k]=(total[an.k]||0)+1;for(const e of a.eggs)total[e.k]=(total[e.k]||0)+1;
+      const ks=Object.keys(grown).filter(k=>grown[k]>=2&&total[k]<10);if(!ks.length||Math.random()>.3)continue;
+      const k=ks[Math.floor(Math.random()*ks.length)],sp=SP[k];
+      if(laysEggs(sp)){const e={uid:S.uid++,k,hatch:now+90000};a.eggs.push(e);eggMeshes.set(e.uid,eggMesh(e,A));toast('🥚 The '+sp.n+'s laid an egg in the '+HAB[a.hab].name+' dome! It will hatch soon.')}
+      else{a.animals.push({uid:S.uid++,k,born:now});changed=true;toast('🍼 A baby '+sp.n+' was born in the '+HAB[a.hab].name+' dome!')}
+      break}}
+  if(changed){save();syncZooAnimals();if(curView==='zoo')renderZooUI()}
+  else if(zoo.breedT===75)save();
 }
