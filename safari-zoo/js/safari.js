@@ -53,7 +53,7 @@ async function buildSafari(c,progress){
   ground.receiveShadow=true;scene.add(ground);
   for(const p of world.ponds){const w=NATURE.waterMesh(p.r*1.1,E.water);w.position.set(p.x,p.lvl,p.z);scene.add(w);world.waters.push(w)}
   if(c.hab==='dino')addVolcano(scene);
-  if(c.sea){const w=NATURE.waterMesh(WS*1.2,E.water);w.material.opacity=.72;w.position.y=0;scene.add(w);world.waters.push(w)}
+  if(c.sea){const w=NATURE.waterMesh(WS*1.2,E.water);w.material.opacity=.5;w.position.y=0;scene.add(w);world.waters.push(w)}
   progress('Growing trees…');await nextFrame();
   const types=NATURE.treeTypes(c.hab);
   const place=rr=>{const x=(rr()-.5)*(WS+380),z=(rr()-.5)*(WS+380);if(Math.hypot(x,z)<28||inPond(x,z))return null;
@@ -323,7 +323,7 @@ function updateAnimals(dt,time){
     a.alt=lerp(a.alt,a.m.A.fly&&(a.state==='flee'||a.state==='chased'||a.soar)?7:0,Math.min(1,dt*1.5));
     let pitch=0;
     if(world.sea){const h=H(a.x,a.z),d=a.sp.def;
-      if(d.swim){let y=-(d.dorsalS&&a.m.h>1?a.m.h*.7:a.m.h+.15);
+      if(d.swim){let y=-(d.dorsalS&&a.m.h>1?a.m.h*.7:a.m.h*.85);
         // dolphins leap out of the water
         if(d.jump&&a.state!=='netted'){a.jt=(a.jt||0)-dt;if(a.jt<-8&&spd>.4&&Math.random()<dt*.15)a.jt=1.3;if(a.jt>0){const q=(1.3-a.jt)/1.3;y+=Math.sin(q*Math.PI)*3.4;pitch=-Math.cos(q*Math.PI)*.7}}
         a.alt=Math.max(h,y)-h}

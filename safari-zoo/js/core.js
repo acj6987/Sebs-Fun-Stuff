@@ -126,11 +126,11 @@ const CONT=[
 const FISHES=['Clownfish','Blue Tang','Yellow Tang','Angelfish','Pufferfish'];
 CONT.push({id:'ocean',name:'Ocean Islands',place:'Tropical sea with islands',hab:'ocean',sea:1,deco:['🏝️','🐠','✨'],
   animals:[
-   ['Clownfish','🐠',1,1.6,{swim:1,herd:[4,6],plan:'fish',s:.5,tall:.42,wide:.17,col:'#ff7a12',tex:'stripes',col2:'#ffffff',freq:6,thin:.6,noBelly:1,fin:'#ff8a2a'}],
-   ['Blue Tang','🐟',1,1.8,{swim:1,herd:[5,8],plan:'fish',s:.55,tall:.5,wide:.15,col:'#2a5fe0',tex:'spots',col2:'#0e1a40',noBelly:1,fin:'#ffd23a'}],
-   ['Yellow Tang','🐟',1,1.6,{swim:1,herd:[6,9],plan:'fish',s:.5,tall:.6,wide:.14,col:'#ffd81f',noBelly:1,fin:'#ffe45a',fin2:1,belly2:1}],
-   ['Angelfish','🐟',1,1.3,{swim:1,herd:[3,5],plan:'fish',s:.5,tall:.75,wide:.12,col:'#f2ecc0',tex:'stripes',col2:'#1a1a1a',freq:9,thin:.5,noBelly:1,fin:'#e8d070',fin2:1.6,belly2:1}],
-   ['Pufferfish','🐡',2,1.1,{swim:1,herd:[1,2],plan:'fish',s:.6,tall:.7,wide:.32,col:'#d8c070',tex:'spots',col2:'#5a4a20',spikes:1,fin:'#c8b060',dorsalS:.15}],
+   ['Clownfish','🐠',1,1.6,{swim:1,herd:[4,6],sz:2,plan:'fish',s:.5,tall:.42,wide:.17,col:'#ff7a12',tex:'stripes',col2:'#ffffff',freq:6,thin:.6,noBelly:1,fin:'#ff8a2a'}],
+   ['Blue Tang','🐟',1,1.8,{swim:1,herd:[5,8],sz:2,plan:'fish',s:.55,tall:.5,wide:.15,col:'#2a5fe0',tex:'spots',col2:'#0e1a40',noBelly:1,fin:'#ffd23a'}],
+   ['Yellow Tang','🐟',1,1.6,{swim:1,herd:[6,9],sz:2,plan:'fish',s:.5,tall:.6,wide:.14,col:'#ffd81f',noBelly:1,fin:'#ffe45a',fin2:1,belly2:1}],
+   ['Angelfish','🐟',1,1.3,{swim:1,herd:[3,5],sz:2,plan:'fish',s:.5,tall:.75,wide:.12,col:'#f2ecc0',tex:'stripes',col2:'#1a1a1a',freq:9,thin:.5,noBelly:1,fin:'#e8d070',fin2:1.6,belly2:1}],
+   ['Pufferfish','🐡',2,1.1,{swim:1,herd:[1,2],sz:2,plan:'fish',s:.6,tall:.7,wide:.32,col:'#d8c070',tex:'spots',col2:'#5a4a20',spikes:1,fin:'#c8b060',dorsalS:.15}],
    ['Dolphin','🐬',2,3.2,{swim:1,jump:1,herd:[3,5],plan:'fish',s:2.6,tall:.22,wide:.13,col:'#8a98a8',belly:'#eef2f4',beak:1,flukes:1,dorsalS:.14,fin2:1,fin:'#7a8898'}],
    ['Manta Ray','🐟',2,1.5,{swim:1,herd:[1,2],plan:'fish',ray:1,s:3,tall:.16,col:'#2a3038',belly:'#eaeaea'}],
    ['Sea Turtle','🐢',2,.8,{amph:1,plan:'lizard',s:1.1,col:'#7a8a5a',shell:'#6a5232',belly:'#d8c890'}],
