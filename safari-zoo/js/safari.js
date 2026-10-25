@@ -245,7 +245,7 @@ function spawnAnimal(initial,force){
   const c=world.c,list=c.animals.map((a,i)=>SP[c.id+':'+i]);
   const w=list.map(s=>s.def.mate?0:[0,7,3,1.2][s.r]),tot=w.reduce((a,b)=>a+b);
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
-  // the two Mummy Dreams only ever appear together, and never again once they are yours
+  // the two Mummy Dreams only ever appear together (and run at 70 mph, 31 m/s), and never again once they are yours
   let kinds=null;
   if(sp.def.mate){if(sp.def.male)return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
   const okAt=(x,z)=>livesAt(sp,x,z);
@@ -308,7 +308,7 @@ function updateAnimals(dt,time){
       if(r>=2&&(d<scareR||herdRun)&&a.stam>0){if(G&&d<scareR)G.fleeT=3;
         const chase=a.sp.def.chase&&d>4;if(chase&&a.state!=='flee'&&mode==='foot')toast('ROAR! The '+a.sp.n+' is chasing you! Run back to the truck!');
         if(a.sp.def.mate&&a.state==='wander'&&d<scareR&&G&&G.members[0]===a)toast('✨ Something glittery just flew away! Sneak up slowly…');
-        a.state='flee';const fs=a.sp.def.mate?17:Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
+        a.state='flee';const fs=a.sp.def.mate?31:Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
         if(a.stam<=0){a.state='tired';a.tired=a.sp.def.mate?12:6;if(d<45&&(!G||G.members[0]===a))toast('The '+a.sp.n+(G?'s are':' is')+' tired! Quick, throw your net!')}}
       else{if(a.state==='flee')a.state='wander';a.stam=Math.min(1,a.stam+dt*.15);
         const lead=G&&G.members[0];
