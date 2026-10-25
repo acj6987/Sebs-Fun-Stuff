@@ -110,14 +110,19 @@ function glam(k,p,{by,at,nb,nd,na,hl,hw,hh}){
     k.bone('arm'+i,'root',sh);k.bone('fore'+i,'arm'+i,el);
     k.cap(sh,el,W*.11,W*.085,'arm'+i,{k:W*.06,col:p.top});k.cap(el,ha,W*.08,W*.065,'fore'+i,{k:W*.04,col:p.col});
     k.extra('fore'+i,'hand',ha,{s:sx,size:W*.13,nail:p.nails[i]});
-    if(i)k.extra('fore'+i,'bag',ad(ha,[0,-W*.12,0]),{size:W*.55,col:p.col2});
+    if(i&&!p.male)k.extra('fore'+i,'bag',ad(ha,[0,-W*.12,0]),{size:W*.55,col:p.col2});
     // fairy wings so she can fly
     const wn='wing'+(sx>0?'R':'L');k.bone(wn,'root',[sx*W*.3,by+Hb*.45,L*.1]);k.extra(wn,'fwing',[sx*W*.3,by+Hb*.45,L*.1],{s:sx,size:L*.85});
-    k.extra('head','peye',at(hl*.32,hh*.16,sx*hw*.4),{r:Math.max(.018,hw*.075)*(p.eyeS||1),s:sx,iris:'#2fa8ff',shadow:'#b14ad8'})}
-  k.extra('head','lips',at(hl*.9,-hh*.27),{w:hh*.34});
-  k.extra('head','bow',at(-hl*.02,hh*.55),{size:hh*.55,col:'#ff3d9a'});
-  k.extra('neck','pearls',ad(nb,sc(nd,p.neck*.12)),{r:p.neckW*1.45,na});
-  k.extra('root','tutu',[0,by-Hb*.05,-L*.05],{rx:W*.62,ry:Hb*.62,len:L*.55,col:'#ff7ec4'});
+    k.extra('head','peye',at(hl*.32,hh*.16,sx*hw*.4),{r:Math.max(.018,hw*.075)*(p.eyeS||1),s:sx,iris:p.male?'#3ad16a':'#2fa8ff',shadow:p.male?'#2f8fff':'#b14ad8',lash:p.male?.5:1})}
+  if(p.male){
+    // the boy wears a sparkly bow tie and a little crown
+    k.extra('neck','bow',ad(nb,ad(sc(nd,p.neck*.12),[0,0,p.neckW*1.3])),{size:hh*.5,col:'#2f6fe0'});
+    k.extra('head','crown',at(-hl*.02,hh*.52),{size:hh*.6})}
+  else{
+    k.extra('head','lips',at(hl*.9,-hh*.27),{w:hh*.34});
+    k.extra('head','bow',at(-hl*.02,hh*.55),{size:hh*.55,col:'#ff3d9a'});
+    k.extra('neck','pearls',ad(nb,sc(nd,p.neck*.12)),{r:p.neckW*1.45,na});
+    k.extra('root','tutu',[0,by-Hb*.05,-L*.05],{rx:W*.62,ry:Hb*.62,len:L*.55,col:'#ff7ec4'})}
   k.extra('root','sparkles',[0,by,0],{size:[W*1.6,Hb*2.4,L*1.4]});
   // her big pretty eyes replace the plain ones
   k.extras=k.extras.filter(e=>e.kind!=='eye');
@@ -507,7 +512,8 @@ function extraMesh(e,p){
       const lid=add(new T.SphereGeometry(r*1.1,18,10,0,Math.PI*2,0,Math.PI*.4),glitterMat(e.shadow));lid.rotation.set(dir.z*.35,0,-dir.x*.35);
       const lm=smat('#120a10',{roughness:.5}),el=.75,az0=Math.atan2(dir.x,dir.z);
       for(let i=0;i<9;i++){const az=az0+(i-4)/4*.95,bp=V3(Math.sin(az)*Math.cos(el)*r*1.08,Math.sin(el)*r*1.08,Math.cos(az)*Math.cos(el)*r*1.08),n=bp.clone().normalize(),L=r*(1.5+.5*Math.cos((i-4)/4*1.4));
-        const c=new T.QuadraticBezierCurve3(bp,bp.clone().addScaledVector(n,L*.6),bp.clone().addScaledVector(n,L*.75).add(V3(0,L*.55,0)));add(new T.TubeGeometry(c,6,r*.035,4),lm)}break}
+        if(!(e.lash>=1)&&i%2)continue;const L2=L*(e.lash||1);
+        const c=new T.QuadraticBezierCurve3(bp,bp.clone().addScaledVector(n,L2*.6),bp.clone().addScaledVector(n,L2*.75).add(V3(0,L2*.55,0)));add(new T.TubeGeometry(c,6,r*.035,4),lm)}break}
     case'lips':{const w=e.w,lm=gloss('#ff3d8e');add(new T.SphereGeometry(1,20,14),lm,[0,w*.16,0],null,[w,w*.32,w*.42]);add(new T.SphereGeometry(1,20,14),lm,[0,-w*.18,-w*.02],null,[w*.9,w*.36,w*.44]);
       for(const sx of[-1,1])add(new T.SphereGeometry(1,12,10),lm,[sx*w*.35,w*.26,w*.05],null,[w*.38,w*.22,w*.3]);
       add(new T.SphereGeometry(w*.16,10,8),new T.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.75}),[w*.3,w*.3,w*.32],null,[1,.4,.4]);break}
@@ -526,6 +532,8 @@ function extraMesh(e,p){
       B(new T.CylinderGeometry(z*.03,z*.03,z*.2,10),gloss('#ffb3d1'),[-z*.08,z*.28,z*.15]).rotation.z=.25;
       const mir=B(new T.CylinderGeometry(z*.11,z*.11,z*.02,20),gold,[0,z*.32,z*.2]);mir.rotation.x=1.2;B(new T.CircleGeometry(z*.095,20),new T.MeshStandardMaterial({color:'#e8f4ff',metalness:1,roughness:0}),[0,z*.33,z*.21]).rotation.x=1.2-Math.PI/2;
       B(new T.CylinderGeometry(z*.015,z*.02,z*.3,6),smat('#2a1a10'),[z*.12,z*.3,-z*.05]).rotation.z=-.3;B(new T.SphereGeometry(z*.05,10,8),smat('#e8b8a0',{roughness:1}),[z*.17,z*.45,-z*.05],[1,1.6,1]);break}
+    case'crown':{const z=e.size,gold=new T.MeshStandardMaterial({color:'#f2c14e',metalness:1,roughness:.2});const band=add(new T.CylinderGeometry(z*.38,z*.42,z*.25,20,1,true),gold);band.material=gold;
+      for(let i=0;i<6;i++){const a=i/6*Math.PI*2;add(new T.ConeGeometry(z*.08,z*.3,6),gold,[Math.cos(a)*z*.4,z*.25,Math.sin(a)*z*.4]);add(new T.SphereGeometry(z*.05,8,6),gloss(i%2?'#2fd1ff':'#ff2d8a'),[Math.cos(a)*z*.41,0,Math.sin(a)*z*.41])}break}
     case'bow':{const z=e.size,bm=glitterMat(e.col);for(const sx of[-1,1]){const l=add(new T.ConeGeometry(z*.35,z*.6,12),bm,[sx*z*.3,0,0],[0,0,sx*Math.PI/2]);l.scale.set(1,1,.45)}add(new T.SphereGeometry(z*.14,10,8),bm);break}
     case'pearls':{const pm=new T.MeshPhysicalMaterial({color:'#fff4f8',roughness:.15,clearcoat:1,iridescence:1,sheen:1,sheenColor:new T.Color('#ffd0e8')}),up=V3(0,Math.sin(e.na),-Math.cos(e.na));
       for(let i=0;i<20;i++){const a=i/20*Math.PI*2;add(new T.SphereGeometry(e.r*.13,10,8),pm,[Math.cos(a)*e.r,up.y*Math.sin(a)*e.r,up.z*Math.sin(a)*e.r])}break}

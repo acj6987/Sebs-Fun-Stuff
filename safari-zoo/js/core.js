@@ -21,6 +21,7 @@ const HAB={
   dino:{name:'Dino Zone',c:'#5a7a3a',i:'🦕'},
   carnivore:{name:'Carnivore Dino Zone',c:'#7a3a2a',i:'🦖'},
   ocean:{name:'Ocean',c:'#2a9ad0',i:'🐠'},
+  dream:{name:'Mummy Dream',c:'#ff7ac0',i:'💖'},
 };
 // how each habitat looks in 3D
 const ENV={
@@ -31,6 +32,7 @@ const ENV={
   outback:{zen:'#2f74cc',hor:'#f2c99a',fog:'#e3b688',ground:'#b55f32',patch:'#9a4c26',rock:'#9a4a26',water:'#4f8a94',grass:['#8a8040','#d8c070'],grassH:.5,grassN:14000,sunEl:.6},
   dino:{zen:'#5d8fb8',hor:'#e2d8c0',fog:'#b8b8a0',ground:'#4f6a2c',patch:'#3a5222',rock:'#4a4440',water:'#3a6658',grass:['#2f5a1e','#7aa040'],grassH:.9,grassN:45000,sunEl:.5},
   ocean:{zen:'#2f86d8',hor:'#d8f0f4',fog:'#bfe2ea',ground:'#ead9a6',patch:'#d9c48a',rock:'#8a8478',water:'#1fa3b8',grass:null,grassN:0,sunEl:.7},
+  dream:{zen:'#7a8ae8',hor:'#ffd8ec',fog:'#f4d6ea',ground:'#6aa84a',patch:'#5a9a3e',rock:'#b8a0b0',water:'#5ab8e8',grass:['#3f8a2e','#9ad860'],grassH:.6,grassN:50000,sunEl:.6},
   polar:{zen:'#6d9fd2',hor:'#eef4fa',fog:'#e4ecf3',ground:'#f2f6f9',patch:'#dde8f0',rock:'#4f5660',water:'#24557a',grass:null,grassN:0,sunEl:.25},
 };
 // [name, emoji, rarity, walk speed m/s, body plan + look]
@@ -136,8 +138,12 @@ CONT.push({id:'ocean',name:'Ocean Islands',place:'Tropical sea with islands',hab
    ['Sea Turtle','🐢',2,.8,{amph:1,plan:'lizard',s:1.1,col:'#7a8a5a',shell:'#6a5232',belly:'#d8c890'}],
    ['Seagull','🕊️',1,1.4,{herd:[3,5],plan:'bird',s:.45,body:'#f4f4f2',wing:'#9aa4ae',head:'#f4f4f2',beak:'#f2c12e',leg:.12,neck:.06,fly:1,tailL:.4,legCol:'#e8a04a'}],
    ['Shark','🦈',3,2.4,{swim:1,hunts:FISHES,plan:'fish',s:4,tall:.2,wide:.12,col:'#7d8a96',belly:'#eef2f4',dorsalS:.13,fin2:1.2,fin:'#6d7a86'}],
-   ['Sparkle Zebraffe','✨',3,2,{amph:1,soar:1,fly:1,glam:1,L:1.9,W:.72,Hb:.95,leg:1.6,legW:.075,neck:1.7,neckW:.14,neckAng:.32,headL:.6,headW:.24,headH:.27,col:'#ffd83a',col2:'#ff4fa3',lineCol:'#ffd83a',belly:'#fff0a0',freq:16,thin:.1,mane:'#ff3d9a',ossicones:1,ears:'pointy',tail:'tuft',tuftCol:'#ff3d9a',tl:.8,hoof:'#ff2d8a',snout:'#ffc4dc',nose:'#ff6aa8',eyeS:1.8,top:'#9b3fd6',nails:['#ff2d8a','#a23cff'],graze:1}],
+   ['Mummy Dream (girl)','💖',3,2,{home:'dream',female:1,mate:'ocean:11',amph:1,soar:1,fly:1,glam:1,L:1.9,W:.72,Hb:.95,leg:1.6,legW:.075,neck:1.7,neckW:.14,neckAng:.32,headL:.6,headW:.24,headH:.27,col:'#ffd83a',col2:'#ff4fa3',lineCol:'#ffd83a',belly:'#fff0a0',freq:16,thin:.1,mane:'#ff3d9a',ossicones:1,ears:'pointy',tail:'tuft',tuftCol:'#ff3d9a',tl:.8,hoof:'#ff2d8a',snout:'#ffc4dc',nose:'#ff6aa8',eyeS:1.8,top:'#9b3fd6',nails:['#ff2d8a','#a23cff'],graze:1}],
   ]});
+// the Mummy Dreams: only two in the whole world, a girl and a boy who always stay together
+{const girl=CONT.at(-1).animals[10];CONT.at(-1).animals.push(['Mummy Dream (boy)','💙',3,2,Object.assign({},girl[4],{female:0,male:1,mate:'ocean:10',top:'#2f6fe0',nails:['#2fd1ff','#2f6fe0'],tuftCol:'#2f8fff',mane:'#ff3d9a'})])}
+const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=1000000;
+function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.areas.some(a=>a.animals.some(x=>x.k===k))}
 const SP={};
 ENV.carnivore=ENV.dino;
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:a[4].home||c.hab}}));
@@ -162,7 +168,12 @@ const GROW=8*60*1000; // babies take 8 minutes to grow up
 function happy(an,area){return SP[an.k].hab===area.hab}
 
 let toastT;
-function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2800)}
+function toast(m,ms=2800){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,ms)}
+// catching both Mummy Dreams wins the giant prize
+function checkDream(){
+  if(S.dreamBonus||!DREAM.every(owns))return;
+  S.dreamBonus=1;S.coins+=DREAM_PRIZE;S.freeDomes=(S.freeDomes||0)+60;save();coins();
+  toast('💖💙 YOU CAUGHT BOTH MUMMY DREAMS! You win 1,000,000 coins, 60 free domes, a giant Mummy Dream Dome where they can have babies, and 6 million visitors are coming to your zoo!',12000)}
 function smallUsed(){return S.cages.filter(c=>c.pen==null).length}
 function pensUsed(){return new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen)).size}
 function coins(){document.querySelectorAll('.coinTxt').forEach(e=>e.textContent='🪙 '+S.coins);const c=$('#cagesTxt');if(c)c.textContent='🧺 '+smallUsed()+'/'+CAGES+' cages · '+pensUsed()+'/'+PENS+' pens'}

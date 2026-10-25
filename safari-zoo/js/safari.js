@@ -241,19 +241,22 @@ function makeIcon(){if(!ICON.run){ICON.run=iconTex('!','#d4602f');ICON.tired=ico
 let grpId=1;
 function spawnAnimal(initial,force){
   const c=world.c,list=c.animals.map((a,i)=>SP[c.id+':'+i]);
-  const w=list.map(s=>[0,7,3,1.2][s.r]),tot=w.reduce((a,b)=>a+b);
+  const w=list.map(s=>s.def.mate?0:[0,7,3,1.2][s.r]),tot=w.reduce((a,b)=>a+b);
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
+  // the two Mummy Dreams only ever appear together, and never again once they are yours
+  let kinds=null;
+  if(sp.def.mate){if(sp.def.male)return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
   const okAt=(x,z)=>livesAt(sp,x,z);
   let x,z,tries=0;do{x=(Math.random()-.5)*2*(LIMIT-15);z=(Math.random()-.5)*2*(LIMIT-15);tries++}
   while(tries<(world.sea?300:50)&&(!okAt(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
   if(initial&&world.animals.length<4&&!world.sea){const a=Math.random()*6.28,d=45+Math.random()*30;x=Math.sin(a)*d;z=-Math.cos(a)*d}
   // animals that live together come as a herd, pride or pack
-  const hd=sp.def.herd,n=hd?hd[0]+Math.floor(Math.random()*(hd[1]-hd[0]+1)):1;
+  const hd=sp.def.herd,n=kinds?kinds.length:hd?hd[0]+Math.floor(Math.random()*(hd[1]-hd[0]+1)):1;
   const grp=n>1?{id:grpId++,members:[],fleeT:0}:null;
   for(let i=0;i<n;i++){
-    const m=ANIMALS.make(sp);world.scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
+    const spi=kinds?kinds[i]:sp,m=ANIMALS.make(spi);world.scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
     const sp2=Math.max(2.5,m.rad*2.6);let ox=i?(Math.random()-.5)*sp2*2.4:0,oz=i?(Math.random()-.5)*sp2*2.4:0;if(!okAt(x+ox,z+oz))ox=oz=0;
-    const a={sp,x:x+ox,z:z+oz,ox,oz,vx:0,vz:0,yaw:Math.random()*6.3,t:0,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp};
+    const a={sp:spi,x:x+ox,z:z+oz,ox,oz,vx:0,vz:0,yaw:Math.random()*6.3,t:0,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp};
     if(grp)grp.members.push(a);world.animals.push(a);
   }
 }
@@ -390,7 +393,7 @@ function cageIt(own=me){
   if(!caged.length){toast('The cages and pens are full! Drive to the zoo to empty them.');return}
   own.pack=own.pack.filter(a=>!caged.includes(a));
   for(const a of caged){world.scene.remove(a.net);world.scene.remove(a.rope);removeAnimal(a)}
-  S.coins+=coinsWon;save();refreshCages();
+  S.coins+=coinsWon;save();refreshCages();checkDream();
   const count={};names.forEach(n=>count[n]=(count[n]||0)+1);
   toast((fresh?'NEW ANIMAL! ':'')+Object.entries(count).map(([n,c])=>c>1?c+' '+n+'s':n).join(', ')+' in the truck'+(own!==me?' (your assistant brought them)':'')+' · +'+coinsWon+' coins'+(own.pack.length?' · No room for '+own.pack.length+' more!':''));
 }

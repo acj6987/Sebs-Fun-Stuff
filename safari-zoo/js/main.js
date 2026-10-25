@@ -162,7 +162,7 @@ function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.pu
 let selected=null;
 $('#habSel').innerHTML=Object.entries(HAB).map(([k,h])=>`<option value="${k}">${h.i} ${h.name}</option>`).join('');
 function renderZooUI(){
-  coins();
+  coins();$('#buildD').textContent=S.freeDomes>0?'Build dome · FREE ('+S.freeDomes+' left)':'Build dome · 🪙 250';
   $('#truckInfo').innerHTML=S.cages.length?`🚚 ${S.cages.length} animal${S.cages.length>1?'s':''} in your truck cages: ${S.cages.map(x=>SP[x.k].e).join('')} <button class="mini" id="unload">Put them back in their domes</button>`:'🚚 Your truck cages are empty.';
   const all=S.areas.flatMap(a=>a.animals.map(an=>[an,a])),h=all.filter(([an,a])=>happy(an,a)).length;
   const score=all.length?Math.min(5,Math.round((h/all.length)*3+Math.min(2,all.length/8))):0;
@@ -209,9 +209,9 @@ $('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))ret
   [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are back in their domes!')});
 $('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=700;w.tx=0;w.tz=-400};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
-function build(type){const cost=250;
+function build(type){const free=(S.freeDomes||0)>0,cost=free?0:250;
   if(S.coins<cost){toast('You need '+cost+' coins. Catch more animals!');return}
-  S.coins-=cost;const area={id:S.aid++,type,hab:$('#habSel').value,animals:[],eggs:[]};S.areas.push(area);save();
+  S.coins-=cost;if(free)S.freeDomes--;const area={id:S.aid++,type,hab:$('#habSel').value,animals:[],eggs:[]};S.areas.push(area);save();
   buildArea(area,S.areas.length-1);rebuildPaths();syncVisitors();zoo.sel=area.id;focusArea(area.id);renderZooUI();
   toast('Built dome '+S.areas.length+': '+HAB[area.hab].name+'!')}
 $('#buildD').onclick=()=>build('dome');
