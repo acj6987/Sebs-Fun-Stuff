@@ -42,7 +42,7 @@ $('#conts').addEventListener('click',e=>{const b=e.target.closest('.cont');if(b)
 async function startSafari(c){
   if(!initRenderer())return;
   show('drive');loading(true,'Driving to '+c.name+'…');await nextFrame();
-  me.pack=[];me.mount=null;car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
+  me.pack=[];me.mount=null;me.frozen=0;car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
   try{await buildSafari(c,t=>$('#loadTxt').textContent=t)}catch(e){console.error(e);loading(false);toast('Something went wrong building '+c.name+'.');show('map');return}
   footRig.visible=false;setDriveUI();$('#where').textContent=c.name+' · '+c.place;$('#cagesTxt').hidden=false;$('#toZoo2').textContent='🏛️ Drive to zoo';
   loading(false);safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
@@ -230,7 +230,7 @@ async function startZooDrive(id,opts={}){
   if(!zoo.built||curView!=='zoo'){show('zoo');loading(true,'Opening your zoo…');await nextFrame();await enterZoo(t=>$('#loadTxt').textContent=t);loading(false)}
   world=zooDriveWorld();
   if(zoo.carG)zoo.scene.remove(zoo.carG);
-  sub.on=false;buildCar(zoo.scene,opts);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
+  sub.on=false;me.frozen=0;buildCar(zoo.scene,opts);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
   mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
   if(A){car.x=A.inside.x;car.z=A.inside.z;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}

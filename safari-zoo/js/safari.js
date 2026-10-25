@@ -74,6 +74,7 @@ async function buildSafari(c,progress){
   // one group of every kind of animal first, then extra ones
   c.animals.forEach((x,i)=>spawnAnimal(true,SP[c.id+':'+i]));
   while(world.animals.length<world.maxAn)spawnAnimal(true);
+  if(c.sea)for(let i=0;i<3;i++)spawnDecoy(DREAM[i%2]);
 }
 
 /* ---------- flying reptiles that circle in the sky ---------- */
@@ -247,7 +248,7 @@ function spawnAnimal(initial,force){
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
   // the two Mummy Dreams only ever appear together (and run at 70 mph, 31 m/s), and never again once they are yours
   let kinds=null;
-  if(sp.def.mate){if(sp.def.male)return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
+  if(sp.def.mate){if(sp.def.male||!DREAM_KEYS.every(owns))return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
   const okAt=(x,z)=>livesAt(sp,x,z);
   let x,z,tries=0;do{x=(Math.random()-.5)*2*(LIMIT-15);z=(Math.random()-.5)*2*(LIMIT-15);tries++}
   while(tries<(world.sea?300:50)&&(!okAt(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
@@ -264,6 +265,24 @@ function spawnAnimal(initial,force){
     if(grp)grp.members.push(a);world.animals.push(a);
   }
 }
+// fake Mummy Dreams: they look exactly real, but they are slower and can be netted from 20 metres... it's a trap!
+function spawnDecoy(k){
+  const sp=SP[k],I=world.islands[1+Math.floor(Math.random()*(world.islands.length-1))]||world.islands[0],ang=Math.random()*6.28,d=I.r*.4*Math.random();
+  const m=ANIMALS.make(sp);world.scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
+  world.animals.push({sp,x:I.x+Math.sin(ang)*d,z:I.z+Math.cos(ang)*d,ox:0,oz:0,vx:0,vz:0,yaw:Math.random()*6.3,t:0,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp:null,fake:true});
+}
+function decoyTrap(a){
+  world.scene.remove(a.m.g);world.animals.splice(world.animals.indexOf(a),1);
+  me.frozen=10;car.v=0;sub.v=0;
+  const lost=S.cages.length;S.cages=[];refreshCages();
+  // one dolphin and one turtle are let go from your zoo
+  let freed=0;for(const k of DREAM_KEYS){const a2=S.areas.find(x=>x.animals.some(y=>y.k===k));if(a2){a2.animals.splice(a2.animals.findIndex(y=>y.k===k),1);freed++}}
+  save();
+  // without them the real Mummy Dreams vanish again
+  if(!DREAM_KEYS.every(owns))for(const b of world.animals.slice())if(b.sp.def.mate&&!b.fake&&b.state!=='netted'){world.scene.remove(b.m.g);world.animals.splice(world.animals.indexOf(b),1)}
+  toast('😱 IT WAS A FAKE MUMMY DREAM! You are frozen for 10 seconds'+(lost?', the '+lost+' animals in your truck escaped':'')+(freed?', and your dolphin and turtle were set free':'')+'!',9000);
+}
+function frozen(dt){if(!(me.frozen>0))return false;me.frozen-=dt;return true}
 // fish stay in the deep water, land animals stay on the islands; turtles and the Sparkle Zebraffe go anywhere
 function livesAt(sp,x,z){if(!world.sea)return!inPond(x,z);const h=H(x,z),d=sp.def;return d.swim?h<-2.2:d.amph?true:h>.8}
 function removeAnimal(a){world.scene.remove(a.m.g);world.animals.splice(world.animals.indexOf(a),1);
@@ -308,8 +327,8 @@ function updateAnimals(dt,time){
       if(r>=2&&(d<scareR||herdRun)&&a.stam>0){if(G&&d<scareR)G.fleeT=3;
         const chase=a.sp.def.chase&&d>4;if(chase&&a.state!=='flee'&&mode==='foot')toast('ROAR! The '+a.sp.n+' is chasing you! Run back to the truck!');
         if(a.sp.def.mate&&a.state==='wander'&&d<scareR&&G&&G.members[0]===a)toast('✨ Something glittery just flew away! Sneak up slowly…');
-        a.state='flee';const fs=a.sp.def.mate?31:Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
-        if(a.stam<=0){a.state='tired';a.tired=a.sp.def.mate?12:6;if(d<45&&(!G||G.members[0]===a))toast('The '+a.sp.n+(G?'s are':' is')+' tired! Quick, throw your net!')}}
+        a.state='flee';const fs=a.sp.def.mate?(a.fake?10:31):Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
+        if(a.stam<=0){a.state='tired';a.tired=a.sp.def.mate&&!a.fake?12:6;if(d<45&&(!G||G.members[0]===a))toast('The '+a.sp.n+(G?'s are':' is')+' tired! Quick, throw your net!')}}
       else{if(a.state==='flee')a.state='wander';a.stam=Math.min(1,a.stam+dt*.15);
         const lead=G&&G.members[0];
         if(lead&&lead!==a){
@@ -362,8 +381,8 @@ function throwNet(){
   if(me.pack.length>=PACK){toast('You are already leading '+PACK+' animals! Take them to the cages first.');return}
   const t=aimTarget();
   if(!t){toast('Look right at an animal to aim your net');return}
-  if(t.dist>(mode==='sub'?26:16)){toast('Too far away! Get closer to the '+t.a.sp.n);return}
-  if(t.a.sp.def.mate&&Math.hypot(t.a.x-me.x,t.a.z-me.z)-t.a.m.rad>2){toast('💖 Mummy Dreams are super shy! Creep up until you are only 2 metres away, then throw.');return}
+  if(t.dist>(mode==='sub'?26:t.a.fake?20:16)){toast('Too far away! Get closer to the '+t.a.sp.n);return}
+  if(t.a.sp.def.mate&&!t.a.fake&&Math.hypot(t.a.x-me.x,t.a.z-me.z)-t.a.m.rad>2){toast('💖 Mummy Dreams are super shy! Creep up until you are only 2 metres away, then throw.');return}
   const a=t.a,dur=.45,tx=a.x+a.vx*dur,tz=a.z+a.vz*dur;
   world.net={a,t:0,dur,start:cam.position.clone().add(V(.3,-.2,0).applyQuaternion(cam.quaternion)),end:V(tx,H(tx,tz)+a.alt+a.m.h*.5,tz),mesh:makeNetMesh()};
   netRig.visible=false;
@@ -374,6 +393,7 @@ function updateNet(dt){
   if(p<1)return;
   world.scene.remove(n.mesh);world.net=null;netRig.visible=true;
   const a=n.a,ok=world.animals.includes(a)&&Math.hypot(a.x-n.end.x,a.z-n.end.z)<Math.max(1.6,a.m.rad*1.3)&&(a.alt<2.5||a.sp.def.swim||world.sea&&a.alt<6&&!a.soar&&a.state!=='flee');
+  if(ok&&a.fake){decoyTrap(a);return}
   if(ok){const netOne=b=>{b.state='netted';b.vx=b.vz=0;b.alt=0;b.icon.visible=false;me.pack.push(b);
       const net=new T.Mesh(new T.SphereGeometry(1,16,12),new T.MeshBasicMaterial({color:'#efe4c8',wireframe:true}));world.scene.add(net);b.net=net;
       b.rope=new T.Line(new T.BufferGeometry().setFromPoints([V(0,0,0),V(0,0,0)]),new T.LineBasicMaterial({color:'#e8d9b0'}));b.rope.frustumCulled=false;world.scene.add(b.rope)};
@@ -402,6 +422,7 @@ function cageIt(own=me){
   own.pack=own.pack.filter(a=>!caged.includes(a));
   for(const a of caged){world.scene.remove(a.net);world.scene.remove(a.rope);removeAnimal(a)}
   S.coins+=coinsWon;save();refreshCages();checkDream();
+  if(world.sea&&DREAM_KEYS.every(owns)&&!DREAM.every(owns)&&!world.animals.some(b=>b.sp.def.mate&&!b.fake)){spawnAnimal(true,SP[DREAM[0]]);setTimeout(()=>toast('✨ You have a dolphin and a turtle! The REAL Mummy Dreams have appeared somewhere far away… but watch out for fakes!',7000),3000)}
   const count={};names.forEach(n=>count[n]=(count[n]||0)+1);
   toast((fresh?'NEW ANIMAL! ':'')+Object.entries(count).map(([n,c])=>c>1?c+' '+n+'s':n).join(', ')+' in the truck'+(own!==me?' (your assistant brought them)':'')+' · +'+coinsWon+' coins'+(own.pack.length?' · No room for '+own.pack.length+' more!':''));
 }
@@ -483,6 +504,7 @@ function updatePets(dt,time){
 
 /* ---------- moving ---------- */
 function updateCar(dt){
+  if(frozen(dt)){car.v=0;return}
   const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,up=gas>.05,dn=brk>.05,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
   const deep=world.sea&&H(car.x,car.z)<-.9,wet=deep||inPond(car.x,car.z)&&world.c.hab!=='polar',max=deep?15:wet?7:world.zoo?34:21;
   if(up)car.v+=(car.v<0?16:8)*gas*dt;if(dn)car.v-=(car.v>0?16:7)*brk*dt;
@@ -505,6 +527,7 @@ function updateCar(dt){
     setBetween(car.arms[i][0],sh,hp.clone().lerp(sh,.25));setBetween(car.arms[i][1],hp.clone().lerp(sh,.28),hp)});
 }
 function updateFoot(dt){
+  if(frozen(dt))return;
   const turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;look.yaw+=turn*2.2*dt;
   const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),run=keys.run||pad.run,spd=me.mount?(me.mount.fast?(run?22:16):(run?15:11)):(run?8:5.5);
   const deepW=world.sea&&!me.mount&&H(me.x,me.z)<-1.2,swim=deepW?.85:1;
@@ -556,7 +579,8 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;
-  if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
+  if(me.frozen>0)msg='🥶 FROZEN by a fake Mummy Dream! '+Math.ceil(me.frozen)+'…';
+  else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
   else if(world.zoo)msg=foodHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
@@ -616,6 +640,7 @@ function toggleSub(){
   toast('🚢 Your truck turned into a submarine! W to go, A D to turn, Space up, Shift dive, F to catch fish, E to jump out snorkelling!',7000);
 }
 function updateSub(dt){
+  if(frozen(dt)){sub.v=0;return}
   const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
   if(gas>.05)sub.v+=6*gas*dt;if(brk>.05)sub.v-=6*brk*dt;if(gas<=.05&&brk<=.05)sub.v*=Math.pow(.4,dt);sub.v=clamp(sub.v,-4,11);
   sub.yaw+=turn*1.1*dt;
