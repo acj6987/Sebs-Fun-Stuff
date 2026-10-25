@@ -563,7 +563,7 @@ function zooCatch(){
 function nearNursery(){return Math.abs(car.x-NURSE.x)<NURSE.D/2+10&&Math.abs(car.z-NURSE.z)<NURSE.W/2+3}
 function dropEggs(){
   const n=(S.truckEggs||[]).length,mums=S.cages.filter(c=>c.preg);if(!n&&!mums.length)return false;S.nursery=S.nursery||[];
-  for(const e of S.truckEggs.splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}
+  for(const e of (S.truckEggs||[]).splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}
   for(const c of mums){S.cages.splice(S.cages.indexOf(c),1);delete c.pen;S.nursery.push({uid:c.uid,k:c.k,hatch:Date.now()+30000,mumAn:c})}
   save();showTruckEggs();refreshCages();syncNurseryEggs();
   toast((n?'🥚 You put '+n+' egg'+(n>1?'s':'')+' in the warm incubators. ':'')+(mums.length?'🤰 The '+mums.map(c=>SP[c.k].n).join(' and ')+' mum'+(mums.length>1?'s are':' is')+' in a cosy nursery pen. ':'')+'Babies come in 30 seconds!',7000);return true}
