@@ -375,7 +375,7 @@ function make(sp){
   const mesh=new T.SkinnedMesh(S.geo,S.mat);mesh.castShadow=true;mesh.receiveShadow=true;mesh.frustumCulled=false;
   mesh.add(bones[0]);inner.add(mesh);inner.updateMatrixWorld(true);mesh.bind(new T.Skeleton(bones));
   const low=new T.SkinnedMesh(S.geoLow,S.mat);low.castShadow=true;low.frustumCulled=false;inner.add(low);low.bind(mesh.skeleton,mesh.bindMatrix);low.visible=false;
-  const B={};bones.forEach(b=>B[b.name]=b);
+  const B={};bones.forEach(b=>B[b.name]=b);if(!B.root)B.root=bones[0];
   for(const e of k.extras){const b=B[e.bone],bp=k.bones.find(x=>x.name===e.bone).pos;const m=extraMesh(e,p);
     // bone world position at rest = sum of chain; extras are placed relative to their bone
     m.position.set(e.pos[0]-bp[0],e.pos[1]-bp[1],e.pos[2]-bp[2]);b.add(m)}
