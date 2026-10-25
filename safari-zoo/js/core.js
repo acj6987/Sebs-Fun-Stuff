@@ -149,7 +149,12 @@ CONT.at(-1).animals.push(
   ['Octopus','🐙',2,1,{swim:1,plan:'octo',s:1.3,col:'#e2553a',tex:'dots',col2:'#ffb08a',noBelly:1}],
   ['Starfish','⭐',1,.2,{herd:[2,4],plan:'star',s:.5,sz:1.6,col:'#ff7a3a',tex:'dots',col2:'#ffd0a0',noBelly:1}],
   ['Mermaid','🧜‍♀️',3,2.4,{swim:1,herd:[1,2],plan:'mermaid',s:2,sparkle:1,skin:'#f2c4a0',hair:'#ff5aa8',top:'#b45aff',col:'#2fd1c0',tex:'dots',col2:'#7affea',noBelly:1,fin:'#4af0d8'}],
-  ['Great White Seal','🦭',3,2.6,{amph:1,chase:1,hunts:[...FISHES,'Dolphin','Sea Turtle','Seagull','Seahorse'],plan:'seal',s:2.6,shark:1,col:'#4a5560',belly:'#f2f4f6',fin:'#3e4852'}]);
+  ['Great White Seal Bear','🦭',3,2.6,{home:'dream',amph:1,chase:1,hunts:[...FISHES,'Dolphin','Sea Turtle','Seagull','Seahorse'],plan:'seal',s:2.6,shark:1,col:'#4a5560',belly:'#f2f4f6',fin:'#3e4852'}]);
+// the Great White Seal Bear and the Mummy Dreams can have babies together: Sparkle Seal Bears!
+CONT.at(-1).animals.push(
+  ['Sparkle Seal Bear','🌟',3,2.2,{bornOnly:1,home:'dream',amph:1,soar:1,fly:1,fairy:1,sparkle:1,plan:'seal',s:2,shark:1,col:'#ffd83a',belly:'#fff0f6',tex:'stripes',col2:'#ff4fa3',freq:9,thin:.4,fin:'#ff4fa3'}],
+  ['White Jiggly Hippo','🦛',2,1.4,{amph:1,jiggle:1,herd:[2,3],L:2.9,W:1.45,Hb:1.25,leg:.45,legW:.24,neck:.2,neckW:.55,neckAng:1.35,headL:.95,headW:.8,headH:.6,muzzle:1.6,col:'#f6f4f2',belly:'#ffdbe4',hoof:'#e8c8d0',snout:'#ffe2ea',ears:'round',earCol:'#ffc0d0',tail:'short',hp:.2}],
+  ['Bubble Dragon','🐉',3,2,{amph:1,soar:1,fly:1,fairy:1,sparkle:1,plan:'lizard',s:1.6,col:'#3ab8ff',tex:'spots',col2:'#b45aff',belly:'#c8f0ff',frill:'#ff7ad8'}]);
 const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=2000000;
 function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.areas.some(a=>a.animals.some(x=>x.k===k))}
 const SP={};

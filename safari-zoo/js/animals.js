@@ -93,7 +93,7 @@ function quad(p){
   else if(p.tail==='short')k.ell(ad(tb,[0,-.02,-.04]),[W*.13,W*.15,W*.12],'tail',{k:W*.1,col:tcol,pat:1,detail:1});
   else if(p.tail==='flat')k.ell(ad(tb,[0,-by+.12,-.32]),[W*.32,.05,.3],'tail',{k:.04,col:'#3a2a1e',detail:1});
   else k.extra('tail','tail',tb,{len:tl,r:p.tail==='long'?.045:.025,tuft:p.tail==='tuft'?(p.tuftCol||p.mane||'#2a1d14'):null,col:p.tail==='long'?p.col:shade(p.col,-.1),ang:p.tail==='long'?2.1:2.75,tip:p.tail==='long'?(p.col2||p.col):null});
-  k.anim={kind:'quad',stride:Math.max(.5,leg*1.5),graze:p.graze,fly:p.fly};
+  k.anim={kind:'quad',stride:Math.max(.5,leg*1.5),graze:p.graze,fly:p.fly,jiggle:p.jiggle};
   if(p.glam)glam(k,p,{by,at,nb,nd,na,hl,hw,hh});
   return k;
 }
@@ -253,7 +253,8 @@ function lizard(p){
     k.cap(a,b,s*.065,s*.05,'leg'+i,{k:s*.05,pat:1});k.cap(b,f,s*.05,s*.04,'low'+i,{k:s*.03,pat:1})});
   if(p.frill)k.extra('head','frill',[0,s*.25,s*.5],{s,col:p.frill});
   if(p.shell){k.ell([0,s*.27,-s*.02],[s*.4,s*.2,s*.55],'root',{k:s*.08,col:p.shell,rough:.015,rf:9});k.ell([0,s*.15,0],[s*.36,s*.06,s*.5],'root',{k:s*.04,col:p.belly||'#d8c890'})}
-  k.anim={kind:'lizard',stride:s*.45};
+  if(p.fairy)fairyWings(k,[0,s*.32,s*.05],s*1.1);
+  k.anim={kind:'lizard',stride:s*.45,fly:p.fly};
   return k;
 }
 function seal(p){
@@ -275,7 +276,8 @@ function seal(p){
     if(p.shark){k.ell([sx*s*.11,s*.6,s*.52],[s*.055,s*.055,s*.03],'head',{k:s*.02,pat:1,detail:1});k.extra('head','teeth',[sx*s*.07,s*.38,s*.64],{s:sx,len:s*.16,size:s*.035})}
   }
   if(p.shark){k.ell([0,s*.47,s*.6],[s*.2,s*.17,s*.2],'head',{k:s*.1,pat:1});k.extra('root','dfin',[0,s*.5,-s*.05],{size:s*.32,tall:1.1,col:p.fin||p.col})}
-  k.anim={kind:'seal',stride:s*.5};
+  if(p.fairy)fairyWings(k,[0,s*.48,s*.1],s*.9);
+  k.anim={kind:'seal',stride:s*.5,fly:p.fly};
   return k;
 }
 function hedgehog(p){
@@ -350,6 +352,8 @@ function person(p){
   k.anim={kind:'person',stride:.45*s};
   return k;
 }
+// sparkly fairy wings on any animal's back
+function fairyWings(k,at,size){for(const sx of[-1,1]){const wn='wing'+(sx>0?'R':'L'),p=[at[0]+sx*size*.12,at[1],at[2]];k.bone(wn,'root',p);k.extra(wn,'fwing',p,{s:sx,size})}}
 /* ---------- fish, dolphins, sharks and rays ---------- */
 function fish(p){
   const k=kit(),s=p.s,th=s*(p.tall||.34),w=s*(p.wide||.16),y=th*.55;
@@ -699,10 +703,12 @@ function animate(a,dt,spd,time,o={}){
     const w=Math.sin(time*(5+spd*4)+sd)*(.25+Math.min(.35,spd*.15));
     if(A.ray){a.inner.rotation.z=Math.sin(time*1.6+sd)*.12;B.root.position.y=a.rest+Math.sin(time*1.6+sd)*.05;B.root.scale.x=1+Math.sin(time*2+sd)*.06}
     else if(A.flukes){B.tail.rotation.x=w*.8;B.root.rotation.x=-w*.08}else{B.tail.rotation.y=w*1.3;B.root.rotation.y=-w*.25}
-  }else if(A.kind==='seal'){
+  }else if(A.kind==='seal'){if(A.fly&&o.alt>.4)B.root.rotation.x=-.15;
     B.root.position.y=a.rest+Math.abs(Math.sin(ph))*.05*Math.min(1,spd);B.tail.rotation.x=Math.sin(ph*2)*.2*Math.min(1,spd)+Math.sin(time+sd)*.05;
     B.head.rotation.x=-.15+Math.sin(time*.7+sd)*.1;
   }
+  // the White Jiggly Hippo wobbles like jelly
+  if(A.jiggle){const j=Math.sin(time*9+sd)*(.035+Math.min(.05,spd*.02));B.root.scale.set(1+j,1-j*1.2,1+j*.6)}
 }
 window.ANIMALS={make,species,isBuilt,animate,setLOD,shade};
 })();

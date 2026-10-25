@@ -243,7 +243,8 @@ function makeIcon(){if(!ICON.run){ICON.run=iconTex('!','#d4602f');ICON.tired=ico
 let grpId=1;
 function spawnAnimal(initial,force){
   const c=world.c,list=c.animals.map((a,i)=>SP[c.id+':'+i]);
-  const w=list.map(s=>s.def.mate?0:[0,7,3,1.2][s.r]),tot=w.reduce((a,b)=>a+b);
+  const w=list.map(s=>s.def.mate||s.def.bornOnly?0:[0,7,3,1.2][s.r]),tot=w.reduce((a,b)=>a+b);
+  if(force&&force.def.bornOnly)return;
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
   // the two Mummy Dreams only ever appear together, and never again once they are yours
   let kinds=null;

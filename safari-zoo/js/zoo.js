@@ -222,6 +222,8 @@ function nextSpot(o){
   return randomSpot(o.A);
 }
 function homeOf(A){const r=Math.min(A.R0*.3,A.R0>250?75:45),k=(A.R0-r-22)/A.R0;return{x:A.x+(A.door.x-A.x)*k,z:A.z+(A.door.z-A.z)*k,r}}
+// what kind of baby a mum has: a mix baby, a girl or boy Mummy Dream, or one like her
+function babyKind(an){const k=an.pregK,mate=SP[an.k].def.mate;delete an.pregK;return k||(mate&&Math.random()<.5?mate:an.k)}
 function poolSpot(A,r=Math.random){const a=r()*6.28,d=Math.sqrt(r())*A.pond.r*.82;return{x:A.pond.x+Math.sin(a)*d,z:A.pond.z+Math.cos(a)*d}}
 const swims=an=>!!SP[an.k].def.swim;
 function randomSpot(A,r=Math.random){const h=homeOf(A);for(let i=0;i<30;i++){const a=r()*6.28,d=Math.sqrt(r())*h.r,x=h.x+Math.sin(a)*d,z=h.z+Math.cos(a)*d;if(Math.hypot(x-A.pond.x,z-A.pond.z)<A.pond.r+2)continue;return{x,z}}return{x:h.x,z:h.z}}
@@ -594,7 +596,7 @@ function syncNurseryEggs(){
 function updateNursery(){
   const now=Date.now();let hatched=false;
   for(const e of (S.nursery||[]).slice())if(now>=e.hatch){S.nursery.splice(S.nursery.indexOf(e),1);const sp=SP[e.k];let d=S.areas.find(a=>a.hab===sp.hab);
-    if(e.mumAn){const mum=e.mumAn;delete mum.preg;const mate=sp.def.mate,b={uid:S.uid++,k:mate&&Math.random()<.5?mate:e.k,born:now,mum:mum.uid};
+    if(e.mumAn){const mum=e.mumAn,b={uid:S.uid++,k:babyKind(mum),born:now,mum:mum.uid};delete mum.preg;
       if(d)d.animals.push(mum,b);else S.holding.push(mum,b);hatched=true;toast('🍼 The '+sp.n+' mum had her baby '+SP[b.k].n+' in the Nursery! They both went home to their dome.',6000);continue}
     if(d)d.animals.push({uid:S.uid++,k:e.k,born:now,mum:e.mum});else S.holding.push({uid:S.uid++,k:e.k,born:now});hatched=true;toast('🐣 A baby '+sp.n+' hatched in the Egg Nursery and went to its dome!')}
   if(hatched){if(S.holding.length)autoHome();save();syncNurseryEggs();syncZooAnimals();if(curView==='zoo')renderZooUI()}
@@ -611,7 +613,7 @@ function breed(dt){
   // mums go into the animal house and have their babies there
   // (mums in a Family Pen have their babies right there in the pen)
   const homes=[...S.areas.map(a=>[a,zoo.areas.get(a.id)]),...(zoo.penAreas||[]).map(P=>[P.area,P])];
-  for(const[a,A]of homes)for(const an of a.animals.slice())if(an.preg&&now>=an.preg){delete an.preg;const mate=SP[an.k].def.mate,b={uid:S.uid++,k:mate&&Math.random()<.5?mate:an.k,born:now,mum:an.uid};a.animals.push(b);
+  for(const[a,A]of homes)for(const an of a.animals.slice())if(an.preg&&now>=an.preg){const b={uid:S.uid++,k:babyKind(an),born:now,mum:an.uid};delete an.preg;a.animals.push(b);
     const mum=zoo.animals.find(o=>o.an===an);if(A){const p=mum?{x:mum.x+1.5,z:mum.z}:A.pen?{x:A.x,z:A.z}:houseSpot(A);addZooAnimal(b,A,p.x,p.z,Math.random()*6.28)}syncMumTags();
     save();if(curView==='zoo')renderZooUI();toast('🍼 A baby '+SP[b.k].n+' was born'+(A&&A.pen?' in Family Pen '+A.pen:' in the animal house')+'!')}
   zoo.breedT=(zoo.breedT??45)-dt;
@@ -619,6 +621,11 @@ function breed(dt){
     for(const a of S.areas){const A=zoo.areas.get(a.id);if(!A)continue;
       const grown={};for(const an of a.animals)if(!an.born)grown[an.k]=(grown[an.k]||0)+1;
       const total={};for(const an of a.animals)total[an.k]=(total[an.k]||0)+(an.preg?2:1);for(const e of a.eggs)total[e.k]=(total[e.k]||0)+1;
+      // the Great White Seal Bear and a Mummy Dream can have a Sparkle Seal Bear baby
+      if(grown['ocean:17']&&(grown['ocean:10']||grown['ocean:11'])&&(total['ocean:18']||0)<10&&Math.random()<.35){
+        const mum=a.animals.find(x=>(x.k==='ocean:10'||x.k==='ocean:17')&&!x.born&&!x.preg);
+        if(mum){mum.preg=now+60000;mum.pregK='ocean:18';save();const o=zoo.animals.find(o=>o.an===mum);if(o){const p=houseSpot(A);o.tx=p.x;o.tz=p.z;o.t=99}
+          toast('🤰 The '+SP[mum.k].n+' is going to have a Sparkle Seal Bear baby with the '+(mum.k==='ocean:17'?'Mummy Dream':'Great White Seal Bear')+'!',6000);break}}
       // the Mummy Dream girl and boy are a pair, so they can have babies together
       const ks=Object.keys(grown).filter(k=>(grown[k]>=2||SP[k].def.female&&grown[SP[k].def.mate]>=1)&&total[k]<10);if(!ks.length||Math.random()>.3)continue;
       const k=ks[Math.floor(Math.random()*ks.length)],sp=SP[k];
@@ -810,7 +817,7 @@ function visitDoctor(){
   if(!S.cages.length){toast('🩺 Bring animals in your truck and the doctor will check them!');return true}
   const now=Date.now(),names=[];let babies=0;
   for(const c of S.cages.splice(0)){delete c.pen;names.push(SP[c.k].n);
-    if(c.preg){delete c.preg;const mate=SP[c.k].def.mate;S.holding.push({uid:S.uid++,k:mate&&Math.random()<.5?mate:c.k,born:now,mum:c.uid});babies++}
+    if(c.preg){S.holding.push({uid:S.uid++,k:babyKind(c),born:now,mum:c.uid});delete c.preg;babies++}
     S.holding.push(c)}
   S.coins+=names.length*20;autoHome();save();coins();refreshCages();syncZooAnimals();if(curView==='zoo')renderZooUI();
   toast('🩺 The doctor checked your '+names.join(', ')+'. All healthy and happy! ❤️'+(babies?' And the doctor helped '+babies+' baby'+(babies>1?' babies':'')+' be born! 🍼':'')+' They went home to their domes. +'+names.length*20+' coins',8000);return true}
