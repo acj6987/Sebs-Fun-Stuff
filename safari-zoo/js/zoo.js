@@ -54,7 +54,7 @@ function buildZoo(){
   zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
     return(Math.abs(x)<ROAD+10+MEGA*2+40||x>0&&x<ULTRA.x+ULTRA.R+40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*900,z=60+rr()*300;return Math.abs(x)<110&&z<190?null:V(x,0,z)},r);
-  buildEntrance();buildFoodStore();buildNursery();
+  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();
   // entrance gate
   const gate=new T.Group();gate.position.set(0,0,30);scene.add(gate);
   const stone=NATURE.rockMat('#b8a890'),wood=NATURE.barkMat(false);
@@ -98,9 +98,9 @@ function buildArea(area,i){
   const D=zooLayout().list[i],{x,z,R:R0,side}=D,grp=new T.Group();grp.position.set(x,0,z);grp.rotation.y=-side*Math.PI/2;zoo.scene.add(grp);
   const E=ENV[area.hab];
   const gt=NATURE.groundTextures(area.hab),map=gt.map.clone(),nm=gt.normal.clone();map.needsUpdate=nm.needsUpdate=true;map.repeat.set(R0/3.5,R0/3.5);nm.repeat.set(R0/3.5,R0/3.5);
-  const gc=new T.Color(E.ground).multiplyScalar(1.15),sea=area.hab==='ocean';
-  // a big pond; the Ocean Dome has a huge deep pool for its fish
-  const pr=R0*(sea?.4:.12),px=-R0*.35,pz=R0*.05;
+  const gc=new T.Color(E.ground).multiplyScalar(1.15),dreamy=area.hab==='dream',sea=area.hab==='ocean'||dreamy;
+  // a big pond; the Ocean Dome has a huge deep pool for its fish, and the Mummy Dream Dome a lagoon with islands
+  const pr=R0*(dreamy?.42:sea?.4:.12),px=-R0*.35,pz=R0*.05;
   let ggeo;if(sea){const sh=new T.Shape();sh.absarc(0,0,R0,0,Math.PI*2);const hole=new T.Path();hole.absarc(px,-pz,pr,0,Math.PI*2,true);sh.holes.push(hole);ggeo=new T.ShapeGeometry(sh,96);map.repeat.set(1/3.5,1/3.5);nm.repeat.set(1/3.5,1/3.5)}
   else ggeo=new T.CircleGeometry(R0,96);
   const gm=new T.Mesh(ggeo,new T.MeshStandardMaterial({color:gc,map,normalMap:nm,roughness:area.hab==='polar'?.55:1}));
@@ -110,6 +110,12 @@ function buildArea(area,i){
   if(sea){w.material.opacity=.38;const sand=new T.MeshStandardMaterial({color:'#2f9aa8',roughness:1}),wall=new T.MeshStandardMaterial({color:'#d8c48a',roughness:.95,side:T.BackSide});
     const side=new T.Mesh(new T.CylinderGeometry(pr,pr*.92,6,96,1,true),wall);side.position.set(px,-3,pz);grp.add(side);
     const bot=new T.Mesh(new T.CircleGeometry(pr*.92,64),sand);bot.rotation.x=-Math.PI/2;bot.position.set(px,-6,pz);bot.receiveShadow=true;grp.add(bot)}
+  const isl=[];
+  if(dreamy){const sandM=new T.MeshStandardMaterial({color:'#f2dca0',roughness:1}),grassM=new T.MeshStandardMaterial({color:'#7ac85a',roughness:1}),palms=(habTypes.ocean||(habTypes.ocean=NATURE.treeTypes('ocean'))).filter((t,j)=>j<2);
+    [[-.35,-.25,.32],[.3,.15,.26],[-.1,.45,.22],[.35,-.45,.18]].forEach(([a,b,s2],j)=>{const ix=px+a*pr,iz=pz+b*pr,ir=pr*s2;
+      const m=new T.Mesh(new T.CylinderGeometry(ir,ir*1.2,7,40),sandM);m.position.set(ix,-2.6,iz);m.receiveShadow=true;grp.add(m);
+      const top=new T.Mesh(new T.CircleGeometry(ir*.8,40),grassM);top.rotation.x=-Math.PI/2;top.position.set(ix,.92,iz);top.receiveShadow=true;grp.add(top);
+      NATURE.scatter(grp,palms,6,q=>{const a2=q()*6.28,d=Math.sqrt(q())*ir*.7;return V(ix+Math.sin(a2)*d,.9,iz+Math.cos(a2)*d)},rng(j+7));isl.push({x:ix,z:iz,r:ir})})}
   const rim=new T.Mesh(new T.TorusGeometry(pr,.5,8,64),NATURE.rockMat(E.rock));rim.rotation.x=-Math.PI/2;rim.position.set(px,.1,pz);rim.scale.z=.4;rim.receiveShadow=true;grp.add(rim);
   // full-size plants and rocks from that habitat, with a clear ring to drive round
   const types=habTypes[area.hab]||(habTypes[area.hab]=NATURE.treeTypes(area.hab));
@@ -133,7 +139,7 @@ function buildArea(area,i){
   const house=buildHouse(grp,R0,cols);
   grp.updateMatrixWorld(true);const W=(lx,lz)=>{const v=grp.localToWorld(V(lx,0,lz));return{x:v.x,z:v.z}};
   zoo.areas.set(area.id,{grp,area,x,z,R0,side,doors,open:0,cols:cols.map(c=>Object.assign(W(c.x,c.z),{r:c.r})),
-    pond:Object.assign(W(px,pz),{r:pr}),door:W(0,R0),inside:W(0,R0-16),house,food:[]});
+    pond:Object.assign(W(px,pz),{r:pr}),door:W(0,R0),inside:W(0,R0-16),house,food:[],islands:isl.map(q=>Object.assign(W(q.x,q.z),{r:q.r}))});
 }
 // the animal house: a big barn inside the dome with an open front, where animals shelter and mums have their babies
 function buildHouse(grp,R0,cols){
@@ -198,6 +204,7 @@ function syncZooAnimals(){
   for(const a of zoo.animals)zoo.scene.remove(a.inst.g);zoo.animals=[];
   for(const area of S.areas){const A=zoo.areas.get(area.id);if(!A)continue;
     for(const an of area.animals){const r=rng(an.uid*13),p=swims(an)?poolSpot(A,r):an.preg?houseSpot(A,r):randomSpot(A,r);addZooAnimal(an,A,p.x,p.z,r()*6.28)}}
+  for(const P of zoo.penAreas||[])for(const an of P.area.animals){const o=addZooAnimal(an,P,P.x+(Math.random()-.5)*8,P.z+(Math.random()-.5)*8,Math.random()*6.28);const k=Math.min(1,5/o.inst.h,9/Math.max(o.inst.len,1));if(k<1)o.inst.inner.scale.multiplyScalar(k)}
   syncMumTags();
 }
 function addZooAnimal(an,A,x,z,yaw){const inst=ANIMALS.make(SP[an.k]),o={an,A,inst,x,z,tx:x,tz:z,yaw,t:Math.random()*3};inst.g.position.set(x,0,z);zoo.scene.add(inst.g);zoo.animals.push(o);return o}
@@ -206,6 +213,9 @@ const eats=sp=>sp.def.swim?null:sp.def.hunts||sp.hab==='carnivore'?'meat':'hay';
 // where an animal wants to go next: food, the house, or somewhere near the gate
 function nextSpot(o){
   if(swims(o.an))return poolSpot(o.A);
+  if(SP[o.an.k].def.soar&&o.A.islands&&o.A.islands.length&&Math.random()<.55){const q=Math.random()<.6?o.A.islands[Math.floor(Math.random()*o.A.islands.length)]:null;
+    if(q){const a=Math.random()*6.28,d=Math.random()*q.r*.6;return{x:q.x+Math.sin(a)*d,z:q.z+Math.cos(a)*d}}return poolSpot(o.A)}
+  if(o.A.pen)return{x:o.A.x+(Math.random()-.5)*12,z:o.A.z+(Math.random()-.5)*12};
   const pile=o.A.food.find(f=>f.type===eats(SP[o.an.k]));
   if(pile){const a=(o.an.uid*2.4)%6.28,d=pile.r+1+SP[o.an.k].def.L*.6||3;return{x:pile.x+Math.sin(a)*d,z:pile.z+Math.cos(a)*d,pile}}
   if(o.an.preg||Math.random()<.18)return houseSpot(o.A);
@@ -228,8 +238,11 @@ function updateZooAnimals(dt,time){
     if(o.pile&&o.pile.left<=0)o.pile=null;
     const far=Math.hypot(o.x-cam.position.x,o.z-cam.position.z)>110;if(far!==o.far){o.far=far;ANIMALS.setLOD(o.inst,far)}
     ANIMALS.animate(o.inst,dt,spd,time,{graze:spd<.1&&(!!o.pile||Math.sin(time*.3+o.an.uid)>.3)});
-    const sw=SP[o.an.k].def.swim;
-    o.inst.g.position.set(o.x,sw?.12-(SP[o.an.k].def.dorsalS&&o.inst.h>1?o.inst.h*.7:o.inst.h*.85):.06+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
+    const sw=SP[o.an.k].def.swim;let base=.06;
+    if(o.A.islands&&o.A.islands.length){const onI=o.A.islands.some(q=>Math.hypot(o.x-q.x,o.z-q.z)<q.r*.8),inPool=Math.hypot(o.x-o.A.pond.x,o.z-o.A.pond.z)<o.A.pond.r;
+      const want=inPool&&!onI||d>25&&SP[o.an.k].def.soar?7+Math.sin(time+o.an.uid):0;o.alt=lerp(o.alt||0,want,Math.min(1,dt*1.5));base=(onI?.92:.06)+o.alt;
+      if(o.alt>.4)ANIMALS.animate(o.inst,0,spd,time,{alt:o.alt})}
+    o.inst.g.position.set(o.x,sw?.12-(SP[o.an.k].def.dorsalS&&o.inst.h>1?o.inst.h*.7:o.inst.h*.85):base+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
     if(o.an.born){const g=Math.min(1,(Date.now()-o.an.born)/GROW);o.inst.g.scale.setScalar(.35+.65*g);if(g>=1)delete o.an.born}
   }
   breed(dt);updateFood(dt);updateNursery();
@@ -263,6 +276,7 @@ function zooFrame(dt,time){
 }
 async function enterZoo(progress){
   if(!zoo.built)buildZoo();
+  for(const c of S.cages.slice())if(SP[c.k].def.mate){S.cages.splice(S.cages.indexOf(c),1);delete c.pen;S.holding.push(c)}
   checkDream();const made=autoHome();if(made.length)setTimeout(()=>toast('New dome built for your '+made.map(h=>HAB[h].name).join(', ')+' animals!'),400);
   S.areas.forEach((a,i)=>{if(!zoo.areas.has(a.id))buildArea(a,i)});
   rebuildPaths();
@@ -278,6 +292,7 @@ async function enterZoo(progress){
   for(const k of['staff','security'])if(!ANIMALS.isBuilt(personSp(k))){progress('Zoo workers and security are getting ready…');await nextFrame();ANIMALS.species(personSp(k))}
   buildEntrancePeople();
   syncVisitors();syncTours();
+  const dd=S.areas.find(a=>a.hab==='dream');if(dd&&dd.animals.length&&!S.dreamShown){S.dreamShown=1;save();focusArea(dd.id);setTimeout(()=>toast('💖💙 Here is your Mummy Dream Dome, right at the front of the zoo!',6000),800)}
 }
 function zooPick(cx,cy){
   const ray=new T.Raycaster();ray.setFromCamera(new T.Vector2(cx/innerWidth*2-1,-(cy/innerHeight)*2+1),cam);
@@ -518,7 +533,7 @@ function labelSprite(text,col='#2f5a32'){const c=document.createElement('canvas'
 function syncMumTags(){
   for(const o of zoo.animals){if(o.tag){o.inst.g.remove(o.tag);o.tag=null}
     const eggs=S.areas.some(a=>a.eggs.some(e=>e.mum===o.an.uid))||(S.truckEggs||[]).some(e=>e.mum===o.an.uid)||(S.nursery||[]).some(e=>e.mum===o.an.uid);
-    const baby=S.areas.some(a=>a.animals.some(b=>b.born&&b.mum===o.an.uid));
+    const baby=S.areas.some(a=>a.animals.some(b=>b.born&&b.mum===o.an.uid))||(S.fam||[]).some(p=>p.some(b=>b.born&&b.mum===o.an.uid));
     if(eggs||baby){o.tag=labelSprite(eggs?'🥚 I laid these eggs':'🍼 I had this baby','#8a2a6a');o.tag.position.y=o.inst.h+1.2;o.inst.g.add(o.tag)}}
 }
 // pick up an egg on foot and put it in your truck
@@ -527,7 +542,9 @@ function pickEgg(){
   if(mode!=='foot')return false;const n=nearEgg();if(!n)return false;
   n.a.eggs.splice(n.a.eggs.indexOf(n.e),1);zoo.scene.remove(n.m);eggMeshes.delete(n.e.uid);(S.truckEggs=S.truckEggs||[]).push(n.e);save();showTruckEggs();
   toast('🥚 You picked up the '+SP[n.e.k].n+' egg and put it in your truck! Take it to the Egg Nursery to hatch it.');return true}
-function eggHint(){const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';return''}
+function eggHint(){const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';
+  if(mode==='car'&&nearPens()&&S.cages.length)return'Press <b>G</b> to put the animals in your truck into a Family Pen';
+  if(mode==='car'&&nearDoctor())return'Press <b>G</b> for the doctor to check the animals in your truck';return''}
 function showTruckEggs(){
   if(!car.g||!car.trailer)return;if(car.eggRack)car.eggRack.parent&&car.eggRack.parent.remove(car.eggRack);const g=new T.Group();car.eggRack=g;car.trailer.add(g);
   const em=new T.MeshStandardMaterial({color:'#f4efe4',roughness:.5}),box=new T.Mesh(new T.BoxGeometry(1.2,.25,.9),new T.MeshStandardMaterial({color:'#e8d0a0',roughness:.9}));box.position.set(0,2.15,3.6);if((S.truckEggs||[]).length)g.add(box);
@@ -592,9 +609,11 @@ function breed(dt){
   for(const a of S.areas)for(const e of a.eggs.slice())if(now>=e.hatch){a.eggs.splice(a.eggs.indexOf(e),1);a.animals.push({uid:S.uid++,k:e.k,born:now});changed=true;
     const m=eggMeshes.get(e.uid);if(m){zoo.scene.remove(m);eggMeshes.delete(e.uid)}toast('🐣 A baby '+SP[e.k].n+' hatched!')}
   // mums go into the animal house and have their babies there
-  for(const a of S.areas)for(const an of a.animals.slice())if(an.preg&&now>=an.preg){delete an.preg;const mate=SP[an.k].def.mate,b={uid:S.uid++,k:mate&&Math.random()<.5?mate:an.k,born:now,mum:an.uid};a.animals.push(b);
-    const A=zoo.areas.get(a.id),mum=zoo.animals.find(o=>o.an===an);if(A){const p=mum?{x:mum.x+1.5,z:mum.z}:houseSpot(A);addZooAnimal(b,A,p.x,p.z,Math.random()*6.28)}syncMumTags();
-    save();if(curView==='zoo')renderZooUI();toast('🍼 A baby '+SP[b.k].n+' was born in the animal house!')}
+  // (mums in a Family Pen have their babies right there in the pen)
+  const homes=[...S.areas.map(a=>[a,zoo.areas.get(a.id)]),...(zoo.penAreas||[]).map(P=>[P.area,P])];
+  for(const[a,A]of homes)for(const an of a.animals.slice())if(an.preg&&now>=an.preg){delete an.preg;const mate=SP[an.k].def.mate,b={uid:S.uid++,k:mate&&Math.random()<.5?mate:an.k,born:now,mum:an.uid};a.animals.push(b);
+    const mum=zoo.animals.find(o=>o.an===an);if(A){const p=mum?{x:mum.x+1.5,z:mum.z}:A.pen?{x:A.x,z:A.z}:houseSpot(A);addZooAnimal(b,A,p.x,p.z,Math.random()*6.28)}syncMumTags();
+    save();if(curView==='zoo')renderZooUI();toast('🍼 A baby '+SP[b.k].n+' was born'+(A&&A.pen?' in Family Pen '+A.pen:' in the animal house')+'!')}
   zoo.breedT=(zoo.breedT??45)-dt;
   if(zoo.breedT<=0){zoo.breedT=75;
     for(const a of S.areas){const A=zoo.areas.get(a.id);if(!A)continue;
@@ -680,7 +699,7 @@ function domeAt(x,z){return[...zoo.areas.values()].find(a=>Math.hypot(x-a.x,z-a.
 // G: load food at the store, or drop food in the dome you are in
 function foodAction(){
   if(world&&world.sea){callDreams();return}
-  if(!(world&&world.zoo))return;if(nearNursery()&&dropEggs())return;const f=truckFood();
+  if(!(world&&world.zoo))return;if(nearNursery()&&dropEggs())return;if(nearPens()&&dropFamily())return;if(nearDoctor()&&visitDoctor())return;const f=truckFood();
   if(nearStore()){if(f.meat>=FOOD.max&&f.hay>=FOOD.max){toast('Your truck is full of food! Drive it to a dome and press G to feed the animals.');return}
     f.meat=FOOD.max;f.hay=FOOD.max;save();showFood();toast('🥩🌾 Loaded '+FOOD.max+' crates of meat and '+FOOD.max+' bales of hay onto your truck! Take them to the domes and press G.');return}
   const A=domeAt(car.x,car.z);
@@ -748,3 +767,50 @@ function buildTunnel(){
   for(let t=0;t<=1;t+=.1){clear(A,A.x+ux*A.R0*(1-t*.2),A.z+uz*A.R0*(1-t*.2),9);clear(B,B.x-ux*B.R0*(1-t*.2),B.z-uz*B.R0*(1-t*.2),9)}
   zoo.tunnel={g,p0,p1};
 }
+
+/* ---------- Family Pens: small areas just for a mum and her baby ---------- */
+const FAM={x:106,z:-32,size:16,gap:2,cols:3,rows:2};
+function famPen(i){const c=i%FAM.cols,r=Math.floor(i/FAM.cols);return{x:FAM.x+c*(FAM.size+FAM.gap),z:FAM.z+r*(FAM.size+FAM.gap)}}
+function buildFamilyPens(){
+  S.fam=S.fam||[[],[],[],[],[],[]];
+  const g=new T.Group();zoo.scene.add(g);const wood=NATURE.barkMat(false),hay=new T.MeshStandardMaterial({color:'#d8c07a',roughness:1}),h=FAM.size/2;
+  for(let i=0;i<6;i++){const p=famPen(i);
+    const fl=new T.Mesh(new T.PlaneGeometry(FAM.size,FAM.size),hay);fl.rotation.x=-Math.PI/2;fl.position.set(p.x,.05,p.z);fl.receiveShadow=true;g.add(fl);
+    const rail=(x0,z0,x1,z1)=>{const L=Math.hypot(x1-x0,z1-z0);for(const y of[.5,1.1]){const b=new T.Mesh(new T.BoxGeometry(L,.12,.12),wood);b.position.set((x0+x1)/2,y,(z0+z1)/2);b.rotation.y=-Math.atan2(z1-z0,x1-x0);b.castShadow=true;g.add(b)}
+      for(let t=0;t<=L;t+=2){const x=x0+(x1-x0)*t/L,z=z0+(z1-z0)*t/L,po=new T.Mesh(new T.BoxGeometry(.18,1.4,.18),wood);po.position.set(x,.7,z);g.add(po);zoo.cols.push({x,z,r:.7})}};
+    rail(p.x-h,p.z-h,p.x+h,p.z-h);rail(p.x-h,p.z-h,p.x-h,p.z+h);rail(p.x+h,p.z-h,p.x+h,p.z+h);rail(p.x-h,p.z+h,p.x-2,p.z+h);rail(p.x+2,p.z+h,p.x+h,p.z+h);
+    const st=new T.Mesh(new T.PlaneGeometry(4,1),new T.MeshStandardMaterial({map:signTexture(['Family Pen '+(i+1)],'#8a5a2a'),side:T.DoubleSide}));st.position.set(p.x,1.9,p.z+h+.1);g.add(st)}
+  const big=new T.Mesh(new T.PlaneGeometry(10,2.6),new T.MeshStandardMaterial({map:signTexture(['FAMILY PENS','Mums and babies - press G'],'#8a5a2a'),side:T.DoubleSide}));
+  big.position.set(FAM.x+FAM.size+FAM.gap,4,FAM.z+2*(FAM.size+FAM.gap)-2);g.add(big);
+  zoo.penAreas=[...Array(6)].map((_,i)=>{const p=famPen(i);return{pen:i+1,x:p.x,z:p.z,R0:8,area:{animals:S.fam[i],hab:'pen'},food:[],pond:{x:p.x,z:p.z,r:0}}});
+}
+function nearPens(){const a=famPen(0),b=famPen(5);return car.x>a.x-FAM.size&&car.x<b.x+FAM.size&&car.z>a.z-FAM.size&&car.z<b.z+FAM.size+6}
+function dropFamily(){
+  const list=S.cages.filter(c=>!SP[c.k].def.mate);if(!list.length)return false;
+  const i=S.fam.findIndex(p=>!p.length);if(i<0){toast('All the Family Pens are full! Catch the animals in a pen with F to take them out.');return true}
+  for(const c of list){S.cages.splice(S.cages.indexOf(c),1);delete c.pen;S.fam[i].push(c)}save();refreshCages();syncZooAnimals();
+  toast('🏡 '+list.map(c=>SP[c.k].n+(c.born?' baby':'')).join(' and ')+' moved into Family Pen '+(i+1)+'!',6000);return true}
+
+/* ---------- the Animal Doctor's: bring animals in your truck for a check-up ---------- */
+const DOC={x:180,z:-8,D:24,W:22};
+function buildDoctor(){
+  const g=new T.Group();g.position.set(DOC.x,0,DOC.z);zoo.scene.add(g);const {D,W}=DOC,Ht=8;
+  const wall=new T.MeshStandardMaterial({color:'#f6f6f2',roughness:.6}),roof=new T.MeshStandardMaterial({color:'#2a7ac8',roughness:.5}),red=new T.MeshStandardMaterial({color:'#e02a2a',emissive:'#a01010',emissiveIntensity:.4});
+  const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o);return o};
+  box(wall,0,.05,0,D,.1,W);box(wall,D/2,Ht/2,0,.5,Ht,W);for(const sd of[-1,1])box(wall,0,Ht/2,sd*W/2,D,Ht,.5);
+  for(const sd of[-1,1])box(wall,-D/2,Ht/2,sd*(W/2-3.5),.5,Ht,7);box(wall,-D/2,Ht-1,0,.5,2,W);box(roof,0,Ht+.2,0,D+1.5,.4,W+1.5);
+  box(red,-D/2-.4,Ht+1.6,0,.3,2.4,.8);box(red,-D/2-.4,Ht+1.6,0,.3,.8,2.4);
+  const bed=new T.MeshStandardMaterial({color:'#9ad0f0',roughness:.6});for(let i=0;i<3;i++)box(bed,D/2-4,.5,-W/2+4+i*7,3,1,5);
+  const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['ANIMAL DOCTOR','Bring animals in your truck - press G'],'#2a7ac8'),roughness:.7}));st.position.set(-D/2-.3,Ht-1.2,0);st.rotation.y=-Math.PI/2;g.add(st);
+  for(let z=-W/2;z<=W/2;z+=1.8)zoo.cols.push({x:DOC.x+D/2,z:DOC.z+z,r:1});
+  for(const sd of[-1,1]){for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:DOC.x+x,z:DOC.z+sd*W/2,r:1});for(let z=0;z<=7;z+=1.8)zoo.cols.push({x:DOC.x-D/2,z:DOC.z+sd*(W/2-z),r:1})}
+}
+function nearDoctor(){return Math.abs(car.x-DOC.x)<DOC.D/2+12&&Math.abs(car.z-DOC.z)<DOC.W/2+4}
+function visitDoctor(){
+  if(!S.cages.length){toast('🩺 Bring animals in your truck and the doctor will check them!');return true}
+  const now=Date.now(),names=[];let babies=0;
+  for(const c of S.cages.splice(0)){delete c.pen;names.push(SP[c.k].n);
+    if(c.preg){delete c.preg;const mate=SP[c.k].def.mate;S.holding.push({uid:S.uid++,k:mate&&Math.random()<.5?mate:c.k,born:now,mum:c.uid});babies++}
+    S.holding.push(c)}
+  S.coins+=names.length*20;autoHome();save();coins();refreshCages();syncZooAnimals();if(curView==='zoo')renderZooUI();
+  toast('🩺 The doctor checked your '+names.join(', ')+'. All healthy and happy! ❤️'+(babies?' And the doctor helped '+babies+' baby'+(babies>1?' babies':'')+' be born! 🍼':'')+' They went home to their domes. +'+names.length*20+' coins',8000);return true}
