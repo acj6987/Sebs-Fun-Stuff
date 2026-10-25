@@ -369,7 +369,52 @@ function fish(p){
   k.anim={kind:'fish',stride:s*.5,flukes:p.flukes};
   return k;
 }
-const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person,theropod,fish};
+/* ---------- more sea creatures ---------- */
+function seahorse(p){
+  const k=kit(),s=p.s;k.bone('root',null,[0,s*.5,0]);k.bone('tail','root',[0,s*.35,-s*.05]);
+  k.cap([0,s*.85,s*.02],[0,s*.45,-s*.04],s*.13,s*.15,'root',{k:s*.08,pat:1});
+  k.cap([0,s*.45,-s*.04],[0,s*.2,-s*.12],s*.12,s*.07,'tail',{k:s*.05,pat:1});k.cap([0,s*.2,-s*.12],[0,s*.07,-s*.02],s*.07,s*.04,'tail',{k:s*.03,pat:1});
+  k.cap([0,s*.07,-s*.02],[0,s*.12,s*.07],s*.04,s*.025,'tail',{k:s*.02,pat:1});
+  k.ell([0,s*.96,s*.06],[s*.1,s*.11,s*.12],'root',{k:s*.05,pat:1});k.cap([0,s*.94,s*.12],[0,s*.88,s*.32],s*.045,s*.035,'root',{k:s*.02,pat:1});
+  k.ell([0,s*1.05,s*.02],[s*.04,s*.06,s*.04],'root',{k:s*.02,pat:1,detail:1});
+  for(const sx of[-1,1])k.extra('root','eye',[sx*s*.08,s*.98,s*.1],{r:s*.025});
+  k.extra('root','dfin',[0,s*.62,-s*.13],{size:s*.2,tall:.9,col:p.fin||p.col});
+  k.anim={kind:'fish',stride:s*.4};return k;
+}
+function jelly(p){
+  const k=kit(),s=p.s,y=s*.9;k.bone('root',null,[0,y,0]);
+  k.ell([0,y,0],[s*.5,s*.32,s*.5],'root',{k:s*.1,pat:1});k.ell([0,y-s*.12,0],[s*.42,s*.12,s*.42],'root',{k:s*.05,col:p.col2,detail:1});
+  for(let i=0;i<10;i++){const a=i/10*6.28;k.extra('root','tentacle',[Math.cos(a)*s*.3,y-s*.15,Math.sin(a)*s*.3],{len:s*(.9+(i*7%3)*.3),r:s*.022,col:p.col2})}
+  k.anim={kind:'jelly',stride:s};return k;
+}
+function octo(p){
+  const k=kit(),s=p.s,y=s*.35;k.bone('root',null,[0,y,0]);
+  k.ell([0,y+s*.35,-s*.1],[s*.3,s*.35,s*.38],'root',{k:s*.12,pat:1,rot:[-.4,0,0]});k.ell([0,y+s*.05,s*.1],[s*.26,s*.2,s*.24],'root',{k:s*.1,pat:1});
+  for(const sx of[-1,1])k.extra('root','eye',[sx*s*.17,y+s*.15,s*.26],{r:s*.045});
+  for(let i=0;i<8;i++){const a=i/8*6.28+.2,c=Math.cos(a),n=Math.sin(a),p0=[c*s*.15,y-s*.05,n*s*.15+s*.1],p1=[c*s*.55,y*.45,n*s*.55+s*.1],p2=[c*s*.9,s*.05,n*s*.9+s*.1];
+    k.cap(p0,p1,s*.08,s*.05,'root',{k:s*.05,pat:1});k.cap(p1,p2,s*.05,s*.02,'root',{k:s*.03,pat:1})}
+  k.anim={kind:'jelly',stride:s};return k;
+}
+function star(p){
+  const k=kit(),s=p.s;k.bone('root',null,[0,s*.06,0]);k.ell([0,s*.06,0],[s*.18,s*.07,s*.18],'root',{k:s*.05,pat:1});
+  for(let i=0;i<5;i++){const a=i/5*6.28;k.cap([0,s*.06,0],[Math.sin(a)*s*.5,s*.04,Math.cos(a)*s*.5],s*.12,s*.03,'root',{k:s*.05,pat:1})}
+  k.anim={kind:'quad0',stride:s*.3};return k;
+}
+// a mermaid swims flat like a fish: head forward, tail behind
+function mermaid(p){
+  const k=kit(),s=p.s,y=s*.2;k.bone('root',null,[0,y,0]);k.bone('tail','root',[0,y,-s*.08]);k.bone('head','root',[0,y+s*.03,s*.3]);
+  k.ell([0,y,s*.15],[s*.1,s*.07,s*.17],'root',{k:s*.04,col:p.skin});
+  k.ell([0,y-s*.035,s*.21],[s*.105,s*.05,s*.075],'root',{k:s*.02,col:p.top,detail:1});
+  k.ell([0,y,-s*.02],[s*.1,s*.065,s*.1],'root',{k:s*.04,pat:1});
+  k.cap([0,y,-s*.05],[0,y,-s*.32],s*.085,s*.05,'tail',{k:s*.04,pat:1});k.cap([0,y,-s*.32],[0,y,-s*.5],s*.05,s*.025,'tail',{k:s*.03,pat:1});
+  k.ell([0,y+s*.03,s*.4],[s*.065,s*.07,s*.075],'head',{k:s*.03,col:p.skin});
+  k.ell([0,y+s*.07,s*.37],[s*.075,s*.06,s*.1],'head',{k:s*.02,col:p.hair});k.cap([0,y+s*.065,s*.33],[0,y+s*.05,s*.05],s*.065,s*.03,'head',{k:s*.03,col:p.hair});
+  for(const sx of[-1,1]){k.extra('head','eye',[sx*s*.026,y+s*.04,s*.47],{r:s*.009});
+    k.cap([sx*s*.1,y,s*.25],[sx*s*.17,y-s*.02,s*.07],s*.03,s*.022,'root',{k:s*.015,col:p.skin})}
+  k.extra('tail','flukes',[0,y,-s*.5],{size:s*.15,col:p.fin});
+  k.anim={kind:'fish',stride:s*.5,flukes:1};return k;
+}
+const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person,theropod,fish,seahorse,jelly,octo,star,mermaid};
 
 /* ---------- coat colours ---------- */
 const colCache={};
@@ -452,7 +497,8 @@ function gloss(col){return glossM[col]||(glossM[col]=new T.MeshPhysicalMaterial(
 function rngA(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
 let glamBody=null;
 function matFor(p){const plan=p.plan||'quad',m=mats();
-  if(p.glam)return glamBody||(glamBody=addSparkle(new T.MeshPhysicalMaterial({vertexColors:true,roughness:.45,clearcoat:.6,clearcoatRoughness:.2,iridescence:.6,iridescenceIOR:1.4,sheen:.8,sheenColor:new T.Color('#ffb0e0'),normalMap:m.fur.normalMap,normalScale:new T.Vector2(.3,.3)}),50,2.6));
+  if(p.glow)return new T.MeshPhysicalMaterial({vertexColors:true,roughness:.15,clearcoat:1,transparent:true,opacity:.72,emissive:p.glow,emissiveIntensity:.35});
+  if(p.glam||p.sparkle)return glamBody||(glamBody=addSparkle(new T.MeshPhysicalMaterial({vertexColors:true,roughness:.45,clearcoat:.6,clearcoatRoughness:.2,iridescence:.6,iridescenceIOR:1.4,sheen:.8,sheenColor:new T.Color('#ffb0e0'),normalMap:m.fur.normalMap,normalScale:new T.Vector2(.3,.3)}),50,2.6));
   if(plan==='fish')return m.wet;
   if(plan==='person')return m.cloth;
   if(plan==='theropod'||p.scaly)return m.scale;
@@ -493,6 +539,8 @@ function extraMesh(e,p){
     case'dcrest':{const geo=new T.CircleGeometry(1,24,0,Math.PI);geo.scale(e.len/2,e.ht,1);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.5}),null,[0,0,0]);break}
     case'crestTube':{const geo=new T.CylinderGeometry(e.r*.7,e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,smat(e.col,{roughness:.6}),null,[-1.9+e.tilt,0,0]);break}
     case'club':{const o=add(new T.SphereGeometry(e.r,16,12),smat('#5a4a38',{roughness:.7}));o.scale.set(1.4,.8,1.1);break}
+    case'tentacle':{const pts=[];for(let i=0;i<=8;i++){const t=i/8;pts.push(V3(Math.sin(t*9)*e.r*4,-t*e.len,Math.cos(t*7)*e.r*3))}
+      add(new T.TubeGeometry(new T.CatmullRomCurve3(pts),16,e.r,5),smat(e.col,{transparent:true,opacity:.7,emissive:e.col,emissiveIntensity:.4}));break}
     case'frill':{const f=add(new T.CircleGeometry(e.s*.3,24),smat(e.col,{side:T.DoubleSide}));break}
     // fish fins
     case'tfin':{const a=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.quadraticCurveTo(a*.5,a*.3,a,a*.8);sh.lineTo(a*.72,0);sh.lineTo(a,-a*.8);sh.quadraticCurveTo(a*.5,-a*.3,0,0);
@@ -643,6 +691,7 @@ function animate(a,dt,spd,time,o={}){
     for(let i=0;i<2;i++){const q=ph+i*Math.PI;B['leg'+i].rotation.x=Math.sin(q)*amp;B['low'+i].rotation.x=Math.max(0,-Math.cos(q))*amp*1.2;
       B['arm'+i].rotation.x=-Math.sin(q)*amp*.7;B['fore'+i].rotation.x=-.15-Math.max(0,Math.sin(q))*amp*.4}
     B.root.position.y=a.rest+Math.abs(Math.cos(ph))*amp*.03;B.head.rotation.y=o.look||Math.sin(time*.5+sd)*.3*(spd<.2?1:.3);
+  }else if(A.kind==='jelly'){const q=Math.sin(time*2.2+sd);B.root.scale.set(1+q*.08,1-q*.1,1+q*.08);B.root.position.y=a.rest+q*.08
   }else if(A.kind==='fish'){
     const w=Math.sin(time*(5+spd*4)+sd)*(.25+Math.min(.35,spd*.15));
     if(A.ray){a.inner.rotation.z=Math.sin(time*1.6+sd)*.12;B.root.position.y=a.rest+Math.sin(time*1.6+sd)*.05;B.root.scale.x=1+Math.sin(time*2+sd)*.06}

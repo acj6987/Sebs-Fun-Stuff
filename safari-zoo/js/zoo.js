@@ -13,7 +13,12 @@ function zooLayout(){
   const zs=[-16,ULTRA.z-ULTRA.R-GAP],list=[];
   const place=(R,k)=>{const side=k?1:-1,z=zs[k]-R;zs[k]=z-R-GAP;return{x:side*(R+ROAD+10),z,R,side}};
   // other domes fill whichever side of the road is shorter
-  S.areas.forEach(a=>list.push(a.hab==='dino'?{x:ULTRA.x,z:ULTRA.z,R:ULTRA.R,side:1,ultra:1}:place(a.hab==='dream'?DREAM_R:MEGA,zs[0]>=zs[1]?0:1)));
+  // the Deep Blue Sea and Mummy Dream domes sit next to each other: together they are the Ultra Dome
+  const pre={},R=a=>a.hab==='dream'?DREAM_R:MEGA;
+  S.areas.forEach(a=>{if(pre[a.id]){list.push(pre[a.id]);return}
+    if(a.hab==='dino'){list.push({x:ULTRA.x,z:ULTRA.z,R:ULTRA.R,side:1,ultra:1});return}
+    const k=zs[0]>=zs[1]?0:1;list.push(place(R(a),k));
+    const tw=a.hab==='ocean'?'dream':a.hab==='dream'?'ocean':null,b=tw&&S.areas.find(x=>x.hab===tw);if(b)pre[b.id]=place(R(b),k)});
   const next=place(MEGA,zs[0]>=zs[1]?0:1);
   return{list,next,end:Math.min(zs[0],zs[1])-20};
 }
@@ -80,12 +85,13 @@ function rebuildPaths(){
   const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:signTexture(['Empty plot','Build a new dome here'],'#6a5a40'),roughness:.8,side:T.DoubleSide}));
   st.position.set(-n.side*(n.R-4),2.2,0);st.rotation.y=-n.side*Math.PI/2;out.add(st);
   P.add(out);
-  buildFence(L);drawMask();refreshZooWorld();if(zoo.people&&zoo.people.length)zoo.graph=pathGraph();
+  buildTunnel();buildFence(L);drawMask();refreshZooWorld();if(zoo.people&&zoo.people.length)zoo.graph=pathGraph();
 }
 function drawMask(){
   const {g,tex}=zoo.mask,W=1024,k=W/MASK.size,X=x=>(x-MASK.x0)*k,Z=z=>(z-MASK.z0)*k,L=zooLayout();
   g.fillStyle='#fff';g.fillRect(0,0,W,W);g.fillStyle='#000';
   g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);g.beginPath();g.ellipse(X(RIDE.x),Z(RIDE.z),(RIDE.rx+3)*k,(RIDE.rz+3)*k,0,0,7);g.fill();g.fillRect(X(RIDE.x+RIDE.rx),Z(RIDE.z-2.5),(-ROAD-RIDE.x-RIDE.rx)*k,5*k);g.fillRect(X(-75),Z(30),150*k,135*k);g.fillRect(X(ROAD),Z(FOOD.z-FOOD.W/2-2),(FOOD.x+FOOD.D/2+2-ROAD)*k,(FOOD.W+4)*k);
+  if(zoo.tunnel){const t=zoo.tunnel;g.strokeStyle='#000';g.lineWidth=20*k;g.beginPath();g.moveTo(X(t.p0.x),Z(t.p0.z));g.lineTo(X(t.p1.x),Z(t.p1.z));g.stroke()}
   for(const d of L.list){if(d.ultra)g.fillRect(X(ROAD),Z(d.z-10),(d.x-d.R-ROAD+3)*k,20*k);else g.fillRect(X(d.side>0?ROAD:-ROAD-12),Z(d.z-7),12*k,14*k);g.beginPath();g.arc(X(d.x),Z(d.z),(d.R+1.5)*k,0,7);g.fill()}
   tex.needsUpdate=true;
 }
@@ -301,6 +307,8 @@ function autoHome(){
   for(const a of S.areas)for(const an of a.animals.slice())if(SP[an.k].hab!==a.hab){a.animals.splice(a.animals.indexOf(an),1);moving.push(an)}
   for(const an of moving){const hab=SP[an.k].hab;let d=S.areas.find(a=>a.hab===hab);
     if(!d){d={id:S.aid++,type:'dome',hab,animals:[],eggs:[]};S.areas.push(d);made.push(hab)}d.animals.push(an)}
+  // the Mummy Dream megadome is always built next to the Deep Blue Sea dome
+  if(S.areas.some(a=>a.hab==='ocean')&&!S.areas.some(a=>a.hab==='dream')){S.areas.push({id:S.aid++,type:'dome',hab:'dream',animals:[],eggs:[]});made.push('dream')}
   save();return made;
 }
 
@@ -645,4 +653,26 @@ function foodHint(){
   const f=truckFood(),A=domeAt(car.x,car.z);
   if(A&&f.meat+f.hay)return'<b>G</b> drop food for the animals ('+f.meat+' 🥩 '+f.hay+' 🌾)';
   return'';
+}
+
+/* ---------- the Ultra Dome: a glass tunnel joining the Deep Blue Sea and Mummy Dream domes ---------- */
+function buildTunnel(){
+  const a=S.areas.find(x=>x.hab==='ocean'),b=S.areas.find(x=>x.hab==='dream'),A=a&&zoo.areas.get(a.id),B=b&&zoo.areas.get(b.id);
+  if(!A||!B||zoo.tunnel)return;
+  const dx=B.x-A.x,dz=B.z-A.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;
+  const p0={x:A.x+ux*(A.R0-8),z:A.z+uz*(A.R0-8)},p1={x:B.x-ux*(B.R0-8),z:B.z-uz*(B.R0-8)},len=Math.hypot(p1.x-p0.x,p1.z-p0.z);
+  const g=new T.Group();g.position.set((p0.x+p1.x)/2,0,(p0.z+p1.z)/2);g.rotation.y=Math.atan2(ux,uz);zoo.scene.add(g);
+  const glass=new T.MeshPhysicalMaterial({color:'#cdefff',roughness:.05,metalness:.1,clearcoat:1,transparent:true,opacity:.22,side:T.DoubleSide,depthWrite:false});
+  const tube=new T.CylinderGeometry(9,9,len,40,1,true);tube.rotateX(Math.PI/2);g.add(new T.Mesh(tube,glass));
+  const steel=new T.MeshStandardMaterial({color:'#dfe6ea',metalness:.8,roughness:.3});
+  for(let z=-len/2;z<=len/2+.1;z+=len/Math.max(2,Math.round(len/6))){const ring=new T.Mesh(new T.TorusGeometry(9,.22,8,40,Math.PI),steel);ring.position.z=z;ring.castShadow=true;g.add(ring)}
+  const pv=zoo.pave||(zoo.pave=pavingTexture()),m=pv.map.clone();m.needsUpdate=true;m.repeat.set(4,len/4);
+  const fl=new T.Mesh(new T.PlaneGeometry(16,len),new T.MeshStandardMaterial({map:m,roughness:.9}));fl.rotation.x=-Math.PI/2;fl.position.y=.05;fl.receiveShadow=true;g.add(fl);
+  for(const e of[-1,1]){const st=new T.Mesh(new T.PlaneGeometry(10,2.6),new T.MeshStandardMaterial({map:signTexture(['ULTRA DOME','Deep Blue Sea · Mummy Dream'],'#2a5ab8'),roughness:.7,side:T.DoubleSide}));st.position.set(0,10.5,e*len/2);g.add(st)}
+  // glass walls you can't drive through, and holes in both domes for the tunnel
+  g.updateMatrixWorld(true);
+  for(let z=-len/2;z<=len/2;z+=2)for(const sx of[-1,1]){const v=g.localToWorld(V(sx*8.6,0,z));zoo.cols.push({x:v.x,z:v.z,r:1})}
+  const clear=(D,cx,cz,r)=>{D.cols=D.cols.filter(c=>Math.hypot(c.x-cx,c.z-cz)>r)};
+  for(let t=0;t<=1;t+=.1){clear(A,A.x+ux*A.R0*(1-t*.2),A.z+uz*A.R0*(1-t*.2),9);clear(B,B.x-ux*B.R0*(1-t*.2),B.z-uz*B.R0*(1-t*.2),9)}
+  zoo.tunnel={g,p0,p1};
 }

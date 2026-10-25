@@ -142,7 +142,14 @@ CONT.push({id:'ocean',name:'🌊 Deep Blue Sea',place:'Deep blue sea with island
   ]});
 // the Mummy Dreams: only two in the whole world, a girl and a boy who always stay together
 {const girl=CONT.at(-1).animals[10];CONT.at(-1).animals.push(['Mummy Dream (boy)','💙',3,2,Object.assign({},girl[4],{female:0,male:1,mate:'ocean:10',top:'#2f6fe0',nails:['#2fd1ff','#2f6fe0'],tuftCol:'#2f8fff',mane:'#ff3d9a'})])}
-const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=2000000,DREAM_KEYS=['ocean:5','ocean:7']; // a Dolphin and a Sea Turtle make the real ones appear
+// more to catch in the Deep Blue Sea
+CONT.at(-1).animals.push(
+  ['Seahorse','🦄',1,.8,{swim:1,herd:[2,3],plan:'seahorse',s:.6,sz:2,col:'#ff9a3a',tex:'dots',col2:'#ffd27a',noBelly:1,fin:'#ffd27a'}],
+  ['Jellyfish','🪼',1,.6,{swim:1,herd:[3,5],plan:'jelly',s:.9,col:'#ff9ae0',col2:'#c47aff',glow:'#ff7ad8',noBelly:1}],
+  ['Octopus','🐙',2,1,{swim:1,plan:'octo',s:1.3,col:'#e2553a',tex:'dots',col2:'#ffb08a',noBelly:1}],
+  ['Starfish','⭐',1,.2,{herd:[2,4],plan:'star',s:.5,sz:1.6,col:'#ff7a3a',tex:'dots',col2:'#ffd0a0',noBelly:1}],
+  ['Mermaid','🧜‍♀️',3,2.4,{swim:1,herd:[1,2],plan:'mermaid',s:2,sparkle:1,skin:'#f2c4a0',hair:'#ff5aa8',top:'#b45aff',col:'#2fd1c0',tex:'dots',col2:'#7affea',noBelly:1,fin:'#4af0d8'}]);
+const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=2000000,DREAM_KEYS=['ocean:5','ocean:7']; // a Dolphin and a Sea Turtle make the Mummy Dreams appear
 function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.areas.some(a=>a.animals.some(x=>x.k===k))}
 const SP={};
 ENV.carnivore=ENV.dino;
