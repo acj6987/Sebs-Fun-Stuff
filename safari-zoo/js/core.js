@@ -180,7 +180,8 @@ function toast(m,ms=2800){const t=$('#toast');t.textContent=m;t.hidden=false;cle
 function checkDream(){
   if(S.dreamBonus||!DREAM.every(owns))return;
   S.dreamBonus=1;S.coins+=DREAM_PRIZE;S.freeDomes=(S.freeDomes||0)+60;save();coins();
-  toast('💖💙 YOU CAUGHT BOTH MUMMY DREAMS! You win 2,000,000 coins (1 million for each!), 60 free domes, a giant Mummy Dream Dome where they can have babies, and 6 million visitors are coming to your zoo!',12000)}
+  toast('💖💙 YOU CAUGHT BOTH MUMMY DREAMS! You win 2,000,000 coins (1 million for each!), 60 free domes, a giant Mummy Dream Dome where they can have babies, and 6 million visitors are coming to your zoo!',12000);
+  const pz=$('#prize');if(pz){pz.hidden=false;clearTimeout(pz.t);pz.t=setTimeout(()=>pz.hidden=true,12000)}}
 function smallUsed(){return S.cages.filter(c=>c.pen==null).length}
 function pensUsed(){return new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen)).size}
 function coins(){document.querySelectorAll('.coinTxt').forEach(e=>e.textContent='🪙 '+S.coins);const c=$('#cagesTxt');if(c)c.textContent='🧺 '+smallUsed()+'/'+CAGES+' cages · '+pensUsed()+'/'+PENS+' pens'}

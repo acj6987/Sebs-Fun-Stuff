@@ -392,7 +392,7 @@ function updateNet(dt){
     else toast('You netted a '+a.sp.n+'! ('+me.pack.length+'/'+PACK+') '+(me.pack.length<PACK?'Catch more, or lead them to the cages on your truck.':'Now lead them to the cages on your truck.'))}
   else toast(a.state==='flee'?'Missed! It\'s too fast. Wait until it gets tired.':'Missed! Try again.');
   // the submarine sucks what it catches into its tank and sends it straight to your truck
-  if(ok&&mode==='sub')cageIt();
+  if(ok&&(mode==='sub'||me.pack.some(b=>b.sp.def.mate)))cageIt();
 }
 function trailerPos(){return car.trailer.localToWorld(V(0,0,0))}
 function cageIt(own=me){
@@ -405,7 +405,7 @@ function cageIt(own=me){
   for(const[g,list]of groups){if(list.length<2)continue;const used=new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen));
     let pen=-1;for(let i=0;i<PENS;i++)if(!used.has(i)){pen=i;break}if(pen<0)break;
     list.slice(0,PEN_SIZE).forEach(a=>store(a,pen))}
-  for(const a of own.pack)if(!caged.includes(a)&&smallUsed()<CAGES)store(a,null);
+  for(const a of own.pack)if(!caged.includes(a)&&(smallUsed()<CAGES||a.sp.def.mate))store(a,null);
   if(!caged.length){toast('The cages and pens are full! Drive to the zoo to empty them.');return}
   own.pack=own.pack.filter(a=>!caged.includes(a));
   for(const a of caged){world.scene.remove(a.net);world.scene.remove(a.rope);removeAnimal(a)}

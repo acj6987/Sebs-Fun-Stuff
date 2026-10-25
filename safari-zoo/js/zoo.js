@@ -4,7 +4,7 @@ const ZOO_ENV={zen:'#4a88d0',hor:'#e2ecf0',fog:'#d3e0e6',ground:'#5f8a3c',patch:
 const ROAD=7,GAP=24,MASK={x0:-1400,z0:-2700,size:2800};
 // the Ultra Dino Dome sits beside the start of the road and holds every dinosaur
 const MEGA=200; // every dome is a mega dome
-const DREAM_R=240; // the giant Mummy Dream Dome
+const DREAM_R=300; // the giant Mummy Dream Dome: first one along the road, just for the two Mummy Dreams
 const ULTRA={R:300,x:ROAD+16+300,z:-16-300};
 const doorAng=R=>9/R; // half-width of the doorway, in radians around the dome
 const zoo={scene:null,running:false,areas:new Map(),animals:[],grounds:[],waters:[],cols:[],cam:{yaw:.5,pitch:.75,dist:700,tx:0,tz:-400,w:{yaw:.5,pitch:.75,dist:700,tx:0,tz:-400}},sel:null,mask:null};
@@ -14,11 +14,13 @@ function zooLayout(){
   const place=(R,k)=>{const side=k?1:-1,z=zs[k]-R;zs[k]=z-R-GAP;return{x:side*(R+ROAD+10),z,R,side}};
   // other domes fill whichever side of the road is shorter
   // the Deep Blue Sea and Mummy Dream domes sit next to each other: together they are the Ultra Dome
-  const pre={},R=a=>a.hab==='dream'?DREAM_R:MEGA;
-  S.areas.forEach(a=>{if(pre[a.id]){list.push(pre[a.id]);return}
-    if(a.hab==='dino'){list.push({x:ULTRA.x,z:ULTRA.z,R:ULTRA.R,side:1,ultra:1});return}
-    const k=zs[0]>=zs[1]?0:1;list.push(place(R(a),k));
-    const tw=a.hab==='ocean'?'dream':a.hab==='dream'?'ocean':null,b=tw&&S.areas.find(x=>x.hab===tw);if(b)pre[b.id]=place(R(b),k)});
+  // the Mummy Dream Dome comes first, at the start of the road on the left
+  const pos={},R=a=>a.hab==='dream'?DREAM_R:MEGA,order=[...S.areas].sort((a,b)=>(b.hab==='dream')-(a.hab==='dream'));
+  order.forEach(a=>{if(pos[a.id])return;
+    if(a.hab==='dino'){pos[a.id]={x:ULTRA.x,z:ULTRA.z,R:ULTRA.R,side:1,ultra:1};return}
+    const k=a.hab==='dream'?0:zs[0]>=zs[1]?0:1;pos[a.id]=place(R(a),k);
+    const tw=a.hab==='ocean'?'dream':a.hab==='dream'?'ocean':null,b=tw&&S.areas.find(x=>x.hab===tw);if(b&&!pos[b.id])pos[b.id]=place(R(b),k)});
+  S.areas.forEach(a=>list.push(pos[a.id]));
   const next=place(MEGA,zs[0]>=zs[1]?0:1);
   return{list,next,end:Math.min(zs[0],zs[1])-20};
 }
@@ -120,13 +122,13 @@ function buildArea(area,i){
   const sized=types.map(t=>Object.assign({},t,{col:t.col?Math.min(t.col,2):0}));
   cols.push(...NATURE.scatter(grp,sized,Math.round((R0>250?650:R0>150?380:60)*Math.max(.5,QUALITY.trees)),q=>{const a=q()*6.28,d=Math.sqrt(q())*lim;const p=V(Math.sin(a)*d,0,Math.cos(a)*d);
     if(Math.hypot(p.x-px,p.z-pz)<pr+3||d<R0*.22||(d>R0*.55&&d<R0*.72)||Math.abs(p.x)<10&&p.z>0||Math.hypot(p.x,p.z-(R0-Math.min(R0*.3,R0>250?75:45)-22))<Math.min(R0*.3,R0>250?75:45)+6)return null;return p},rr));
-  if(R0>250){const vg=new T.CylinderGeometry(10,70,80,48,8,true),p=vg.attributes.position;for(let i=0;i<p.count;i++){const k=1+(MESHER.noise3(p.getX(i)*.05,p.getY(i)*.05,p.getZ(i)*.05)-.5)*.3;p.setX(i,p.getX(i)*k);p.setZ(i,p.getZ(i)*k)}vg.computeVertexNormals();
+  if(area.hab==='dino'){const vg=new T.CylinderGeometry(10,70,80,48,8,true),p=vg.attributes.position;for(let i=0;i<p.count;i++){const k=1+(MESHER.noise3(p.getX(i)*.05,p.getY(i)*.05,p.getZ(i)*.05)-.5)*.3;p.setX(i,p.getX(i)*k);p.setZ(i,p.getZ(i)*k)}vg.computeVertexNormals();
     const [lc,lg]=NATURE.canvas(256);lg.fillStyle='#000';lg.fillRect(0,0,256,256);for(let i=0;i<7;i++){let x=Math.random()*256;lg.strokeStyle='#ff6a14';lg.lineWidth=3+Math.random()*4;lg.beginPath();lg.moveTo(x,0);for(let y=0;y<120+Math.random()*130;y+=8){x+=(Math.random()-.5)*6;lg.lineTo(x,y)}lg.stroke()}
     const vo=new T.Mesh(vg,new T.MeshStandardMaterial({color:'#3a3330',roughness:.95,emissive:'#ff5a14',emissiveMap:NATURE.toTex(lc,true),emissiveIntensity:1.3}));vo.position.set(-R0*.45,40,-R0*.4);vo.castShadow=true;grp.add(vo);
     const cr=new T.Mesh(new T.CircleGeometry(10,24),new T.MeshBasicMaterial({color:'#ff5a14'}));cr.rotation.x=-Math.PI/2;cr.position.set(-R0*.45,78,-R0*.4);grp.add(cr);cols.push({x:-R0*.45,z:-R0*.4,r:70})}
   const doors=buildDome(grp,R0);
   // sign beside the doorway
-  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:R0>250?signTexture(['ULTRA DINO DOME','Danger! Only with the zoo owner'],'#8a2a14'):area.hab==='carnivore'?signTexture([(i+1)+'. CARNIVORE DINO DOME','Danger! Meat eaters! Only with the owner'],'#8a2a14'):area.hab==='dream'?signTexture(['💖 MUMMY DREAM DOME 💙','The only two in the whole world!'],'#c2368a'):signTexture([(i+1)+'. '+HAB[area.hab].name+' Mega Dome','Visitors only with the zoo owner']),roughness:.7}));
+  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:area.hab==='dino'?signTexture(['ULTRA DINO DOME','Danger! Only with the zoo owner'],'#8a2a14'):area.hab==='carnivore'?signTexture([(i+1)+'. CARNIVORE DINO DOME','Danger! Meat eaters! Only with the owner'],'#8a2a14'):area.hab==='dream'?signTexture(['💖 MUMMY DREAM DOME 💙','The only two in the whole world!'],'#c2368a'):signTexture([(i+1)+'. '+HAB[area.hab].name+' Mega Dome','Visitors only with the zoo owner']),roughness:.7}));
   st.position.set(13,2.6,R0+3);st.rotation.y=-.25;grp.add(st);
   const bw=NATURE.barkMat(false);for(const sd of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.25,3.2,.25),bw);p.position.set(13+sd*3.4,1.6,R0+3-sd*.85);p.castShadow=true;grp.add(p)}
   // the glass wall is solid except for the doorway; pond and trees block the truck too
@@ -266,7 +268,7 @@ function zooFrame(dt,time){
 }
 async function enterZoo(progress){
   if(!zoo.built)buildZoo();
-  const made=autoHome();if(made.length)setTimeout(()=>toast('New dome built for your '+made.map(h=>HAB[h].name).join(', ')+' animals!'),400);
+  checkDream();const made=autoHome();if(made.length)setTimeout(()=>toast('New dome built for your '+made.map(h=>HAB[h].name).join(', ')+' animals!'),400);
   S.areas.forEach((a,i)=>{if(!zoo.areas.has(a.id))buildArea(a,i)});
   rebuildPaths();
   const need=[...new Set(S.areas.flatMap(a=>a.animals.map(x=>x.k)))].filter(k=>!ANIMALS.isBuilt(SP[k]));
@@ -276,7 +278,7 @@ async function enterZoo(progress){
   syncRides();
   // pterodactyls flying inside the Ultra Dino Dome
   for(const f of zoo.flyers||[])zoo.scene.remove(f.inst.g);zoo.flyers=[];
-  const U=[...zoo.areas.values()].find(a=>a.R0>250);if(U){if(!ANIMALS.isBuilt(SP['dino:3']))ANIMALS.species(SP['dino:3']);zoo.flyers=makeFlyers(zoo.scene,SP['dino:3'],6,{x:U.x,z:U.z},[60,150],[30,70],1.4)}
+  const U=[...zoo.areas.values()].find(a=>a.area.hab==='dino');if(U){if(!ANIMALS.isBuilt(SP['dino:3']))ANIMALS.species(SP['dino:3']);zoo.flyers=makeFlyers(zoo.scene,SP['dino:3'],6,{x:U.x,z:U.z},[60,150],[30,70],1.4)}
   for(let i=0;i<LOOKS.length;i++)if(!ANIMALS.isBuilt(personSp(i))){progress('Opening the gates for visitors… '+(i+1)+'/'+LOOKS.length);await nextFrame();ANIMALS.species(personSp(i))}
   for(const k of['staff','security'])if(!ANIMALS.isBuilt(personSp(k))){progress('Zoo workers and security are getting ready…');await nextFrame();ANIMALS.species(personSp(k))}
   buildEntrancePeople();
@@ -440,9 +442,9 @@ function updateDinoTour(dt){
   if(A!==dinoTour.inDome){
     const prev=dinoTour.inDome;
     if(prev&&dinoTour.t>20&&!dinoTour.seen.has(prev.area.id)){dinoTour.seen.add(prev.area.id);const tip=prev.R0>250?300:150;S.coins+=tip;save();coins();
-      toast('The visitors loved the '+(prev.R0>250?'Ultra Dino Dome':HAB[prev.area.hab].name+' Mega Dome')+'! They gave you a '+tip+' coin tip.')}
+      toast('The visitors loved the '+(prev.area.hab==='dino'?'Ultra Dino Dome':HAB[prev.area.hab].name+' Mega Dome')+'! They gave you a '+tip+' coin tip.')}
     else if(prev&&dinoTour.t<=20)toast('That was quick! Show them around a bit longer next time.');
-    if(A)toast(A.R0>250?'Hold on tight! The visitors are amazed by the dinosaurs!':'Welcome to the '+HAB[A.area.hab].name+' Mega Dome! The visitors are looking at the animals.');
+    if(A)toast(A.area.hab==='dino'?'Hold on tight! The visitors are amazed by the dinosaurs!':'Welcome to the '+HAB[A.area.hab].name+' Mega Dome! The visitors are looking at the animals.');
     dinoTour.inDome=A;dinoTour.t=0}
   if(A)dinoTour.t+=dt;
 }
