@@ -10,17 +10,12 @@ const doorAng=R=>9/R; // half-width of the doorway, in radians around the dome
 const zoo={scene:null,running:false,areas:new Map(),animals:[],grounds:[],waters:[],cols:[],cam:{yaw:.5,pitch:.75,dist:700,tx:0,tz:-400,w:{yaw:.5,pitch:.75,dist:700,tx:0,tz:-400}},sel:null,mask:null};
 // domes line both sides of one long road that starts at the gate
 function zooLayout(){
+  // the Mummy Dream Dome is first on the right, right at the front; the Ultra Dino Dome sits just behind it
+  const dream=S.areas.some(a=>a.hab==='dream');ULTRA.z=-16-ULTRA.R-(dream?DREAM_R*2+GAP:0);
   const zs=[-16,ULTRA.z-ULTRA.R-GAP],list=[];
   const place=(R,k)=>{const side=k?1:-1,z=zs[k]-R;zs[k]=z-R-GAP;return{x:side*(R+ROAD+10),z,R,side}};
   // other domes fill whichever side of the road is shorter
-  // the Deep Blue Sea and Mummy Dream domes sit next to each other: together they are the Ultra Dome
-  // the Mummy Dream Dome comes first, at the start of the road on the left
-  const pos={},R=a=>a.hab==='dream'?DREAM_R:MEGA,order=[...S.areas].sort((a,b)=>(b.hab==='dream')-(a.hab==='dream'));
-  order.forEach(a=>{if(pos[a.id])return;
-    if(a.hab==='dino'){pos[a.id]={x:ULTRA.x,z:ULTRA.z,R:ULTRA.R,side:1,ultra:1};return}
-    const k=a.hab==='dream'?0:zs[0]>=zs[1]?0:1;pos[a.id]=place(R(a),k);
-    const tw=a.hab==='ocean'?'dream':a.hab==='dream'?'ocean':null,b=tw&&S.areas.find(x=>x.hab===tw);if(b&&!pos[b.id])pos[b.id]=place(R(b),k)});
-  S.areas.forEach(a=>list.push(pos[a.id]));
+  S.areas.forEach(a=>list.push(a.hab==='dino'?{x:ULTRA.x,z:ULTRA.z,R:ULTRA.R,side:1,ultra:1}:a.hab==='dream'?{x:ROAD+16+DREAM_R,z:-16-DREAM_R,R:DREAM_R,side:1,ultra:1}:place(MEGA,zs[0]>=zs[1]?0:1)));
   const next=place(MEGA,zs[0]>=zs[1]?0:1);
   return{list,next,end:Math.min(zs[0],zs[1])-20};
 }
@@ -310,8 +305,8 @@ function autoHome(){
   for(const a of S.areas)for(const an of a.animals.slice())if(SP[an.k].hab!==a.hab){a.animals.splice(a.animals.indexOf(an),1);moving.push(an)}
   for(const an of moving){const hab=SP[an.k].hab;let d=S.areas.find(a=>a.hab===hab);
     if(!d){d={id:S.aid++,type:'dome',hab,animals:[],eggs:[]};S.areas.push(d);made.push(hab)}d.animals.push(an)}
-  // the Mummy Dream megadome is always built next to the Deep Blue Sea dome
-  if(S.areas.some(a=>a.hab==='ocean')&&!S.areas.some(a=>a.hab==='dream')){S.areas.push({id:S.aid++,type:'dome',hab:'dream',animals:[],eggs:[]});made.push('dream')}
+  // the Mummy Dream megadome is always ready for them at the front of the zoo
+  if(!S.areas.some(a=>a.hab==='dream')){S.areas.push({id:S.aid++,type:'dome',hab:'dream',animals:[],eggs:[]});made.push('dream')}
   save();return made;
 }
 
@@ -715,9 +710,9 @@ function foodHint(){
   return'';
 }
 
-/* ---------- the Ultra Dome: a glass tunnel joining the Deep Blue Sea and Mummy Dream domes ---------- */
+/* ---------- the Ultra Dome: a glass tunnel joining the Mummy Dream Dome and the Ultra Dino Dome ---------- */
 function buildTunnel(){
-  const a=S.areas.find(x=>x.hab==='ocean'),b=S.areas.find(x=>x.hab==='dream'),A=a&&zoo.areas.get(a.id),B=b&&zoo.areas.get(b.id);
+  const a=S.areas.find(x=>x.hab==='dream'),b=S.areas.find(x=>x.hab==='dino'),A=a&&zoo.areas.get(a.id),B=b&&zoo.areas.get(b.id);
   if(!A||!B||zoo.tunnel)return;
   const dx=B.x-A.x,dz=B.z-A.z,L=Math.hypot(dx,dz),ux=dx/L,uz=dz/L;
   const p0={x:A.x+ux*(A.R0-8),z:A.z+uz*(A.R0-8)},p1={x:B.x-ux*(B.R0-8),z:B.z-uz*(B.R0-8)},len=Math.hypot(p1.x-p0.x,p1.z-p0.z);
@@ -728,7 +723,7 @@ function buildTunnel(){
   for(let z=-len/2;z<=len/2+.1;z+=len/Math.max(2,Math.round(len/6))){const ring=new T.Mesh(new T.TorusGeometry(9,.22,8,40,Math.PI),steel);ring.position.z=z;ring.castShadow=true;g.add(ring)}
   const pv=zoo.pave||(zoo.pave=pavingTexture()),m=pv.map.clone();m.needsUpdate=true;m.repeat.set(4,len/4);
   const fl=new T.Mesh(new T.PlaneGeometry(16,len),new T.MeshStandardMaterial({map:m,roughness:.9}));fl.rotation.x=-Math.PI/2;fl.position.y=.05;fl.receiveShadow=true;g.add(fl);
-  for(const e of[-1,1]){const st=new T.Mesh(new T.PlaneGeometry(10,2.6),new T.MeshStandardMaterial({map:signTexture(['ULTRA DOME','Deep Blue Sea · Mummy Dream'],'#2a5ab8'),roughness:.7,side:T.DoubleSide}));st.position.set(0,10.5,e*len/2);g.add(st)}
+  for(const e of[-1,1]){const st=new T.Mesh(new T.PlaneGeometry(10,2.6),new T.MeshStandardMaterial({map:signTexture(['ULTRA DOME','Mummy Dream · Dino Zone'],'#2a5ab8'),roughness:.7,side:T.DoubleSide}));st.position.set(0,10.5,e*len/2);g.add(st)}
   // glass walls you can't drive through, and holes in both domes for the tunnel
   g.updateMatrixWorld(true);
   for(let z=-len/2;z<=len/2;z+=2)for(const sx of[-1,1]){const v=g.localToWorld(V(sx*8.6,0,z));zoo.cols.push({x:v.x,z:v.z,r:1})}
