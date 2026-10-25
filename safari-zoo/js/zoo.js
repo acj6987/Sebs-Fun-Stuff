@@ -2,15 +2,17 @@
 const ZOO_ENV={zen:'#4a88d0',hor:'#e2ecf0',fog:'#d3e0e6',ground:'#5f8a3c',patch:'#4c7530',rock:'#7a7c78',water:'#3f7896',grass:['#3a6a22','#8cbc54'],grassH:.32,grassN:70000,sunEl:.75};
 // ginormous domes so every animal can be its real size; the Dino Zone dome is the biggest of all
 const ROAD=7,GAP=24,MASK={x0:-1400,z0:-2700,size:2800};
-function domeR(hab){return hab==='dino'?100:50}
+// the Ultra Dino Dome sits beside the start of the road and holds every dinosaur
+const ULTRA={R:300,x:ROAD+16+300,z:-16-300};
 const doorAng=R=>9/R; // half-width of the doorway, in radians around the dome
 const zoo={scene:null,running:false,areas:new Map(),animals:[],grounds:[],waters:[],cols:[],cam:{yaw:.5,pitch:.7,dist:330,tx:0,tz:-160,w:{yaw:.5,pitch:.7,dist:330,tx:0,tz:-160}},sel:null,mask:null};
 // domes line both sides of one long road that starts at the gate
 function zooLayout(){
-  const zs=[-16,-16],list=[];
-  const place=(R,i)=>{const k=i%2,side=k?1:-1,z=zs[k]-R;zs[k]=z-R-GAP;return{x:side*(R+ROAD+10),z,R,side}};
-  S.areas.forEach((a,i)=>list.push(place(domeR(a.hab),i)));
-  const next=place(50,S.areas.length);
+  const zs=[-16,ULTRA.z-ULTRA.R-GAP],list=[];
+  const place=(R,k)=>{const side=k?1:-1,z=zs[k]-R;zs[k]=z-R-GAP;return{x:side*(R+ROAD+10),z,R,side}};
+  // other domes fill whichever side of the road is shorter
+  S.areas.forEach(a=>list.push(a.hab==='dino'?{x:ULTRA.x,z:ULTRA.z,R:ULTRA.R,side:1,ultra:1}:place(50,zs[0]>=zs[1]?0:1)));
+  const next=place(50,zs[0]>=zs[1]?0:1);
   return{list,next,end:Math.min(zs[0],zs[1])-20};
 }
 
@@ -46,7 +48,7 @@ function buildZoo(){
   // woods around the zoo, leaving room for lots more domes
   const types=NATURE.treeTypes('woodland'),r=rng(5);
   zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
-    return Math.abs(x)<300&&z<60?null:V(x,0,z)},r));
+    return(Math.abs(x)<300||x>0&&x<ULTRA.x+ULTRA.R+40&&z>ULTRA.z-ULTRA.R-40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*700,z=60+rr()*300;return Math.abs(x)<20?null:V(x,0,z)},r);
   // entrance gate
   const gate=new T.Group();gate.position.set(0,0,30);scene.add(gate);
@@ -63,7 +65,7 @@ function rebuildPaths(){
   const strip=(x0,z0,x1,z1)=>{const w=Math.abs(x1-x0),d=Math.abs(z1-z0),m=pv.map.clone(),n=pv.normal.clone();m.needsUpdate=n.needsUpdate=true;m.repeat.set(w/4,d/4);n.repeat.set(w/4,d/4);
     const o=new T.Mesh(new T.PlaneGeometry(w,d),new T.MeshStandardMaterial({map:m,normalMap:n,roughness:.9}));o.rotation.x=-Math.PI/2;o.position.set((x0+x1)/2,.04,(z0+z1)/2);o.receiveShadow=true;P.add(o)};
   strip(-ROAD,L.end,ROAD,40);
-  for(const d of L.list)strip(d.side>0?ROAD:-ROAD-11,d.z-6,d.side>0?ROAD+11:-ROAD,d.z+6);
+  for(const d of L.list)if(d.ultra)strip(ROAD,d.z-9,d.x-d.R+2,d.z+9);else strip(d.side>0?ROAD:-ROAD-11,d.z-6,d.side>0?ROAD+11:-ROAD,d.z+6);
   const pole=new T.MeshStandardMaterial({color:'#2a2c2e',metalness:.7,roughness:.4}),glow=new T.MeshStandardMaterial({color:'#fff6d8',emissive:'#ffe8b0',emissiveIntensity:1.2});
   for(let z=20;z>L.end;z-=30)for(const sx of[-1,1]){const l=new T.Group();l.position.set(sx*(ROAD+1.2),0,z+(sx>0?15:0));
     const p=new T.Mesh(new T.CylinderGeometry(.1,.14,5,8),pole);p.position.y=2.5;p.castShadow=true;l.add(p);
@@ -81,7 +83,7 @@ function drawMask(){
   const {g,tex}=zoo.mask,W=1024,k=W/MASK.size,X=x=>(x-MASK.x0)*k,Z=z=>(z-MASK.z0)*k,L=zooLayout();
   g.fillStyle='#fff';g.fillRect(0,0,W,W);g.fillStyle='#000';
   g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);
-  for(const d of L.list){g.fillRect(X(d.side>0?ROAD:-ROAD-12),Z(d.z-7),12*k,14*k);g.beginPath();g.arc(X(d.x),Z(d.z),(d.R+1.5)*k,0,7);g.fill()}
+  for(const d of L.list){if(d.ultra)g.fillRect(X(ROAD),Z(d.z-10),(d.x-d.R-ROAD+3)*k,20*k);else g.fillRect(X(d.side>0?ROAD:-ROAD-12),Z(d.z-7),12*k,14*k);g.beginPath();g.arc(X(d.x),Z(d.z),(d.R+1.5)*k,0,7);g.fill()}
   tex.needsUpdate=true;
 }
 
@@ -102,11 +104,15 @@ function buildArea(area,i){
   const types=habTypes[area.hab]||(habTypes[area.hab]=NATURE.treeTypes(area.hab));
   const rr=rng(area.id*97+3),lim=R0-4;
   const sized=types.map(t=>Object.assign({},t,{col:t.col?Math.min(t.col,2):0}));
-  cols.push(...NATURE.scatter(grp,sized,Math.round((R0>60?150:60)*Math.max(.5,QUALITY.trees)),q=>{const a=q()*6.28,d=Math.sqrt(q())*lim;const p=V(Math.sin(a)*d,0,Math.cos(a)*d);
+  cols.push(...NATURE.scatter(grp,sized,Math.round((R0>200?650:60)*Math.max(.5,QUALITY.trees)),q=>{const a=q()*6.28,d=Math.sqrt(q())*lim;const p=V(Math.sin(a)*d,0,Math.cos(a)*d);
     if(Math.hypot(p.x-px,p.z-pz)<pr+3||d<R0*.22||(d>R0*.55&&d<R0*.72)||Math.abs(p.x)<10&&p.z>0)return null;return p},rr));
+  if(R0>200){const vg=new T.CylinderGeometry(10,70,80,48,8,true),p=vg.attributes.position;for(let i=0;i<p.count;i++){const k=1+(MESHER.noise3(p.getX(i)*.05,p.getY(i)*.05,p.getZ(i)*.05)-.5)*.3;p.setX(i,p.getX(i)*k);p.setZ(i,p.getZ(i)*k)}vg.computeVertexNormals();
+    const [lc,lg]=NATURE.canvas(256);lg.fillStyle='#000';lg.fillRect(0,0,256,256);for(let i=0;i<7;i++){let x=Math.random()*256;lg.strokeStyle='#ff6a14';lg.lineWidth=3+Math.random()*4;lg.beginPath();lg.moveTo(x,0);for(let y=0;y<120+Math.random()*130;y+=8){x+=(Math.random()-.5)*6;lg.lineTo(x,y)}lg.stroke()}
+    const vo=new T.Mesh(vg,new T.MeshStandardMaterial({color:'#3a3330',roughness:.95,emissive:'#ff5a14',emissiveMap:NATURE.toTex(lc,true),emissiveIntensity:1.3}));vo.position.set(-R0*.45,40,-R0*.4);vo.castShadow=true;grp.add(vo);
+    const cr=new T.Mesh(new T.CircleGeometry(10,24),new T.MeshBasicMaterial({color:'#ff5a14'}));cr.rotation.x=-Math.PI/2;cr.position.set(-R0*.45,78,-R0*.4);grp.add(cr);cols.push({x:-R0*.45,z:-R0*.4,r:70})}
   const doors=buildDome(grp,R0);
   // sign beside the doorway
-  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:signTexture([(i+1)+'. '+HAB[area.hab].name,area.hab==='dino'?'Ginormous Dino Dome':'Giant Glass Dome']),roughness:.7}));
+  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:R0>200?signTexture(['ULTRA DINO DOME','Danger! Only with the zoo owner'],'#8a2a14'):signTexture([(i+1)+'. '+HAB[area.hab].name,'Giant Glass Dome']),roughness:.7}));
   st.position.set(13,2.6,R0+3);st.rotation.y=-.25;grp.add(st);
   const bw=NATURE.barkMat(false);for(const sd of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.25,3.2,.25),bw);p.position.set(13+sd*3.4,1.6,R0+3-sd*.85);p.castShadow=true;grp.add(p)}
   // the glass wall is solid except for the doorway; pond and trees block the truck too
@@ -120,8 +126,8 @@ function buildArea(area,i){
 const domeCache={};
 function domeGeometry(R){
   if(domeCache[R])return domeCache[R];
-  const da=doorAng(R),dh=R>60?15:11;
-  const ico=new T.IcosahedronGeometry(R,R>60?5:4).toNonIndexed(),p=ico.attributes.position,keep=[],edges=new Map();
+  const da=doorAng(R),dh=R>200?18:R>60?15:11;
+  const ico=new T.IcosahedronGeometry(R,R>200?11:R>60?5:4).toNonIndexed(),p=ico.attributes.position,keep=[],edges=new Map();
   const key=v=>v.toArray().map(n=>n.toFixed(2)).join(',');
   const door=v=>v.z>0&&Math.abs(Math.atan2(v.x,v.z))<da+.02&&v.y<dh;
   for(let i=0;i<p.count;i+=3){const a=V(p.getX(i),p.getY(i),p.getZ(i)),b=V(p.getX(i+1),p.getY(i+1),p.getZ(i+1)),c=V(p.getX(i+2),p.getY(i+2),p.getZ(i+2));
@@ -188,11 +194,12 @@ function zooCamera(dt){
 }
 function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;w.tx=A.x;w.tz=A.z;w.dist=A.R0*2.6;w.pitch=Math.max(.45,Math.min(w.pitch,.8))}
 function zooTick(dt,time){
-  updateZooAnimals(dt,time);updateVisitors(dt,time);
+  updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
     if(driving&&Math.hypot((mode==='car'?car.x:me.x)-gx,(mode==='car'?car.z:me.z)-gz)<20)near=true;
-    if(!near&&zoo.people)for(const v of zoo.people)if(Math.hypot(v.x-gx,v.z-gz)<9){near=true;break}
+    if(!near&&zoo.people&&A.R0<200)for(const v of zoo.people)if(Math.hypot(v.x-gx,v.z-gz)<9){near=true;break}
+    if(!near&&zoo.tours)for(const t of zoo.tours)if(Math.hypot(t.x-gx,t.z-gz)<22){near=true;break}
     A.open+=((near?1:0)-A.open)*Math.min(1,dt*2.5);
     for(const d of A.doors){const{sd,w}=d.userData;d.position.x=sd*(w/2+A.open*w*.95)}}
   for(const w of zoo.waters){w.userData.water.offset.x+=dt*.015;w.userData.water.offset.y+=dt*.01}
@@ -212,7 +219,8 @@ async function enterZoo(progress){
   for(let i=0;i<need.length;i++){progress('Getting the animals ready… '+(i+1)+'/'+need.length);await nextFrame();ANIMALS.species(SP[need[i]])}
   syncZooAnimals();
   for(let i=0;i<LOOKS.length;i++)if(!ANIMALS.isBuilt(personSp(i))){progress('Opening the gates for visitors… '+(i+1)+'/'+LOOKS.length);await nextFrame();ANIMALS.species(personSp(i))}
-  syncVisitors();
+  if(!ANIMALS.isBuilt(personSp('staff'))){progress('Zoo workers are getting the tour cars ready…');await nextFrame();ANIMALS.species(personSp('staff'))}
+  syncVisitors();syncTours();
 }
 function zooPick(cx,cy){
   const ray=new T.Raycaster();ray.setFromCamera(new T.Vector2(cx/innerWidth*2-1,-(cy/innerHeight)*2+1),cam);
@@ -225,7 +233,7 @@ function refreshZooWorld(){
   if(!zoo.world)return;const w=zoo.world;w.cols=new Map();
   const add=c=>{const k=Math.floor(c.x/20)+','+Math.floor(c.z/20);if(!w.cols.has(k))w.cols.set(k,[]);w.cols.get(k).push(c)};
   zoo.cols.forEach(add);for(const A of zoo.areas.values())A.cols.forEach(add);
-  w.bounds={x0:-290,x1:290,z0:zooLayout().end-40,z1:80};
+  w.bounds={x0:-290,x1:ULTRA.x+ULTRA.R+40,z0:zooLayout().end-40,z1:80};
   w.domes=[...zoo.areas.values()].map(A=>({x:A.x,z:A.z,r:A.R0}));
 }
 function zooDriveWorld(){
@@ -255,7 +263,8 @@ const LOOKS=[
   {s:.98,skin:'#a8714c',shirt:'#e84393',pants:'#2d3436',hair:'#2a1a12',shoes:'#ddd',short:1,long:1},
 ];
 const personSps=[];
-function personSp(i){return personSps[i]||(personSps[i]={k:'person'+i,n:'Visitor',def:Object.assign({plan:'person'},LOOKS[i])})}
+const STAFF={s:1,skin:'#c99a74',shirt:'#3f6a2a',pants:'#5a4a32',hair:'#2a1a10',shoes:'#2a2018',hat:'#2f5a22',short:1};
+function personSp(i){return personSps[i]||(personSps[i]={k:'person'+i,n:i==='staff'?'Zoo worker':'Visitor',def:Object.assign({plan:'person'},i==='staff'?STAFF:LOOKS[i])})}
 function pathGraph(){
   const nodes=[],link=(a,b)=>{a.nb.push(b);b.nb.push(a)},L=zooLayout();
   const gate={x:0,z:44,nb:[],gate:1};nodes.push(gate);
@@ -264,7 +273,8 @@ function pathGraph(){
   const road=zs.map(z=>{const n={x:0,z,nb:[]};nodes.push(n);return n});link(gate,road[0]);for(let i=1;i<road.length;i++)link(road[i-1],road[i]);
   S.areas.forEach((a,i)=>{const A=zoo.areas.get(a.id);if(!A)return;const d=L.list[i],rn=road.find(n=>n.z===Math.round(d.z));
     // a spot at the dome gate to look in, and a spot inside the dome
-    const v={x:d.side*(ROAD+6),z:d.z,nb:[],view:1,face:d.side*Math.PI/2};nodes.push(v);link(rn,v);
+    const v={x:d.ultra?d.x-d.R-7:d.side*(ROAD+6),z:d.z,nb:[],view:1,face:d.side*Math.PI/2};nodes.push(v);link(rn,v);
+    if(d.ultra)return;
     const ins={x:A.inside.x,z:A.inside.z+(Math.random()-.5)*8,nb:[],inside:1};ins.face=Math.atan2(A.x-ins.x,A.z-ins.z);nodes.push(ins);link(v,ins)});
   return{nodes,gate};
 }
@@ -299,3 +309,66 @@ function updateVisitors(dt,time){
     v.inst.g.position.set(v.x,.04,v.z);v.inst.g.rotation.y=v.yaw;
   }
 }
+
+/* ---------- tour cars: zoo workers drive visitors around the domes, and visitors pay ---------- */
+function seat(inst){const B=inst.B;for(let i=0;i<2;i++){B['leg'+i].rotation.x=-1.45;B['low'+i].rotation.x=1.4;B['arm'+i].rotation.x=-.4}inst.rest=B.root.position.y}
+function tourCarModel(){
+  const g=new T.Group(),paint=new T.MeshPhysicalMaterial({color:'#f4f2ea',roughness:.35,clearcoat:.6}),green=new T.MeshStandardMaterial({color:'#2f6a32',roughness:.6}),dark=new T.MeshStandardMaterial({color:'#1d1c1a',roughness:.9});
+  const B=(m,x,y,z,sx,sy,sz)=>{const o=new T.Mesh(new T.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o)};
+  B(paint,0,.75,0,2,.6,4.6);B(green,0,.9,0,2.02,.12,4.62);B(paint,0,1.15,-1.9,1.9,.35,.8);
+  for(const x of[-.95,.95])for(const z of[-2.1,2.1]){B(dark,x,1.9,z,.08,1.8,.08)}B(green,0,2.85,0,2.1,.1,4.5);
+  for(const z of[-.9,.3,1.5])B(new T.MeshStandardMaterial({color:'#6a4a2a'}),0,1.1,z,1.8,.15,.6);
+  for(const x of[-1,1])for(const z of[-1.5,1.5]){const w=new T.Mesh(new T.CylinderGeometry(.4,.4,.3,16),dark);w.rotation.z=Math.PI/2;w.position.set(x,.4,z);g.add(w)}
+  const sign=new T.Mesh(new T.PlaneGeometry(1.8,.35),new T.MeshStandardMaterial({map:signTexture(['ZOO TOURS'],'#2f6a32'),roughness:.7}));sign.position.set(0,3.05,-2.26);sign.rotation.y=Math.PI;g.add(sign);
+  return g;
+}
+function tourRoute(){
+  const L=zooLayout(),pts=[{x:2.5,z:40}];
+  S.areas.forEach((a,i)=>{const A=zoo.areas.get(a.id),d=L.list[i];if(!A||d.ultra)return;
+    // drive down the road, in through the gate, once round the inside ring and back out
+    pts.push({x:2.5*d.side,z:d.z},{x:A.door.x,z:A.door.z});
+    const ring=A.R0*.63,start=Math.atan2(A.door.x-A.x,A.door.z-A.z);
+    for(let k=0;k<=10;k++){const a=start+k/10*Math.PI*2*d.side;pts.push({x:A.x+Math.sin(a)*ring,z:A.z+Math.cos(a)*ring,pay:k===10?1:0})}
+    pts.push({x:A.door.x,z:A.door.z},{x:2.5*d.side,z:d.z})});
+  pts.push({x:-2.5,z:L.end+30},{x:-2.5,z:40});
+  return pts;
+}
+function syncTours(){
+  for(const t of zoo.tours||[])zoo.scene.remove(t.g);zoo.tours=[];
+  const n=S.areas.some(a=>a.hab!=='dino')?2:0,route=tourRoute();
+  for(let i=0;i<n;i++){const g=tourCarModel();zoo.scene.add(g);
+    const driver=ANIMALS.make(personSp('staff'));seat(driver);driver.g.position.set(-.45,.7,-1.2);g.add(driver.g);
+    const riders=[];[[-.5,-.1],[.5,-.1],[-.5,1.1],[.5,1.1]].forEach(([x,z],j)=>{const r=ANIMALS.make(personSp((i*4+j)%LOOKS.length));seat(r);r.g.position.set(x,.75,z);g.add(r.g);riders.push(r)});
+    const k=Math.floor(i*route.length/n);zoo.tours.push({g,route,k,x:route[k].x,z:route[k].z,yaw:0,riders,driver})}
+  const el=$('#tours');if(el){el.textContent='🚙 '+n+' tour cars';el.hidden=!n}
+}
+function updateTours(dt,time){
+  if(!zoo.tours)return;
+  for(const t of zoo.tours){const p=t.route[t.k],dx=p.x-t.x,dz=p.z-t.z,d=Math.hypot(dx,dz),spd=7;
+    if(d<1.5){if(p.pay){const fee=t.riders.length*3;S.coins+=fee;save();coins();if(curView==='zoo'&&Math.random()<.3)toast('🚙 A tour car finished a dome tour: +'+fee+' coins')}t.k=(t.k+1)%t.route.length}
+    else{t.x+=dx/d*Math.min(spd*dt,d);t.z+=dz/d*Math.min(spd*dt,d);const ty=Math.atan2(-dx,-dz);let dy=ty-t.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));t.yaw+=dy*Math.min(1,dt*4)}
+    t.g.position.set(t.x,0,t.z);t.g.rotation.y=t.yaw;
+    for(const r of t.riders)r.B.head.rotation.y=Math.sin(time*.8+r.seed)*.6;
+  }
+}
+
+/* ---------- Dino Tour: visitors pay to ride in your truck into the Ultra Dino Dome ---------- */
+const dinoTour={on:false,riders:[],entered:0,inside:false};
+function startDinoTour(){
+  const n=3,fee=60*n;S.coins+=fee;save();coins();
+  dinoTour.on=true;dinoTour.entered=0;dinoTour.inside=false;dinoTour.riders=[];
+  [[-.5,1.42],[0,1.42],[.5,1.42]].forEach(([x,z],j)=>{const r=ANIMALS.make(personSp((j*3+2)%LOOKS.length));seat(r);r.g.position.set(x,1.2,z);car.g.add(r.g);dinoTour.riders.push(r)});
+  toast('🦖 '+n+' visitors paid '+fee+' coins for a Dino Tour! Drive them into the Ultra Dino Dome, then bring them back out safely.');
+}
+function updateDinoTour(dt){
+  if(!dinoTour.on||!(world&&world.zoo)||curView!=='drive')return;
+  const A=[...zoo.areas.values()].find(a=>a.R0>200);if(!A)return;
+  const inside=Math.hypot(car.x-A.x,car.z-A.z)<A.R0-2;
+  for(const r of dinoTour.riders){r.B.head.rotation.y=Math.sin(performance.now()/700+r.seed)*.7}
+  if(inside&&!dinoTour.inside){dinoTour.inside=true;toast(dinoTour.entered?'Back in the Ultra Dino Dome!':'The visitors are amazed! Look at all the dinosaurs! Drive around, then take them back out.')}
+  if(inside)dinoTour.entered+=dt;
+  if(!inside&&dinoTour.inside){dinoTour.inside=false;
+    if(dinoTour.entered>20){const tip=150;S.coins+=tip;save();coins();toast('Dino Tour complete! The visitors loved it and gave you a '+tip+' coin tip!');endDinoTour()}
+    else toast('That was quick! Drive them round the Ultra Dino Dome a bit longer.')}
+}
+function endDinoTour(){for(const r of dinoTour.riders)r.g.parent&&r.g.parent.remove(r.g);dinoTour.riders=[];dinoTour.on=false}

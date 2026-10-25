@@ -166,6 +166,7 @@ function renderZooUI(){
   $('#holding').innerHTML=S.holding.length?S.holding.map(an=>{const s=SP[an.k];
     return `<button class="chip ${selected===an.uid?'sel':''}" data-uid="${an.uid}"><span class="e">${s.e}</span>${s.n}<small>${HAB[s.hab].i}</small></button>`}).join('')
     :'<span class="empty">The truck is empty. Go on safari to catch more animals!</span>';
+  $('#dinoTour').hidden=!S.areas.some(a=>a.hab==='dino');
   $('#placeHint').hidden=selected===null;
   if(selected!==null){const an=S.holding.find(x=>x.uid===selected);if(an)$('#placeHint').textContent='Now tap an area in the zoo to move the '+SP[an.k].n+' in. It likes '+HAB[SP[an.k].hab].name+' areas best.'}
   renderAreaCard();
@@ -232,10 +233,11 @@ async function startZooDrive(id){
   $('#cagesTxt').hidden=true;$('#toZoo2').textContent='🏛️ Zoo view';
   show('drive');safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
 }
-$('#driveZoo').onclick=()=>startZooDrive(null);
+$('#driveZoo').onclick=()=>{endDinoTour();startZooDrive(null)};
+$('#dinoTour').onclick=async()=>{if(!S.areas.some(a=>a.hab==='dino')){toast('Catch a dinosaur in the 🦖 Dino Zone first, so you have an Ultra Dino Dome!');return}endDinoTour();await startZooDrive(null);startDinoTour()};
 $('#goEnc').onclick=()=>{renderEncPick();$('#encPick').hidden=false};
 $('#encClose').onclick=()=>$('#encPick').hidden=true;
-$('#encGrid').addEventListener('click',e=>{const b=e.target.closest('[data-enc]');if(!b)return;startZooDrive(b.dataset.enc==='gate'?null:+b.dataset.enc)});
+$('#encGrid').addEventListener('click',e=>{const b=e.target.closest('[data-enc]');if(!b)return;endDinoTour();startZooDrive(b.dataset.enc==='gate'?null:+b.dataset.enc)});
 
 // visitors pay for happy animals
 setInterval(()=>{let h=0;for(const a of S.areas)for(const an of a.animals)if(happy(an,a))h++;if(h){S.coins+=h;save();coins()}},5000);
