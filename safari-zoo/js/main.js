@@ -167,6 +167,7 @@ $('#habSel').innerHTML=Object.entries(HAB).map(([k,h])=>`<option value="${k}">${
 function renderZooUI(){
   coins();$('#buildD').textContent=S.freeDomes>0?'Build dome · FREE ('+S.freeDomes+' left)':'Build dome · 🪙 250';
   $('#truckInfo').innerHTML=S.cages.length?`🚚 ${S.cages.length} animal${S.cages.length>1?'s':''} in your truck cages: ${S.cages.map(x=>SP[x.k].e).join('')} <button class="mini" id="unload">Put them back in their domes</button>`:'🚚 Your truck cages are empty.';
+  if((S.truckEggs||[]).length)$('#truckInfo').innerHTML+=`<br>🥚 ${S.truckEggs.length} egg${S.truckEggs.length>1?'s':''} in your truck. Drive them to the Egg Nursery and press G.`;
   const all=S.areas.flatMap(a=>a.animals.map(an=>[an,a])),h=all.filter(([an,a])=>happy(an,a)).length;
   const score=all.length?Math.min(5,Math.round((h/all.length)*3+Math.min(2,all.length/8))):0;
   $('#stars').textContent='★'.repeat(score)+'☆'.repeat(5-score)+`  ${all.length} animals · ${h} happy`;
@@ -230,7 +231,7 @@ async function startZooDrive(id,opts={}){
   if(!zoo.built||curView!=='zoo'){show('zoo');loading(true,'Opening your zoo…');await nextFrame();await enterZoo(t=>$('#loadTxt').textContent=t);loading(false)}
   world=zooDriveWorld();
   if(zoo.carG)zoo.scene.remove(zoo.carG);
-  sub.on=false;buildCar(zoo.scene,opts);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
+  sub.on=false;buildCar(zoo.scene,opts);zoo.carG=car.g;showTruckEggs();showFood();buildFootRig();zoo.scene.add(cam);refreshCages();
   mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
   if(A){car.x=A.inside.x;car.z=A.inside.z;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}
