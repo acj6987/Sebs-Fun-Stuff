@@ -152,7 +152,7 @@ $('#back').onclick=goMap;
 $('#toZoo1').onclick=openZoo;
 $('#toZoo2').onclick=()=>{if(me.pack.length)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
 $('#zooMap').onclick=()=>show('map');
-function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages);S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They went straight into their domes.'),50)}
+function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages.map(c=>(delete c.pen,c)));S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They went straight into their domes.'),50)}
 
 /* ---------- zoo panel ---------- */
 let selected=null;
@@ -195,13 +195,13 @@ $('#holding').addEventListener('click',e=>{const b=e.target.closest('.chip');if(
   if(selected!==null&&matchMedia('(max-width:700px)').matches)$('#zooSide').classList.add('min')});
 $('#acList').addEventListener('click',e=>{const area=S.areas.find(a=>a.id===zoo.sel);if(!area)return;
   const ld=e.target.closest('[data-load]'),fr=e.target.closest('[data-free]');
-  if(ld){if(S.cages.length>=CAGES){toast('The truck cages are full ('+CAGES+'). Unload some first!');return}
-    const u=+ld.dataset.load,i=area.animals.findIndex(x=>x.uid===u),an=area.animals.splice(i,1)[0];S.cages.push(an);save();syncZooAnimals();renderZooUI();
+  if(ld){if(smallUsed()>=CAGES){toast('The small truck cages are full ('+CAGES+'). Unload some first!');return}
+    const u=+ld.dataset.load,i=area.animals.findIndex(x=>x.uid===u),an=area.animals.splice(i,1)[0];delete an.pen;S.cages.push(an);save();syncZooAnimals();renderZooUI();
     toast('The '+SP[an.k].n+' is in a cage on your truck. Take it for a drive!')}
   if(fr){if(fr.dataset.sure!=='1'){fr.dataset.sure='1';fr.textContent='Tap again to set free';setTimeout(()=>{if(fr.isConnected){fr.dataset.sure='';fr.textContent='🌿 Set free'}},3000);return}
     const u=+fr.dataset.free,i=area.animals.findIndex(x=>x.uid===u),an=area.animals.splice(i,1)[0];save();syncZooAnimals();renderZooUI();
     toast('Bye bye '+SP[an.k].n+'! It went back to the wild.')}});
-$('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0));const made=autoHome();
+$('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0).map(c=>(delete c.pen,c)));const made=autoHome();
   [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are back in their domes!')});
 $('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=150;w.tx=0;w.tz=-60};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');

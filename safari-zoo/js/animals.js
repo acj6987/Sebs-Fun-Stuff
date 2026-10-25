@@ -18,7 +18,7 @@ function kit(){
 function quad(p){
   const k=kit(),{L,W,Hb,leg}=p,lw=p.legW||W*.15,by=leg+Hb*.42;
   k.bone('root',null,[0,by,0]);
-  k.ell([0,by+Hb*.04,L*.2],[W*.5,Hb*.52,L*.34],'root',{k:Hb*.4,pat:1});
+  k.ell([0,by+Hb*.04,L*.2],[W*.5,Hb*.52,L*.34],'root',{k:Hb*.4,pat:1,rough:p.armor?.06:0,rf:7});
   k.ell([0,by,-L*.22],[W*.48,Hb*.48,L*.33],'root',{k:Hb*.4,pat:1});
   k.ell([0,by-Hb*.06,0],[W*.45,Hb*.44,L*.32],'root',{k:Hb*.35,pat:1});
   if(p.hump)k.ell([0,by+Hb*.46,p.shag?L*.18:0],[W*.3,Hb*.36,L*.22],'root',{k:Hb*.3,pat:1,col:p.shag,rough:p.shag?.03:0,rf:10});
@@ -76,6 +76,8 @@ function quad(p){
   if(p.tri){k.extra('head','trifrill',at(-hl*.15,hh*.35),{r:hw*1.15,col:p.col2||p.col,tilt:hp});
     for(const sx of[-1,1])k.extra('head','horn',at(hl*.15,hh*.45,sx*hw*.25),{len:.9,r:.09,tilt:1.1-hp,col:'#e8dcc0'});k.extra('head','horn',at(hl*.78,hh*.05),{len:.35,r:.08,tilt:.6,col:'#e8dcc0'})}
   if(p.plates)for(let i=0;i<9;i++){const z=L*(.42-i*.11),y=by+Hb*(.45-Math.abs(i-3.5)*.02)+Hb*.12*Math.sin(Math.PI*i/8.5);k.extra('root','plate',[i%2?.08:-.08,y,z],{size:(.45+Math.sin(Math.PI*i/8.5)*.5)*Hb*.55,col:p.col2||'#a85a3a'})}
+  if(p.crestTube)k.extra('head','crestTube',at(hl*.05,hh*.45),{len:hl*1.6,r:hh*.16,tilt:hp,col:p.col2||p.col});
+  if(p.armor)for(let i=0;i<7;i++)for(const sx of[-1,1])k.extra('root','spike',[sx*W*.5,by+Hb*.05,L*(.38-i*.12)],{s:-sx,len:.45,r:.1});
   if(p.ossicones)for(const s of[-1,1])k.extra('head','ossicone',at(-hl*.05,hh*.5,s*.07),{});
   // tail
   const tb=[0,by+Hb*.15,-L*.5],tl=p.tl||.4;k.bone('tail','root',tb);
@@ -85,6 +87,7 @@ function quad(p){
     if(p.tip)k.ell(ad(end,sc([0,end[1]-tb[1],end[2]-tb[2]],.12)),[W*.2,W*.2,W*.2],'tail',{k:W*.12,col:p.tip,rough:.02,rf:20})}
   else if(p.tail==='dino'){const t1=ad(tb,[0,-Hb*.15,-tl*.5]),t2=ad(tb,[0,-Hb*.35,-tl]);k.bone('tail2','tail',t1);
     k.cap(ad(tb,[0,0,L*.08]),t1,W*.32,W*.17,'tail',{k:W*.15,pat:1});k.cap(t1,t2,W*.17,W*.035,'tail2',{k:W*.08,pat:1});
+    if(p.club)k.extra('tail2','club',t2,{r:W*.22});
     if(p.plates)for(let i=0;i<4;i++)k.extra(i<2?'tail':'tail2','spike',ad(i<2?ad(tb,[0,-Hb*.1,-tl*(.7+i*.08)]):t1,i<2?[0,0,0]:[0,-Hb*.05*(i-1),-tl*.12*(i-1)]),{s:i%2?1:-1,len:.6,r:.07})}
   else if(p.tail==='ringed')k.cap(tb,ad(tb,[0,-tl*.3,-tl*.95]),W*.14,W*.16,'tail',{k:W*.1,pat:'rings'});
   else if(p.tail==='short')k.ell(ad(tb,[0,-.02,-.04]),[W*.13,W*.15,W*.12],'tail',{k:W*.1,col:tcol,pat:1,detail:1});
@@ -280,6 +283,8 @@ function theropod(p){
   const tb=[0,hip+Hb*.08,-L*.4],t1=[0,hip-Hb*.05,-L*.4-p.tail*s*.45],t2=[0,hip-Hb*.25,-L*.4-p.tail*s];
   k.bone('tail','root',tb);k.bone('tail2','tail',t1);
   k.cap(tb,t1,Hb*.4,Hb*.2,'tail',{k:Hb*.2,pat:1});k.cap(t1,t2,Hb*.2,Math.max(.03,Hb*.03),'tail2',{k:Hb*.1,pat:1});
+  if(p.sail)k.extra('root','sail',[0,hip+Hb*.35,L*.02],{len:L*.95,ht:Hb*1.4,col:p.col2});
+  if(p.dcrest)for(const sx of[-1,1])k.extra('head','dcrest',at(hl*.45,hh*.42,sx*hw*.12),{len:hl*.75,ht:hh*.7,col:p.col2});
   if(p.raptor)for(let i=0;i<6;i++)k.extra('neck','quill',ad(nb,[0,Hb*.3+i*p.neck*s*.09,i*p.neck*s*.1-.05]),{size:.15*s,col:p.col2});
   k.anim={kind:'biped',stride:hip*1.1};
   return k;
@@ -413,6 +418,10 @@ function extraMesh(e,p){
     case'teeth':for(let i=0;i<9;i++){const geo=new T.ConeGeometry(e.size*.35,e.size,5);geo.rotateX(Math.PI);add(geo,m.ivory,[0,0,i*e.len/9])}break;
     case'claw':{const geo=new T.ConeGeometry(e.size*.25,e.size,6);add(geo,m.horn,null,[-.8,0,0]);break}
     case'quill':{const geo=new T.ConeGeometry(e.size*.15,e.size,5);geo.translate(0,e.size/2,0);add(geo,smat(e.col||'#3a2a1a'),null,[-.6,0,0]);break}
+    case'sail':{const geo=new T.CircleGeometry(1,40,0,Math.PI);geo.scale(e.len/2,e.ht,1);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.6}));break}
+    case'dcrest':{const geo=new T.CircleGeometry(1,24,0,Math.PI);geo.scale(e.len/2,e.ht,1);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.5}),null,[0,0,0]);break}
+    case'crestTube':{const geo=new T.CylinderGeometry(e.r*.7,e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,smat(e.col,{roughness:.6}),null,[-1.9+e.tilt,0,0]);break}
+    case'club':{const o=add(new T.SphereGeometry(e.r,16,12),smat('#5a4a38',{roughness:.7}));o.scale.set(1.4,.8,1.1);break}
     case'frill':{const f=add(new T.CircleGeometry(e.s*.3,24),smat(e.col,{side:T.DoubleSide}));break}
   }
   return g;
