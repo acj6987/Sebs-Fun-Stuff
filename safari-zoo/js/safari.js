@@ -54,10 +54,29 @@ async function buildSafari(c,progress){
   // build each animal shape once, showing progress
   const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]));
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
+  // pterodactyls circling high in the sky over Dino Zone
+  if(c.hab==='dino'){const fl=makeFlyers(scene,SP['dino:3'],10,{x:0,z:0},[60,240],[35,80],1.6),smoke=world.tick;
+    world.tick=(dt,time)=>{if(smoke)smoke(dt,time);updateFlyers(fl,dt,time,H)}}
   refreshCages();
   // one group of every kind of animal first, then extra ones
   c.animals.forEach((x,i)=>spawnAnimal(true,SP[c.id+':'+i]));
   while(world.animals.length<40)spawnAnimal(true);
+}
+
+/* ---------- flying reptiles that circle in the sky ---------- */
+function makeFlyers(scene,sp,n,center,rr,alt,scale=1){
+  const list=[];
+  for(let i=0;i<n;i++){const inst=ANIMALS.make(sp);inst.g.scale.setScalar(scale);scene.add(inst.g);
+    list.push({inst,cx:center.x+(Math.random()-.5)*rr[1],cz:center.z+(Math.random()-.5)*rr[1],r:rr[0]+Math.random()*(rr[1]-rr[0])*.5,
+      alt:alt[0]+Math.random()*(alt[1]-alt[0]),a:Math.random()*6.28,spd:(9+Math.random()*5)*(Math.random()<.5?1:-1)})}
+  return list;
+}
+function updateFlyers(list,dt,time,ground){
+  for(const f of list){f.a+=f.spd/f.r*dt;const x=f.cx+Math.cos(f.a)*f.r,z=f.cz+Math.sin(f.a)*f.r;
+    const vx=-Math.sin(f.a)*Math.sign(f.spd),vz=Math.cos(f.a)*Math.sign(f.spd);
+    f.inst.g.position.set(x,ground(x,z)+f.alt+Math.sin(time*.4+f.r)*4,z);f.inst.g.rotation.set(0,Math.atan2(vx,vz),-Math.sign(f.spd)*.25);
+    // flap for a bit, then glide
+    const flap=Math.sin(time*.5+f.r)>.2;ANIMALS.animate(f.inst,dt,0,time,{alt:flap?5:0});if(!flap)for(const w of['L','R'])f.inst.B['wing'+w].rotation.z=(w==='R'?1:-1)*-.15}
 }
 
 /* ---------- the volcano on Dino Island ---------- */
@@ -81,7 +100,7 @@ function addVolcano(scene){
   world.tick=dt=>{for(const q of world.smoke){q.t=(q.t+dt*.03)%1;const k=q.t;q.sp.position.set(vx+Math.sin(k*9)*12*k,base+hgt+k*170,vz+Math.cos(k*7)*10*k);q.sp.scale.setScalar(30+k*120);q.sp.material.opacity=1-k}};
 }
 /* ---------- the jeep ---------- */
-function buildCar(scene){
+function buildCar(scene,opts={}){
   const g=new T.Group();scene.add(g);car.g=g;
   const paint=new T.MeshPhysicalMaterial({color:'#c4843a',roughness:.38,metalness:.25,clearcoat:.7,clearcoatRoughness:.2});
   const dark=new T.MeshStandardMaterial({color:'#1f1d1b',roughness:.85}),trim=new T.MeshStandardMaterial({color:'#2e2924',roughness:.7});
@@ -125,9 +144,22 @@ function buildCar(scene){
   const TA=(geo,m,x,y,z,sx,sy,sz)=>{const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=o.receiveShadow=true;tr.add(o);return o};
   TA(BX,dark,0,.75,-4.4,.14,.14,1.4);TA(BX,wood,0,.8,0,2.3,.2,8.2);TA(BX,steel,-1.15,.95,0,.06,.25,8.2);TA(BX,steel,1.15,.95,0,.06,.25,8.2);
   for(const z of[-2.6,-1.3,1.3,2.6])for(const x of[-1.22,1.22]){const wg=new T.Group();wg.position.set(x,.54,z);tr.add(wg);const sp=new T.Group();wg.add(sp);const t=new T.Mesh(tread,tyre);t.rotation.y=Math.PI/2;sp.add(t);const rim=new T.Mesh(CY,steel);rim.scale.set(.4,.22,.4);rim.rotation.z=Math.PI/2;sp.add(rim);car.wheels.push(sp)}
-  car.slots=[];car.pens=[];
+  car.slots=[];car.pens=[];car.seats=[];
+  if(opts.tour){
+    // a safari passenger carriage: seats, a roof and big open windows to look out of
+    const paintC=new T.MeshPhysicalMaterial({color:'#e8e2d0',roughness:.4,clearcoat:.5}),green=new T.MeshStandardMaterial({color:'#2f6a32',roughness:.6}),seatM=new T.MeshPhysicalMaterial({color:'#7a4a26',roughness:.55,sheen:.4});
+    const glassM=new T.MeshPhysicalMaterial({color:'#dff2fa',transparent:true,opacity:.12,roughness:.02,clearcoat:1,side:T.DoubleSide,depthWrite:false});
+    for(const x of[-1.12,1.12]){TA(BX,paintC,x,1.35,0,.08,.9,8);TA(BX,green,x,1.82,0,.1,.08,8.04)}
+    TA(BX,paintC,0,1.35,3.98,2.3,.9,.08);TA(BX,paintC,0,1.35,-3.98,2.3,.9,.08);
+    for(const z of[-3.95,-2,0,2,3.95])for(const x of[-1.12,1.12])TA(BX,steel,x,2.55,z,.08,1.5,.08);
+    TA(BX,green,0,3.32,0,2.5,.1,8.3);TA(BX,paintC,0,3.4,0,2.2,.06,7.8);
+    for(const x of[-1.13,1.13]){const gl=new T.Mesh(new T.PlaneGeometry(7.9,1.4),glassM);gl.rotation.y=Math.PI/2;gl.position.set(x,2.55,0);tr.add(gl)}
+    for(const z of[-3,-1.5,0,1.5,3]){TA(BX,seatM,0,1.12,z,2,.16,.6);TA(BX,seatM,0,1.45,z+.32,2,.55,.1);for(const x of[-.55,.55])car.seats.push(V(x,1.2,z))}
+    const sign=new T.Mesh(new T.PlaneGeometry(2,.4),new T.MeshStandardMaterial({map:typeof signTexture==='function'?signTexture(['SAFARI TOURS'],'#2f6a32'):null,color:'#ffffff'}));sign.position.set(0,3,4.03);tr.add(sign);
+  }else{
   for(const z of[-3.4,-2.05,-.7])for(const x of[-.55,.55]){const cg=new T.Group();cg.position.set(x,.9,z);tr.add(cg);buildCage(cg);const hold=new T.Group();cg.add(hold);car.slots.push(hold)}
   for(const x of[-.56,.56]){const cg=new T.Group();cg.position.set(x,.9,2.2);tr.add(cg);buildCage(cg,1.06,1.35,3.6);const hold=new T.Group();cg.add(hold);car.pens.push(hold)}
+  }
   // steering wheel + your hands
   const col=new T.Group();col.position.set(-.45,1.6,-.48);col.rotation.x=-.6;g.add(col);
   const cm=new T.Mesh(CY,dark);cm.scale.set(.03,.5,.03);cm.rotation.x=Math.PI/2;cm.position.z=-.25;col.add(cm);

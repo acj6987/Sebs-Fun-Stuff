@@ -217,23 +217,23 @@ function renderEncPick(){
   $('#encGrid').innerHTML='<button class="enc gate" data-enc="gate"><b>🚪</b><span>Zoo gate</span><small>Drive around</small></button>'+
     S.areas.map((a,i)=>`<button class="enc" data-enc="${a.id}"><b>${i+1}</b><span>${HAB[a.hab].i} ${HAB[a.hab].name}</span><small>${a.animals.map(x=>SP[x.k].e).join('')||'empty'}</small></button>`).join('');
 }
-async function startZooDrive(id){
+async function startZooDrive(id,opts={}){
   if(!initRenderer())return;
   $('#encPick').hidden=true;
   if(!zoo.built||curView!=='zoo'){show('zoo');loading(true,'Opening your zoo…');await nextFrame();await enterZoo(t=>$('#loadTxt').textContent=t);loading(false)}
   world=zooDriveWorld();
   if(zoo.carG)zoo.scene.remove(zoo.carG);
-  buildCar(zoo.scene);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
+  buildCar(zoo.scene,opts);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
   mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
   if(A){car.x=A.inside.x;car.z=A.inside.z;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}
-  else{car.x=0;car.z=48;$('#where').textContent='My Zoo'}
+  else{car.x=0;car.z=opts.tour?52:48;$('#where').textContent=opts.tour?'Safari tour':'My Zoo'}
   car.yaw=A?Math.atan2(-(A.x-car.x),-(A.z-car.z)):0;footRig.visible=false;setDriveUI();
   $('#cagesTxt').hidden=true;$('#toZoo2').textContent='🏛️ Zoo view';
   show('drive');safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
 }
 $('#driveZoo').onclick=()=>{endDinoTour();startZooDrive(null)};
-$('#dinoTour').onclick=async()=>{endDinoTour();await startZooDrive(null);startDinoTour()};
+$('#dinoTour').onclick=async()=>{endDinoTour();await startZooDrive(null,{tour:true});startDinoTour()};
 $('#goEnc').onclick=()=>{renderEncPick();$('#encPick').hidden=false};
 $('#encClose').onclick=()=>$('#encPick').hidden=true;
 $('#encGrid').addEventListener('click',e=>{const b=e.target.closest('[data-enc]');if(!b)return;endDinoTour();startZooDrive(b.dataset.enc==='gate'?null:+b.dataset.enc)});
