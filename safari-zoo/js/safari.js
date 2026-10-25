@@ -248,7 +248,7 @@ function spawnAnimal(initial,force){
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
   // the two Mummy Dreams only ever appear together (and run at 70 mph, 31 m/s), and never again once they are yours
   let kinds=null;
-  if(sp.def.mate){if(sp.def.male||!DREAM_KEYS.every(owns))return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
+  if(sp.def.mate){if(sp.def.male||!DREAM_KEYS.every(owns))return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s&&!a.fake));if(!kinds.length)return}
   const okAt=(x,z)=>livesAt(sp,x,z);
   let x,z,tries=0;do{x=(Math.random()-.5)*2*(LIMIT-15);z=(Math.random()-.5)*2*(LIMIT-15);tries++}
   while(tries<(world.sea?300:50)&&(!okAt(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
