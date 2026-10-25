@@ -247,7 +247,7 @@ function spawnAnimal(initial,force){
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
   // the two Mummy Dreams only ever appear together, and never again once they are yours
   let kinds=null;
-  if(sp.def.mate){if(sp.def.male||!DREAM_KEYS.every(owns))return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
+  if(sp.def.mate){if(sp.def.male)return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
   const okAt=(x,z)=>livesAt(sp,x,z);
   let x,z,tries=0;do{x=(Math.random()-.5)*2*(LIMIT-15);z=(Math.random()-.5)*2*(LIMIT-15);tries++}
   while(tries<(world.sea?300:50)&&(!okAt(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
@@ -410,7 +410,6 @@ function cageIt(own=me){
   own.pack=own.pack.filter(a=>!caged.includes(a));
   for(const a of caged){world.scene.remove(a.net);world.scene.remove(a.rope);removeAnimal(a)}
   S.coins+=coinsWon;save();refreshCages();checkDream();
-  if(world.sea&&DREAM_KEYS.every(owns)&&!DREAM.every(owns)&&!world.animals.some(b=>b.sp.def.mate)){spawnAnimal(true,SP[DREAM[0]]);setTimeout(()=>toast('✨ You have a dolphin and a turtle! The REAL Mummy Dreams have appeared somewhere far away… go and find them!',7000),3000)}
   const count={};names.forEach(n=>count[n]=(count[n]||0)+1);
   toast((fresh?'NEW ANIMAL! ':'')+Object.entries(count).map(([n,c])=>c>1?c+' '+n+'s':n).join(', ')+' in the truck'+(own!==me?' (your assistant brought them)':'')+' · +'+coinsWon+' coins'+(own.pack.length?' · No room for '+own.pack.length+' more!':''));
 }
@@ -635,8 +634,9 @@ function updateTreasure(dt,time){
 function callDreams(){
   if(mode!=='foot'){toast('Jump out first, then press G to hold out food for the Mummy Dreams!');return}
   if(DREAM.every(owns)){toast('Both Mummy Dreams are already in your zoo!');return}
-  const d=world.animals.filter(a=>a.sp.def.mate&&a.state!=='netted');
-  if(!d.length){toast(DREAM_KEYS.every(owns)?'The Mummy Dreams are not here right now. Come back to the Deep Blue Sea!':'The Mummy Dreams only come when you have a dolphin and a sea turtle in your zoo.');return}
+  // if they are not here, they fly in straight away
+  if(!world.animals.some(a=>a.sp.def.mate))spawnAnimal(true,SP[DREAM[0]]);
+  const d=world.animals.filter(a=>a.sp.def.mate&&a.state!=='netted');if(!d.length)return;
   const f=truckFood();if(f.hay>0){f.hay--;save()}
   for(const a of d){a.state='follow';a.followT=90;a.vx=a.vz=0}
   toast('🌾 You hold out some yummy food… 💖💙 The Mummy Dreams smelled it and are coming to you! They will follow you, so catch them!',7000);
