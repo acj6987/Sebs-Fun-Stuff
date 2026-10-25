@@ -246,7 +246,33 @@ function hedgehog(p){
   k.anim={kind:'quad0',stride:s*.4};
   return k;
 }
-const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog};
+/* ---------- zoo visitors ---------- */
+function person(p){
+  const k=kit(),s=p.s,sk=p.skin,sh=p.shirt,pa=p.pants;
+  k.bone('root',null,[0,.95*s,0]);
+  k.ell([0,.97*s,0],[.17*s,.13*s,.11*s],'root',{k:.05*s,col:pa});
+  k.ell([0,1.22*s,0],[.19*s,.28*s,.12*s],'root',{k:.07*s,col:sh});
+  k.bone('neck','root',[0,1.47*s,0]);k.bone('head','neck',[0,1.55*s,0]);
+  k.cap([0,1.45*s,0],[0,1.56*s,.01*s],.055*s,.05*s,'neck',{k:.03*s,col:sk});
+  k.ell([0,1.66*s,.01*s],[.095*s,.115*s,.105*s],'head',{k:.03*s,col:sk});
+  k.ell([0,1.705*s,-.02*s],[.106*s,.1*s,.115*s],'head',{k:.015*s,col:p.hair,rough:.006*s,rf:60});
+  if(p.long)k.ell([0,1.58*s,-.07*s],[.09*s,.13*s,.05*s],'head',{k:.03*s,col:p.hair,detail:1});
+  if(p.hat)k.cap([0,1.75*s,-.01*s],[0,1.8*s,-.01*s],.13*s,.11*s,'head',{k:.01*s,col:p.hat,detail:1});
+  for(const sx of[-1,1]){
+    const i=sx>0?0:1;k.extra('head','eye',[sx*.035*s,1.68*s,.1*s],{r:.012*s});
+    const shd=[sx*.22*s,1.44*s,0],el=[sx*.25*s,1.17*s,0],ha=[sx*.25*s,.93*s,.02*s];
+    k.bone('arm'+i,'root',shd);k.bone('fore'+i,'arm'+i,el);
+    k.cap(shd,el,.055*s,.045*s,'arm'+i,{k:.03*s,col:sh});k.cap(el,ha,.042*s,.035*s,'fore'+i,{k:.02*s,col:p.short?sk:sh});
+    k.ell(ha,[.035*s,.05*s,.025*s],'fore'+i,{k:.02*s,col:sk,detail:1});
+    const hip=[sx*.09*s,.93*s,0],kn=[sx*.1*s,.5*s,.01*s],an=[sx*.1*s,.09*s,0];
+    k.bone('leg'+i,'root',hip);k.bone('low'+i,'leg'+i,kn);
+    k.cap(hip,kn,.075*s,.058*s,'leg'+i,{k:.04*s,col:pa});k.cap(kn,an,.055*s,.045*s,'low'+i,{k:.03*s,col:p.shorts?sk:pa});
+    k.ell([sx*.1*s,.045*s,.04*s],[.05*s,.045*s,.11*s],'low'+i,{k:.02*s,col:p.shoes,detail:1});
+  }
+  k.anim={kind:'person',stride:.45*s};
+  return k;
+}
+const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person};
 
 /* ---------- coat colours ---------- */
 const colCache={};
@@ -302,6 +328,7 @@ function mats(){
     fur:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.9,sheen:.35,sheenRoughness:.6,sheenColor:new T.Color(.18,.17,.15),normalMap:furN,normalScale:new T.Vector2(.7,.7)}),
     feather:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.75,sheen:.6,sheenRoughness:.4,sheenColor:new T.Color(.25,.25,.25),normalMap:featherN,normalScale:new T.Vector2(.4,.4)}),
     scale:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.55,clearcoat:.25,clearcoatRoughness:.5,normalMap:scaleN,normalScale:new T.Vector2(.6,.6)}),
+    cloth:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.85,sheen:.5,sheenRoughness:.7,sheenColor:new T.Color(.2,.2,.2),normalMap:furN,normalScale:new T.Vector2(.25,.25)}),
     wet:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.35,clearcoat:.7,clearcoatRoughness:.2,normalMap:furN,normalScale:new T.Vector2(.15,.15)}),
     eye:new T.MeshPhysicalMaterial({color:'#0b0806',roughness:.08,clearcoat:1,clearcoatRoughness:.02}),
     owlEye:new T.MeshPhysicalMaterial({color:'#f2b821',roughness:.1,clearcoat:1}),
@@ -313,6 +340,7 @@ function mats(){
 }
 function rngA(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
 function matFor(p){const plan=p.plan||'quad',m=mats();
+  if(plan==='person')return m.cloth;
   if(plan==='bird')return m.feather;if(plan==='lizard'||plan==='snake')return m.scale;if(plan==='frog'||plan==='seal')return m.wet;return m.fur}
 
 /* ---------- extras (thin parts attached to bones) ---------- */
@@ -419,6 +447,10 @@ function animate(a,dt,spd,time,o={}){
   }else if(A.kind==='lizard'){
     for(let i=0;i<4;i++){const q=ph+[0,Math.PI,Math.PI,0][i];B['leg'+i].rotation.y=Math.sin(q)*amp*1.3;B['low'+i].rotation.z=Math.max(0,Math.cos(q))*amp*.4}
     B.root.rotation.y=Math.sin(ph)*amp*.25;B.tail.rotation.y=-Math.sin(ph)*amp*.5+Math.sin(time*.8+sd)*.08;B.tail2.rotation.y=-Math.sin(ph-.8)*amp*.6;
+  }else if(A.kind==='person'){
+    for(let i=0;i<2;i++){const q=ph+i*Math.PI;B['leg'+i].rotation.x=Math.sin(q)*amp;B['low'+i].rotation.x=Math.max(0,-Math.cos(q))*amp*1.2;
+      B['arm'+i].rotation.x=-Math.sin(q)*amp*.7;B['fore'+i].rotation.x=-.15-Math.max(0,Math.sin(q))*amp*.4}
+    B.root.position.y=a.rest+Math.abs(Math.cos(ph))*amp*.03;B.head.rotation.y=o.look||Math.sin(time*.5+sd)*.3*(spd<.2?1:.3);
   }else if(A.kind==='seal'){
     B.root.position.y=a.rest+Math.abs(Math.sin(ph))*.05*Math.min(1,spd);B.tail.rotation.x=Math.sin(ph*2)*.2*Math.min(1,spd)+Math.sin(time+sd)*.05;
     B.head.rotation.x=-.15+Math.sin(time*.7+sd)*.1;

@@ -152,7 +152,7 @@ $('#back').onclick=goMap;
 $('#toZoo1').onclick=openZoo;
 $('#toZoo2').onclick=()=>{if(me.leash)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
 $('#zooMap').onclick=()=>show('map');
-function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages);S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo!'),50)}
+function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages);S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They went straight into their domes.'),50)}
 
 /* ---------- zoo panel ---------- */
 let selected=null;
@@ -174,10 +174,10 @@ function renderAreaCard(){
   if(!area){card.hidden=true;return}
   card.hidden=false;
   $('#acTitle').textContent=(S.areas.indexOf(area)+1)+'. '+HAB[area.hab].i+' '+HAB[area.hab].name+' Dome';
-  $('#acCount').textContent=area.animals.length+' of '+CAP[area.type]+' places used';
+  $('#acCount').textContent=area.animals.length+' animal'+(area.animals.length===1?'':'s')+' live here · room for as many as you catch';
   $('#acList').innerHTML=area.animals.length?area.animals.map(an=>{const s=SP[an.k],ok=happy(an,area);
-    return `<li><span class="e">${s.e}</span><span><b>${s.n}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span><button class="mini" data-back="${an.uid}">To truck</button></li>`}).join('')
-    :'<li class="empty">No animals here yet. Pick one from your truck, then tap this area.</li>';
+    return `<li><span class="e">${s.e}</span><span><b>${s.n}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span></li>`}).join('')
+    :'<li class="empty">No animals here yet. Catch some '+HAB[area.hab].name+' animals on safari!</li>';
 }
 function tapArea(id){
   const area=S.areas.find(a=>a.id===id);if(!area)return;
@@ -199,7 +199,7 @@ $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
 function build(type){const cost=250;
   if(S.coins<cost){toast('You need '+cost+' coins. Catch more animals!');return}
   S.coins-=cost;const area={id:S.aid++,type,hab:$('#habSel').value,animals:[]};S.areas.push(area);save();
-  buildArea(area,S.areas.length-1);rebuildPaths();zoo.sel=area.id;focusArea(area.id);renderZooUI();
+  buildArea(area,S.areas.length-1);rebuildPaths();syncVisitors();zoo.sel=area.id;focusArea(area.id);renderZooUI();
   toast('Built dome '+S.areas.length+': '+HAB[area.hab].name+'!')}
 $('#buildD').onclick=()=>build('dome');
 

@@ -189,6 +189,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <button class="btn dark" id="zooMap">🗺️ Map</button>
     <h1>My Zoo</h1>
     <span class="stars" id="stars"></span>
+    <span class="coins" id="visitors">👥 0 visitors</span>
     <span class="coins coinTxt">🪙 0</span>
   </div>
   <div class="zooGo">
@@ -204,15 +205,17 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
   </div>
   <div id="zooSide">
     <div class="sideTop"><button class="btn dark" id="sideToggle">🚚 Truck &amp; build</button></div>
-    <div class="panel">
-      <h2>Animal truck</h2>
-      <p>Tap an animal, then tap an area in the zoo to move it in.</p>
+    <div class="panel" hidden>
       <div class="holding" id="holding"></div>
       <p id="placeHint" hidden></p>
     </div>
     <div class="panel">
+      <h2>Your animals</h2>
+      <p>Every animal you bring home goes straight into the dome for its home. Big cats and zebras live in the Savanna dome, penguins in the Polar dome, and so on. Tap a dome to see who lives there.</p>
+    </div>
+    <div class="panel">
       <h2>Build a new dome</h2>
-      <p>Every enclosure is a big glass dome. Each one holds 10 animals, and you can drive inside.</p>
+      <p>A dome is built for free when you catch an animal from a new home. You can also buy an extra one.</p>
       <div class="build">
         <select id="habSel" aria-label="Habitat"></select>
         <button class="btn" id="buildD">Build dome · 🪙 250</button>

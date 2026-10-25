@@ -104,7 +104,7 @@ const CONT=[
 ];
 const SP={};
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:c.hab}}));
-const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:4,dome:10},CAGES=4;
+const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:9999,dome:9999},CAGES=4;
 
 /* ---- save game ---- */
 function fresh(){return{coins:150,holding:[],cages:[],dex:{},uid:1,aid:4,areas:[

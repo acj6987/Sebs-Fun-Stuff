@@ -68,7 +68,7 @@ function rebuildPaths(){
   for(let i=0;i<40;i++){const a=i/40*Math.PI*2;if(i%2)continue;const s=new T.Mesh(new T.BoxGeometry(2.4,.06,.3),dm);s.position.set(Math.sin(a)*DOME,.06,Math.cos(a)*DOME);s.rotation.y=a+Math.PI/2;out.add(s)}
   const st=new T.Mesh(new T.PlaneGeometry(6,1.9),new T.MeshStandardMaterial({map:signTexture(['Empty plot','Build a new dome here'],'#6a5a40'),roughness:.8}));st.position.set(0,1.8,DOME+3.6);out.add(st);
   P.add(out);
-  drawMask();refreshZooWorld();
+  drawMask();refreshZooWorld();if(zoo.people&&zoo.people.length)zoo.graph=pathGraph();
 }
 function drawMask(){
   const {g,tex}=zoo.mask,W=1024,k=W/900,X=x=>(x+450)*k,Z=z=>(z+750)*k;
@@ -170,7 +170,7 @@ function zooCamera(dt){
 }
 function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;w.tx=A.x;w.tz=A.z;w.dist=85;w.pitch=Math.max(.45,Math.min(w.pitch,.8))}
 function zooTick(dt,time){
-  updateZooAnimals(dt,time);
+  updateZooAnimals(dt,time);updateVisitors(dt,time);
   for(const w of zoo.waters){w.userData.water.offset.x+=dt*.015;w.userData.water.offset.y+=dt*.01}
 }
 function zooFrame(dt,time){
@@ -181,11 +181,14 @@ function zooFrame(dt,time){
 }
 async function enterZoo(progress){
   if(!zoo.built)buildZoo();
+  const made=autoHome();if(made.length)setTimeout(()=>toast('New dome built for your '+made.map(h=>HAB[h].name).join(', ')+' animals!'),400);
   S.areas.forEach((a,i)=>{if(!zoo.areas.has(a.id))buildArea(a,i)});
   rebuildPaths();
   const need=[...new Set(S.areas.flatMap(a=>a.animals.map(x=>x.k)))].filter(k=>!ANIMALS.isBuilt(SP[k]));
   for(let i=0;i<need.length;i++){progress('Getting the animals ready… '+(i+1)+'/'+need.length);await nextFrame();ANIMALS.species(SP[need[i]])}
   syncZooAnimals();
+  for(let i=0;i<LOOKS.length;i++)if(!ANIMALS.isBuilt(personSp(i))){progress('Opening the gates for visitors… '+(i+1)+'/'+LOOKS.length);await nextFrame();ANIMALS.species(personSp(i))}
+  syncVisitors();
 }
 function zooPick(cx,cy){
   const ray=new T.Raycaster();ray.setFromCamera(new T.Vector2(cx/innerWidth*2-1,-(cy/innerHeight)*2+1),cam);
@@ -205,4 +208,69 @@ function zooDriveWorld(){
   if(!zoo.world)zoo.world={zoo:true,flat:true,c:{hab:'woodland',name:'My Zoo'},E:ZOO_ENV,scene:zoo.scene,ponds:[],animals:[],respawn:[],waters:[],net:null,
     sky:zoo.sky,grass:zoo.grass,tick:zooTick};
   refreshZooWorld();return zoo.world;
+}
+
+/* ---------- every animal lives in the dome for its home ---------- */
+function autoHome(){
+  const moving=S.holding.splice(0),made=[];
+  for(const a of S.areas)for(const an of a.animals.slice())if(SP[an.k].hab!==a.hab){a.animals.splice(a.animals.indexOf(an),1);moving.push(an)}
+  for(const an of moving){const hab=SP[an.k].hab;let d=S.areas.find(a=>a.hab===hab);
+    if(!d){d={id:S.aid++,type:'dome',hab,animals:[]};S.areas.push(d);made.push(hab)}d.animals.push(an)}
+  save();return made;
+}
+
+/* ---------- visitors walking around the zoo ---------- */
+const LOOKS=[
+  {s:1,skin:'#e8b896',shirt:'#c0392b',pants:'#2c3e60',hair:'#3a2618',shoes:'#222'},
+  {s:.97,skin:'#8d5a3b',shirt:'#f1c40f',pants:'#34495e',hair:'#111',shoes:'#f4f4f4',short:1,long:1},
+  {s:1.04,skin:'#f2cdb0',shirt:'#2e86de',pants:'#d8c9a8',hair:'#c9a35a',shoes:'#5a3a22',short:1,shorts:1,hat:'#e8dcc0'},
+  {s:.72,skin:'#c68a5e',shirt:'#27ae60',pants:'#1f3a5a',hair:'#2a1a10',shoes:'#e74c3c',short:1},
+  {s:.95,skin:'#5c3a28',shirt:'#8e44ad',pants:'#222',hair:'#111',shoes:'#333',long:1},
+  {s:.68,skin:'#f0c8a8',shirt:'#e67e22',pants:'#3b6ea5',hair:'#e0b050',shoes:'#fff',short:1,shorts:1,long:1},
+  {s:1.02,skin:'#d9a982',shirt:'#ecf0f1',pants:'#4a5a3a',hair:'#6a4a2a',shoes:'#3a2a1a',hat:'#2f5a32'},
+  {s:.98,skin:'#a8714c',shirt:'#e84393',pants:'#2d3436',hair:'#2a1a12',shoes:'#ddd',short:1,long:1},
+];
+const personSps=[];
+function personSp(i){return personSps[i]||(personSps[i]={k:'person'+i,n:'Visitor',def:Object.assign({plan:'person'},LOOKS[i])})}
+function pathGraph(){
+  const rows=zooRows(),nodes=[],at=(x,z)=>nodes.find(n=>Math.abs(n.x-x)<.1&&Math.abs(n.z-z)<.1),link=(a,b)=>{a.nb.push(b);b.nb.push(a)};
+  for(let r=0;r<=rows;r++)for(const x of PATH_X)nodes.push({x,z:ZTOP-r*SLOT,nb:[]});
+  for(let r=0;r<=rows;r++)for(let c=0;c<PATH_X.length;c++){const n=at(PATH_X[c],ZTOP-r*SLOT);
+    if(c<PATH_X.length-1)link(n,at(PATH_X[c+1],ZTOP-r*SLOT));if(r<rows)link(n,at(PATH_X[c],ZTOP-(r+1)*SLOT))}
+  const gate={x:0,z:44,nb:[],gate:1};nodes.push(gate);link(gate,at(0,ZTOP));
+  // spots in front of every dome doorway where people stop and look in
+  S.areas.forEach((a,i)=>{const p=slotXZ(i),pz=p.z+SLOT/2,v={x:p.x,z:p.z+DOME+4,nb:[],view:1};nodes.push(v);
+    const l=at(p.x-SLOT/2,pz),r=at(p.x+SLOT/2,pz);if(l)link(v,l);if(r)link(v,r)});
+  return{nodes,gate};
+}
+function syncVisitors(){
+  for(const v of zoo.people||[])zoo.scene.remove(v.inst.g);zoo.people=[];zoo.graph=pathGraph();
+  const n=Math.min(42,10+S.areas.length*4+Math.floor(S.areas.reduce((t,a)=>t+a.animals.length,0)/2));
+  for(let i=0;i<n;i++){const inst=ANIMALS.make(personSp(i%LOOKS.length));zoo.scene.add(inst.g);
+    // most start somewhere along the paths, the rest come in through the gate
+    const g=zoo.graph,from=i<n*.75?g.nodes[Math.floor(Math.random()*g.nodes.length)]:g.gate;
+    const v={inst,from,to:from.nb[Math.floor(Math.random()*from.nb.length)],off:(Math.random()-.5)*4.5,spd:1.1+Math.random()*.6,wait:Math.random()*3,x:from.x,z:from.z,yaw:0};
+    zoo.people.push(v)}
+  const el=$('#visitors');if(el)el.textContent='👥 '+n+' visitors';
+}
+function updateVisitors(dt,time){
+  if(!zoo.people)return;
+  const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
+  for(const v of zoo.people){
+    let spd=0,look=0;
+    if(v.wait>0){v.wait-=dt;if(v.from.view){const ty=Math.PI;let d=ty-v.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));v.yaw+=d*Math.min(1,dt*3);look=Math.sin(time*.7+v.off)*.4}}
+    else{
+      const dx=v.to.x-v.from.x,dz=v.to.z-v.from.z,L=Math.hypot(dx,dz)||1,ox=-dz/L*v.off,oz=dx/L*v.off;
+      const tx=v.to.x+(v.to.view?0:ox),tz=v.to.z+(v.to.view?0:oz),ex=tx-v.x,ez=tz-v.z,d=Math.hypot(ex,ez);
+      if(d<.5){const prev=v.from;v.from=v.to;const opts=v.from.nb.filter(n=>n!==prev);v.to=(opts.length?opts:v.from.nb)[Math.floor(Math.random()*(opts.length||v.from.nb.length))];
+        if(v.from.view)v.wait=3+Math.random()*6;else if(Math.random()<.12)v.wait=1+Math.random()*3}
+      else{spd=v.spd;v.x+=ex/d*spd*dt;v.z+=ez/d*spd*dt;const ty=Math.atan2(ex,ez);let dy=ty-v.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));v.yaw+=dy*Math.min(1,dt*5)}
+    }
+    // step out of the way of the jeep or of you
+    if(driving){const cx=v.x-px,cz=v.z-pz,cd=Math.hypot(cx,cz);if(cd<(mode==='car'?5:1.2)&&cd>.01){const push=((mode==='car'?5:1.2)-cd)*Math.min(1,dt*6);v.x+=cx/cd*push;v.z+=cz/cd*push}}
+    const far=Math.hypot(v.x-cam.position.x,v.z-cam.position.z);v.inst.g.visible=far<220;if(!v.inst.g.visible)continue;
+    const lod=far>60;if(lod!==v.far){v.far=lod;ANIMALS.setLOD(v.inst,lod)}
+    ANIMALS.animate(v.inst,dt,spd,time,{look});
+    v.inst.g.position.set(v.x,.04,v.z);v.inst.g.rotation.y=v.yaw;
+  }
 }
