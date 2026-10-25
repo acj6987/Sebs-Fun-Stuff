@@ -42,7 +42,7 @@ $('#conts').addEventListener('click',e=>{const b=e.target.closest('.cont');if(b)
 async function startSafari(c){
   if(!initRenderer())return;
   show('drive');loading(true,'Driving to '+c.name+'…');await nextFrame();
-  me.pack=[];car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
+  me.pack=[];me.mount=null;car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
   try{await buildSafari(c,t=>$('#loadTxt').textContent=t)}catch(e){console.error(e);loading(false);toast('Something went wrong building '+c.name+'.');show('map');return}
   footRig.visible=false;setDriveUI();$('#where').textContent=c.name+' · '+c.place;$('#cagesTxt').hidden=false;$('#toZoo2').textContent='🏛️ Drive to zoo';
   loading(false);safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
@@ -118,6 +118,7 @@ addEventListener('keydown',e=>{
   if(e.repeat)return;
   if(e.code==='KeyE'){pressE();e.preventDefault()}
   if(e.code==='KeyF'){throwNet();e.preventDefault()}
+  if(e.code==='KeyR'){rideToggle();e.preventDefault()}
   if(e.code==='Space'){e.preventDefault();jump()}
   if(e.code==='Escape')goMap()});
 addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=false});
@@ -145,6 +146,7 @@ document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;
   b.addEventListener('pointerdown',e=>{keys[k]=true;b.setPointerCapture(e.pointerId);e.preventDefault()});
   ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false))});
 $('#netBtn').addEventListener('click',throwNet);
+$('#rideBtn').addEventListener('click',rideToggle);
 $('#eBtn').addEventListener('click',pressE);
 $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.pack.length)releaseLeash();show('map')}

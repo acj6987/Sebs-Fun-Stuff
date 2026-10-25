@@ -66,7 +66,7 @@ function rebuildPaths(){
   const pv=zoo.pave||(zoo.pave=pavingTexture()),L=zooLayout();
   const strip=(x0,z0,x1,z1)=>{const w=Math.abs(x1-x0),d=Math.abs(z1-z0),m=pv.map.clone(),n=pv.normal.clone();m.needsUpdate=n.needsUpdate=true;m.repeat.set(w/4,d/4);n.repeat.set(w/4,d/4);
     const o=new T.Mesh(new T.PlaneGeometry(w,d),new T.MeshStandardMaterial({map:m,normalMap:n,roughness:.9}));o.rotation.x=-Math.PI/2;o.position.set((x0+x1)/2,.04,(z0+z1)/2);o.receiveShadow=true;P.add(o)};
-  strip(-ROAD,L.end,ROAD,40);
+  strip(-ROAD,L.end,ROAD,40);strip(RIDE.x+RIDE.rx-1,RIDE.z-2.5,-ROAD,RIDE.z+2.5);
   for(const d of L.list)if(d.ultra)strip(ROAD,d.z-9,d.x-d.R+2,d.z+9);else strip(d.side>0?ROAD:-ROAD-11,d.z-6,d.side>0?ROAD+11:-ROAD,d.z+6);
   const pole=new T.MeshStandardMaterial({color:'#2a2c2e',metalness:.7,roughness:.4}),glow=new T.MeshStandardMaterial({color:'#fff6d8',emissive:'#ffe8b0',emissiveIntensity:1.2});
   for(let z=20;z>L.end;z-=30)for(const sx of[-1,1]){const l=new T.Group();l.position.set(sx*(ROAD+1.2),0,z+(sx>0?15:0));
@@ -84,7 +84,7 @@ function rebuildPaths(){
 function drawMask(){
   const {g,tex}=zoo.mask,W=1024,k=W/MASK.size,X=x=>(x-MASK.x0)*k,Z=z=>(z-MASK.z0)*k,L=zooLayout();
   g.fillStyle='#fff';g.fillRect(0,0,W,W);g.fillStyle='#000';
-  g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);g.fillRect(X(-75),Z(30),150*k,135*k);
+  g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);g.beginPath();g.ellipse(X(RIDE.x),Z(RIDE.z),(RIDE.rx+3)*k,(RIDE.rz+3)*k,0,0,7);g.fill();g.fillRect(X(RIDE.x+RIDE.rx),Z(RIDE.z-2.5),(-ROAD-RIDE.x-RIDE.rx)*k,5*k);g.fillRect(X(-75),Z(30),150*k,135*k);
   for(const d of L.list){if(d.ultra)g.fillRect(X(ROAD),Z(d.z-10),(d.x-d.R-ROAD+3)*k,20*k);else g.fillRect(X(d.side>0?ROAD:-ROAD-12),Z(d.z-7),12*k,14*k);g.beginPath();g.arc(X(d.x),Z(d.z),(d.R+1.5)*k,0,7);g.fill()}
   tex.needsUpdate=true;
 }
@@ -199,7 +199,7 @@ function zooCamera(dt){
 }
 function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;w.tx=A.x;w.tz=A.z;w.dist=A.R0*2.6;w.pitch=Math.max(.45,Math.min(w.pitch,.8))}
 function zooTick(dt,time){
-  updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);
+  updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
@@ -224,6 +224,8 @@ async function enterZoo(progress){
   const need=[...new Set(S.areas.flatMap(a=>a.animals.map(x=>x.k)))].filter(k=>!ANIMALS.isBuilt(SP[k]));
   for(let i=0;i<need.length;i++){progress('Getting the animals ready… '+(i+1)+'/'+need.length);await nextFrame();ANIMALS.species(SP[need[i]])}
   syncZooAnimals();syncEggs();
+  if(!ANIMALS.isBuilt(SP['dino:1'])){progress('Saddling up the Triceratops…');await nextFrame();ANIMALS.species(SP['dino:1'])}
+  syncRides();
   // pterodactyls flying inside the Ultra Dino Dome
   for(const f of zoo.flyers||[])zoo.scene.remove(f.inst.g);zoo.flyers=[];
   const U=[...zoo.areas.values()].find(a=>a.R0>250);if(U){if(!ANIMALS.isBuilt(SP['dino:3']))ANIMALS.species(SP['dino:3']);zoo.flyers=makeFlyers(zoo.scene,SP['dino:3'],6,{x:U.x,z:U.z},[60,150],[30,70],1.4)}
@@ -481,4 +483,46 @@ function breed(dt){
       break}}
   if(changed){save();syncZooAnimals();if(curView==='zoo')renderZooUI()}
   else if(zoo.breedT===75)save();
+}
+
+/* ---------- Triceratops Rides: visitors pay 1000 coins each to ride round the track ---------- */
+const RIDE={x:-95,z:7,rx:55,rz:14,fee:1000};
+function buildRideArea(){
+  if(zoo.rideArea)return;const g=new T.Group();zoo.rideArea=g;zoo.scene.add(g);
+  const sand=NATURE.groundTextures('savanna'),m=sand.map.clone();m.needsUpdate=true;m.repeat.set(16,5);
+  const ground=new T.Mesh(new T.CircleGeometry(1,64),new T.MeshStandardMaterial({map:m,color:'#d8c08a',roughness:1}));ground.scale.set(RIDE.rx+2,RIDE.rz+2,1);ground.rotation.x=-Math.PI/2;ground.position.set(RIDE.x,.05,RIDE.z);ground.receiveShadow=true;g.add(ground);
+  const wood=NATURE.barkMat(false),posts=[],m4=new T.Matrix4();
+  for(let a=0;a<Math.PI*2;a+=.045){const x=RIDE.x+Math.cos(a)*(RIDE.rx+2.5),z=RIDE.z+Math.sin(a)*(RIDE.rz+2.5);if(Math.abs(z-RIDE.z)<3&&x>RIDE.x)continue;posts.push([x,z]);zoo.cols.push({x,z,r:.6})}
+  const pg=new T.CylinderGeometry(.12,.14,1.6,7);pg.translate(0,.8,0);const pim=new T.InstancedMesh(pg,wood,posts.length);posts.forEach(([x,z],i)=>pim.setMatrixAt(i,m4.makeTranslation(x,0,z)));pim.castShadow=true;g.add(pim);
+  const rg=new T.BoxGeometry(1,.1,.07),rim=new T.InstancedMesh(rg,wood,posts.length*2);let j=0;
+  for(let i=0;i<posts.length-1;i++){const[a,b]=posts[i],[c,d]=posts[i+1];if(Math.hypot(c-a,d-b)>5)continue;for(const y of[.7,1.4]){m4.compose(V((a+c)/2,y,(b+d)/2),new T.Quaternion().setFromAxisAngle(V(0,1,0),Math.atan2(-(d-b),c-a)),V(Math.hypot(c-a,d-b),1,1));rim.setMatrixAt(j++,m4)}}
+  rim.count=j;rim.castShadow=true;g.add(rim);
+  const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['TRICERATOPS RIDES',RIDE.fee+' coins per rider'],'#2f6a32'),roughness:.7,side:T.DoubleSide}));
+  st.position.set(RIDE.x+RIDE.rx-6,3,RIDE.z+RIDE.rz+4);g.add(st);
+  for(const sd of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.25,3.6,.25),wood);p.position.set(RIDE.x+RIDE.rx-6+sd*4.3,1.8,RIDE.z+RIDE.rz+4);p.castShadow=true;g.add(p)}
+}
+function syncRides(){
+  buildRideArea();
+  for(const t of zoo.rides||[])zoo.scene.remove(t.inst.g);zoo.rides=[];
+  const owned=S.areas.some(a=>a.animals.some(x=>x.k==='dino:1'))||S.cages.some(x=>x.k==='dino:1');
+  if(!owned){if(!zoo.rideNote){toast('Catch a Triceratops in the 🦖 Dino Zone to open Triceratops Rides!');zoo.rideNote=1}return}
+  for(let i=0;i<3;i++){const inst=ANIMALS.make(SP['dino:1']);zoo.scene.add(inst.g);
+    // two visitors sit on its back
+    const riders=[];for(const z of[.3,-.9]){const r=ANIMALS.make(personSp((i*2+(z>0?0:1))%LOOKS.length));seat(r);r.g.position.set(0,inst.h*.86-.95*LOOKS[(i*2+(z>0?0:1))%LOOKS.length].s,z);inst.inner.add(r.g);riders.push(r)}
+    zoo.rides.push({inst,a:i*Math.PI*2/3,riders,laps:0})}
+  // baby triceratops play in the middle
+  for(let i=0;i<2;i++){const inst=ANIMALS.make(SP['dino:1']);inst.g.scale.setScalar(.4);zoo.scene.add(inst.g);zoo.rides.push({inst,baby:1,x:RIDE.x-10+i*20,z:RIDE.z,tx:RIDE.x,tz:RIDE.z,t:0,yaw:0})}
+}
+function updateRides(dt,time){
+  if(!zoo.rides)return;
+  for(const t of zoo.rides){
+    if(t.baby){const dx=t.tx-t.x,dz=t.tz-t.z,d=Math.hypot(dx,dz);let spd=0;
+      if(d>.5){spd=1.2;t.x+=dx/d*spd*dt;t.z+=dz/d*spd*dt;t.yaw=Math.atan2(dx,dz)}else if((t.t-=dt)<=0){t.t=3+Math.random()*4;t.tx=RIDE.x+(Math.random()-.5)*RIDE.rx;t.tz=RIDE.z+(Math.random()-.5)*RIDE.rz*.6}
+      ANIMALS.animate(t.inst,dt,spd,time,{});t.inst.g.position.set(t.x,.05,t.z);t.inst.g.rotation.y=t.yaw;continue}
+    const prev=t.a;t.a+=dt*1.6/((RIDE.rx+RIDE.rz)*.5);
+    if(Math.floor(t.a/(Math.PI*2))>Math.floor(prev/(Math.PI*2))){const fee=RIDE.fee*t.riders.length;S.coins+=fee;save();coins();t.laps++;if(curView==='zoo')toast('🦕 Triceratops ride finished! '+t.riders.length+' riders paid '+fee+' coins')}
+    const x=RIDE.x+Math.cos(t.a)*(RIDE.rx-6),z=RIDE.z+Math.sin(t.a)*(RIDE.rz-4),vx=-Math.sin(t.a)*(RIDE.rx-6),vz=Math.cos(t.a)*(RIDE.rz-4);
+    ANIMALS.animate(t.inst,dt,1.6,time,{});t.inst.g.position.set(x,.05,z);t.inst.g.rotation.y=Math.atan2(vx,vz);
+    for(const r of t.riders)r.B.head.rotation.y=Math.sin(time*.9+r.seed)*.6;
+  }
 }

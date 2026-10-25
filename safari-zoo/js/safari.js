@@ -52,7 +52,7 @@ async function buildSafari(c,progress){
   world.grass=NATURE.makeGrass(E,world.ponds,{half:HALF});if(world.grass)scene.add(world.grass);
   buildCar(scene);buildFootRig();scene.add(cam);
   // build each animal shape once, showing progress
-  const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]));
+  const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]));
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
   // pterodactyls circling high in the sky over Dino Zone
   if(c.hab==='dino'){const fl=makeFlyers(scene,SP['dino:3'],10,{x:0,z:0},[60,240],[35,80],1.6),smoke=world.tick;
@@ -370,15 +370,48 @@ function pressE(){
   if(mode==='car'){
     if(Math.abs(car.v)>3){toast('Slow down to jump out!');return}
     const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=H(me.x,me.z);me.vy=0;
-    look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=true;setDriveUI();return}
+    look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=true;placePets();setDriveUI();return}
   if(me.pack.length){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<7.5){cageIt();return}}
   const tp=trailerPos();
   if(Math.hypot(me.x-car.x,me.z-car.z)<5.5||Math.hypot(me.x-tp.x,me.z-tp.z)<4){
-    if(me.pack.length)releaseLeash();mode='car';look.yaw=0;look.pitch=-.12;footRig.visible=false;setDriveUI()}
+    if(me.pack.length)releaseLeash();dismount(true);mode='car';look.yaw=0;look.pitch=-.12;footRig.visible=false;setDriveUI()}
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
-function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';$('#netBtn').hidden=mode==='car';$('#cross').hidden=mode==='car'}
+function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode==='car'||!!(world&&world.zoo);rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#cross').hidden=mode==='car'}
+
+/* ---------- your pet dinosaurs: they follow you, and you can ride them ---------- */
+const PET_KEYS=['dino:1','dino:0']; // Triceratops and Velociraptor
+function ensurePets(){
+  if(world.pets||world.zoo)return;world.pets=[];
+  PET_KEYS.forEach((k,i)=>{const inst=ANIMALS.make(SP[k]);world.scene.add(inst.g);
+    const tag=makeIcon();tag.material=tag.material.clone();tag.material.map=iconTex(i?'🦖':'🦕',i?'#8a2a14':'#2f6a32');tag.visible=true;tag.scale.set(1.1,1.1,1);tag.position.y=inst.h+1;inst.g.add(tag);
+    world.pets.push({sp:SP[k],inst,x:car.x,z:car.z,yaw:car.yaw,side:i?1:-1,fast:i===1,saddle:i?inst.h*.75:inst.h*.82,tag})});
+}
+function placePets(){ensurePets();if(!world.pets)return;for(const p of world.pets){const q=car.g.localToWorld(V(p.side*3.5,0,-1));p.x=q.x;p.z=q.z;p.yaw=car.yaw+Math.PI}}
+function rideToggle(){
+  if(!safari.running)return;if(mode==='car'){toast('Jump out of the truck first, then press R to ride a dinosaur!');return}
+  if(me.mount){dismount();return}
+  ensurePets();if(!world.pets){toast('Your pet dinosaurs are waiting on safari!');return}
+  const p=world.pets.map(p=>[p,Math.hypot(p.x-me.x,p.z-me.z)]).sort((a,b)=>a[1]-b[1])[0];
+  if(p[1]>9){toast('Walk closer to your '+p[0].sp.n+' to ride it');return}
+  me.mount=p[0];p[0].tag.visible=false;me.x=p[0].x;me.z=p[0].z;toast('You jumped on your '+p[0].sp.n+'! Hold Shift to go even faster. Press R to get off.');setDriveUI();
+}
+function dismount(quiet){if(!me.mount)return;const p=me.mount;me.mount=null;p.tag.visible=true;me.x+=Math.cos(look.yaw)*2.5;me.z-=Math.sin(look.yaw)*2.5;if(!quiet)toast('You hopped off your '+p.sp.n+'.');setDriveUI()}
+function updatePets(dt,time){
+  if(!world.pets)return;
+  world.pets.forEach((p,i)=>{
+    let tx,tz,spd=0;
+    if(me.mount===p){const ox=p.x,oz=p.z;p.x=me.x;p.z=me.z;spd=Math.hypot(p.x-ox,p.z-oz)/Math.max(dt,1e-3);p.yaw=look.yaw+Math.PI}
+    else{
+      // follow you, or run along behind the truck
+      if(mode==='car'){const q=car.g.localToWorld(V(p.side*3.5,0,11));tx=q.x;tz=q.z}else{tx=me.x+Math.cos(look.yaw)*p.side*3.5+Math.sin(look.yaw)*3;tz=me.z-Math.sin(look.yaw)*p.side*3.5+Math.cos(look.yaw)*3}
+      const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);
+      if(d>60){p.x=tx;p.z=tz}else if(d>1.5){spd=Math.min(p.fast?23:21,d*1.6);p.x+=dx/d*spd*dt;p.z+=dz/d*spd*dt;const ty=Math.atan2(dx,dz);let dy=ty-p.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));p.yaw+=dy*Math.min(1,dt*5)}}
+    ANIMALS.animate(p.inst,dt,spd,time,{});
+    p.inst.g.position.set(p.x,H(p.x,p.z)+(p.inst.hop||0),p.z);p.inst.g.rotation.y=p.yaw;
+  });
+}
 
 /* ---------- moving ---------- */
 function updateCar(dt){
@@ -405,7 +438,7 @@ function updateCar(dt){
 }
 function updateFoot(dt){
   const turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;look.yaw+=turn*2.2*dt;
-  const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),spd=keys.run||pad.run?8:5.5;
+  const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),run=keys.run||pad.run,spd=me.mount?(me.mount.fast?(run?22:16):(run?15:11)):(run?8:5.5);
   me.x-=Math.sin(look.yaw)*mv*spd*dt;me.z-=Math.cos(look.yaw)*mv*spd*dt;keepIn(me);collide(me,.5);
   const cl=o=>{const dx=me.x-o.x,dz=me.z-o.z,d=Math.hypot(dx,dz);if(d<o.r){me.x=o.x+dx/d*o.r;me.z=o.z+dz/d*o.r}};
   cl({x:car.x,z:car.z,r:2.1});for(const z of[-3.2,-1.1,1.1,3.2]){const p=car.trailer.localToWorld(V(0,0,z));cl({x:p.x,z:p.z,r:1.5})}
@@ -417,7 +450,7 @@ function updateFoot(dt){
 function placeCamera(){
   if(mode==='car'){cam.position.copy(car.g.localToWorld(V(-.45,2.08,.42)));
     cam.quaternion.copy(car.g.quaternion).multiply(new T.Quaternion().setFromEuler(new T.Euler(look.pitch,look.yaw,0,'YXZ')))}
-  else{cam.position.set(me.x,me.y+1.65+Math.sin(me.bob)*.05,me.z);cam.rotation.set(look.pitch,look.yaw,0,'YXZ');footRig.position.y=-.12+Math.sin(me.bob*2)*.01}
+  else{cam.position.set(me.x,me.y+1.65+(me.mount?me.mount.saddle-.6:0)+Math.sin(me.bob)*(me.mount?.12:.05),me.z);cam.rotation.set(look.pitch,look.yaw,0,'YXZ');footRig.position.y=-.12+Math.sin(me.bob*2)*.01}
   const fx=mode==='car'?car.x:me.x,fz=mode==='car'?car.z:me.z;world.sky.follow(fx,H(fx,fz),fz);
 }
 const safari={running:false,
@@ -426,7 +459,7 @@ const safari={running:false,
     const n=Math.min(8,Math.ceil(dt/(1/30))),h=dt/n;
     if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
-    updateAnimals(dt,time);placeCamera();updateNet(dt);
+    updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
     if(world.tick)world.tick(dt,time);
     if(world.grass)world.grass.userData.update(cam.position,time,world.scene.fog,world.sky.sunDir);
