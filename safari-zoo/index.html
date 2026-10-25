@@ -126,6 +126,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 #areaCard li{display:flex;align-items:center;gap:8px;background:var(--sand);border-radius:10px;padding:5px 8px}
 #areaCard li .e{font-size:26px}
 #areaCard li span:nth-child(2){flex:1;min-width:0}
+#areaCard .two{display:flex;flex-direction:column;gap:4px}
 #areaCard li small{display:block;font-size:12px;color:#5b604c}
 .mini{border:0;border-radius:999px;background:var(--paper);font-weight:800;font-size:12px;padding:5px 9px;color:var(--ink);box-shadow:0 2px 0 #b9ad8f}
 .x{border:0;background:none;font-size:22px;font-weight:900;color:var(--ink);padding:0 4px}
@@ -146,7 +147,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <div class="top">
       <div>
         <h1 class="logo">Safari Zoo Drive</h1>
-        <p class="sub">Pick a continent and climb into your jeep. Find wild animals, jump out, catch them in your net, put them in the cages on your trailer and take them back to your zoo.</p>
+        <p class="sub">Pick a continent, or Dino Island, and climb into your safari truck. Find wild animals, jump out, catch them in your net, put them in the 8 cages on your trailer and take them back to your zoo.</p>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span class="coins coinTxt">🪙 0</span>
@@ -158,7 +159,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
       <div><b>Drive</b><br><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys. Drag the mouse (or your finger) to look around.</div>
       <div><b>Jump out</b><br>Stop near an animal and press <kbd>E</kbd>. Press <kbd>Space</kbd> to jump. Press <kbd>E</kbd> by the jeep to get back in.</div>
       <div><b>Catch</b><br>Look at the animal and press <kbd>F</kbd> to throw your net. Rare animals run away, so wait until they get tired!</div>
-      <div><b>Your zoo</b><br>Bring caged animals home and put them in big glass domes. Then drive your jeep around the zoo and right inside the domes.</div>
+      <div><b>Your zoo</b><br>Bring caged animals home and put them in big glass domes. Then drive your truck around the zoo and right inside the domes.</div>
     </div>
   </div>
 </section>
@@ -169,7 +170,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
   <div class="hud">
     <button class="btn dark" id="back">🗺️ Map</button>
     <span class="where" id="where"></span>
-    <span class="coins" id="cagesTxt">🧺 0/4</span>
+    <span class="coins" id="cagesTxt">🧺 0/8</span>
     <span class="coins coinTxt">🪙 0</span>
     <button class="btn" id="toZoo2">🏛️ Drive to zoo</button>
   </div>
@@ -205,7 +206,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
   <div id="encPick" hidden>
     <div class="panel encBox">
       <div class="row"><h2>Which enclosure?</h2><button class="x" id="encClose" aria-label="Close">×</button></div>
-      <p>Pick a number. Your jeep starts inside that dome so you can drive around with the animals.</p>
+      <p>Pick a number. Your truck starts inside that dome so you can drive around with the animals.</p>
       <div class="encGrid" id="encGrid"></div>
     </div>
   </div>
@@ -217,6 +218,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     </div>
     <div class="panel">
       <h2>Your animals</h2>
+      <p id="truckInfo"></p>
       <p>Every animal you bring home goes straight into the dome for its home. Big cats and zebras live in the Savanna dome, penguins in the Polar dome, and so on. Tap a dome to see who lives there.</p>
     </div>
     <div class="panel">

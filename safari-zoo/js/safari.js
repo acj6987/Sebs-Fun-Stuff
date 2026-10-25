@@ -4,7 +4,7 @@ const keys={};
 const look={yaw:0,pitch:-.12,drag:null,idle:0};
 let mode='car',world=null,safariScene=null;
 const car={x:0,z:0,y:0,yaw:0,v:0,steer:0,g:null};
-const me={x:0,z:0,y:0,vy:0,ground:true,bob:0,leash:null};
+const me={x:0,z:0,y:0,vy:0,ground:true,bob:0,pack:[]};const PACK=5;
 
 function baseH(x,z){return 2.4*Math.sin(x*.012)*Math.cos(z*.010)+1.3*Math.sin(x*.029+z*.018)+.55*Math.sin(x*.071)*Math.sin(z*.063)+1.8*Math.sin(x*.004+1)*Math.cos(z*.005+.4)}
 function H(x,z){if(world.flat)return 0;let h=baseH(x,z);
@@ -42,6 +42,7 @@ async function buildSafari(c,progress){
   const ground=new T.Mesh(geo,new T.MeshStandardMaterial({vertexColors:true,map,normalMap:nm,normalScale:new T.Vector2(.9,.9),roughness:c.hab==='polar'?.55:1,envMapIntensity:.6}));
   ground.receiveShadow=true;scene.add(ground);
   for(const p of world.ponds){const w=NATURE.waterMesh(p.r*1.1,E.water);w.position.set(p.x,p.lvl,p.z);scene.add(w);world.waters.push(w)}
+  if(c.hab==='dino')addVolcano(scene);
   progress('Growing trees…');await nextFrame();
   const types=NATURE.treeTypes(c.hab);
   const place=rr=>{const x=(rr()-.5)*(WS+380),z=(rr()-.5)*(WS+380);if(Math.hypot(x,z)<28||inPond(x,z))return null;
@@ -57,6 +58,23 @@ async function buildSafari(c,progress){
   for(let i=0;i<26;i++)spawnAnimal(true);
 }
 
+/* ---------- the volcano on Dino Island ---------- */
+function addVolcano(scene){
+  const vx=150,vz=-395,base=H(vx,vz)-25,hgt=125;
+  const geo=new T.CylinderGeometry(20,105,hgt,64,16,true),p=geo.attributes.position;
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),n=MESHER.fbm(x*.03,y*.03,z*.03);const k=1+(n-.5)*.35;p.setX(i,x*k);p.setZ(i,z*k)}
+  geo.computeVertexNormals();
+  const cone=new T.Mesh(geo,NATURE.rockMat('#3a3330'));cone.position.set(vx,base+hgt/2,vz);cone.receiveShadow=true;scene.add(cone);
+  const lavaM=new T.MeshBasicMaterial({color:'#ff5a14',fog:false});
+  const crater=new T.Mesh(new T.CircleGeometry(19,32),lavaM);crater.rotation.x=-Math.PI/2;crater.position.set(vx,base+hgt-3,vz);scene.add(crater);
+  for(let i=0;i<5;i++){const a=-1.2+i*.45+Math.random()*.2,len=hgt*1.15;const st=new T.Mesh(new T.PlaneGeometry(4+Math.random()*3,len),new T.MeshBasicMaterial({color:i%2?'#ff7a1a':'#ff4410',fog:false,side:T.DoubleSide}));
+    const r0=20,r1=100,mid=(r0+r1)/2;st.position.set(vx+Math.sin(a)*mid,base+hgt/2,vz+Math.cos(a)*mid);st.rotation.order='YXZ';st.rotation.y=a;st.rotation.x=-Math.atan2(hgt,r1-r0)+Math.PI/2;st.translateZ(1.2);scene.add(st)}
+  const glow=new T.PointLight('#ff7a30',2.2,700,1.5);glow.position.set(vx,base+hgt+15,vz);scene.add(glow);
+  const [c,g]=NATURE.canvas(128);const gr=g.createRadialGradient(64,64,0,64,64,62);gr.addColorStop(0,'rgba(90,85,80,.75)');gr.addColorStop(1,'rgba(90,85,80,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
+  const sm=new T.SpriteMaterial({map:NATURE.toTex(c,true),transparent:true,depthWrite:false,fog:false});
+  world.smoke=[];for(let i=0;i<18;i++){const sp=new T.Sprite(sm.clone());scene.add(sp);world.smoke.push({sp,t:i/18})}
+  world.tick=dt=>{for(const q of world.smoke){q.t=(q.t+dt*.03)%1;const k=q.t;q.sp.position.set(vx+Math.sin(k*9)*12*k,base+hgt+k*170,vz+Math.cos(k*7)*10*k);q.sp.scale.setScalar(30+k*120);q.sp.material.opacity=1-k}};
+}
 /* ---------- the jeep ---------- */
 function buildCar(scene){
   const g=new T.Group();scene.add(g);car.g=g;
@@ -83,19 +101,27 @@ function buildCar(scene){
   A(CY,tyre,0,1.25,2.2,.42,.22,.42,Math.PI/2,0,0);
   for(const x of[-.62,-.3])A(CY,new T.MeshStandardMaterial({color:'#efe8d6',roughness:.3}),x,1.6,-.57,.07,.02,.07,1.2,0,0);
   car.wheels=[];car.front=[];
-  const tread=new T.TorusGeometry(.36,.11,10,28);
-  for(const[x,z]of[[-1.02,-1.4],[1.02,-1.4],[-1.02,1.4],[1.02,1.4]]){const wg=new T.Group();wg.position.set(x,.47,z);g.add(wg);
+  const tread=new T.TorusGeometry(.4,.14,10,28);
+  for(const[x,z]of[[-1.02,-1.4],[1.02,-1.4],[-1.02,1.4],[1.02,1.4]]){const wg=new T.Group();wg.position.set(x,.54,z);g.add(wg);
     const sp=new T.Group();wg.add(sp);const t=new T.Mesh(tread,tyre);t.rotation.y=Math.PI/2;t.castShadow=true;sp.add(t);
     const hub=new T.Mesh(CY,chrome);hub.scale.set(.26,.2,.26);hub.rotation.z=Math.PI/2;sp.add(hub);
     car.wheels.push(sp);if(z<0)car.front.push(wg)}
   // trailer with cages
-  const tr=new T.Group();tr.position.set(0,0,4);g.add(tr);car.trailer=tr;
+  // safety cage over the cab, a strong front bumper and a long trailer with 8 cages
+  const steel=new T.MeshStandardMaterial({color:'#2f3336',metalness:.8,roughness:.35});
+  const bar=(a,b,r=.05)=>{const d=b.clone().sub(a),L=d.length(),m=new T.Mesh(CY,steel);m.scale.set(r,L,r);m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());m.castShadow=true;g.add(m)};
+  for(const x of[-1,1]){bar(V(x*.95,1.3,-.9),V(x*.95,2.75,-.6));bar(V(x*.95,1.3,1.9),V(x*.95,2.75,1.9));bar(V(x*.95,2.75,-.6),V(x*.95,2.75,1.9));
+    bar(V(x*.97,1.55,-.85),V(x*.97,1.55,1.9),.035);bar(V(x*.97,1.85,-.75),V(x*.97,1.85,1.9),.035)}
+  bar(V(-.95,2.75,-.6),V(.95,2.75,-.6));bar(V(-.95,2.75,1.9),V(.95,2.75,1.9));for(const z of[.2,1])bar(V(-.95,2.75,z),V(.95,2.75,z),.035);
+  bar(V(-1.05,.7,-2.35),V(1.05,.7,-2.35),.07);bar(V(-1.05,1.15,-2.35),V(1.05,1.15,-2.35),.06);for(const x of[-.7,0,.7])bar(V(x,.6,-2.35),V(x,1.2,-2.35),.05);
+  for(const x of[-1,1])bar(V(x*1.05,.6,-2.35),V(x*1.05,1.15,-2.35),.06);
+  const tr=new T.Group();tr.position.set(0,0,5.6);g.add(tr);car.trailer=tr;
   const wood=new T.MeshStandardMaterial({color:'#5b4632',roughness:.9});
   const TA=(geo,m,x,y,z,sx,sy,sz)=>{const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=o.receiveShadow=true;tr.add(o);return o};
-  TA(BX,dark,0,.75,-1.55,.12,.12,1.1);TA(BX,wood,0,.78,0,2.2,.18,2.9);
-  for(const x of[-1.15,1.15]){const wg=new T.Group();wg.position.set(x,.44,0);tr.add(wg);const sp=new T.Group();wg.add(sp);const t=new T.Mesh(tread,tyre);t.rotation.y=Math.PI/2;t.scale.setScalar(.92);sp.add(t);car.wheels.push(sp)}
+  TA(BX,dark,0,.75,-3.3,.14,.14,1.4);TA(BX,wood,0,.8,0,2.3,.2,5.8);TA(BX,steel,-1.15,.95,0,.06,.25,5.8);TA(BX,steel,1.15,.95,0,.06,.25,5.8);
+  for(const z of[-1.6,1.6])for(const x of[-1.22,1.22]){const wg=new T.Group();wg.position.set(x,.54,z);tr.add(wg);const sp=new T.Group();wg.add(sp);const t=new T.Mesh(tread,tyre);t.rotation.y=Math.PI/2;sp.add(t);car.wheels.push(sp)}
   car.slots=[];
-  for(const[x,z]of[[-.53,-.7],[.53,-.7],[-.53,.7],[.53,.7]]){const cg=new T.Group();cg.position.set(x,.87,z);tr.add(cg);buildCage(cg);const hold=new T.Group();cg.add(hold);car.slots.push(hold)}
+  for(const z of[-2.1,-.7,.7,2.1])for(const x of[-.55,.55]){const cg=new T.Group();cg.position.set(x,.9,z);tr.add(cg);buildCage(cg);const hold=new T.Group();cg.add(hold);car.slots.push(hold)}
   // steering wheel + your hands
   const col=new T.Group();col.position.set(-.45,1.6,-.48);col.rotation.x=-.6;g.add(col);
   const cm=new T.Mesh(CY,dark);cm.scale.set(.03,.5,.03);cm.rotation.x=Math.PI/2;cm.position.z=-.25;col.add(cm);
@@ -173,11 +199,14 @@ function updateAnimals(dt,time){
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const a of world.animals){
     const d=Math.hypot(a.x-px,a.z-pz),r=a.sp.r;
-    if(a.state==='netted'){const td=Math.hypot(me.x-a.x,me.z-a.z);
-      if(mode==='foot'&&td>3.2){const s=Math.min(6.5,(td-3)*2.2);a.vx=(me.x-a.x)/td*s;a.vz=(me.z-a.z)/td*s}else{a.vx*=.8;a.vz*=.8}}
+    if(a.state==='netted'){
+      // netted animals follow you in a line, each one behind the one before
+      const i=me.pack.indexOf(a),lead=i>0?me.pack[i-1]:me,gap=i>0?2.2+a.m.rad+lead.m.rad:3.2,td=Math.hypot(lead.x-a.x,lead.z-a.z);
+      if(mode==='foot'&&td>gap){const s=Math.min(7,(td-gap+.2)*2.2);a.vx=(lead.x-a.x)/td*s;a.vz=(lead.z-a.z)/td*s}else{a.vx*=.8;a.vz*=.8}}
     else if(a.state==='tired'){a.tired-=dt;a.vx*=.9;a.vz*=.9;a.stam=Math.min(1,a.stam+dt*.2);if(a.tired<=0){a.state='wander';a.stam=1}}
     else{const scareR=r===3?(mode==='car'?28:20):r===2?(mode==='car'?20:14):0;
-      if(r>=2&&d<scareR&&a.stam>0){a.state='flee';const fs=Math.max(a.sp.s*2.4,r===3?9.5:7);a.vx=(a.x-px)/d*fs;a.vz=(a.z-pz)/d*fs;a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
+      if(r>=2&&d<scareR&&a.stam>0){const chase=a.sp.def.chase&&d>4;if(chase&&a.state!=='flee'&&mode==='foot')toast('ROAR! The '+a.sp.n+' is chasing you! Run back to the truck!');
+        a.state='flee';const fs=Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
         if(a.stam<=0){a.state='tired';a.tired=6;if(d<45)toast('The '+a.sp.n+' is tired! Quick, throw your net!')}}
       else{if(a.state==='flee')a.state='wander';a.stam=Math.min(1,a.stam+dt*.15);
         a.t-=dt;if(a.t<=0){a.t=2+Math.random()*4;
@@ -207,9 +236,9 @@ function aimTarget(){
   return best}
 function throwNet(){
   if(!safari.running)return;
-  if(mode==='car'){toast('Jump out of the jeep first! Press E.');return}
+  if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.net)return;
-  if(me.leash){toast('You already have the '+me.leash.sp.n+'. Take it to the cages first!');return}
+  if(me.pack.length>=PACK){toast('You are already leading '+PACK+' animals! Take them to the cages first.');return}
   const t=aimTarget();
   if(!t){toast('Look right at an animal to aim your net');return}
   if(t.dist>16){toast('Too far away! Get closer to the '+t.a.sp.n);return}
@@ -223,35 +252,38 @@ function updateNet(dt){
   if(p<1)return;
   world.scene.remove(n.mesh);world.net=null;netRig.visible=true;
   const a=n.a,ok=world.animals.includes(a)&&Math.hypot(a.x-n.end.x,a.z-n.end.z)<Math.max(1.6,a.m.rad*1.3)&&a.alt<2.5;
-  if(ok){a.state='netted';a.vx=a.vz=0;a.alt=0;a.icon.visible=false;me.leash=a;
+  if(ok){a.state='netted';a.vx=a.vz=0;a.alt=0;a.icon.visible=false;me.pack.push(a);
     const net=new T.Mesh(new T.SphereGeometry(1,16,12),new T.MeshBasicMaterial({color:'#efe4c8',wireframe:true}));world.scene.add(net);a.net=net;
-    me.rope=new T.Line(new T.BufferGeometry().setFromPoints([V(0,0,0),V(0,0,0)]),new T.LineBasicMaterial({color:'#e8d9b0'}));me.rope.frustumCulled=false;world.scene.add(me.rope);
-    toast('You netted a '+a.sp.n+'! Lead it back to the cages on your jeep.')}
+    a.rope=new T.Line(new T.BufferGeometry().setFromPoints([V(0,0,0),V(0,0,0)]),new T.LineBasicMaterial({color:'#e8d9b0'}));a.rope.frustumCulled=false;world.scene.add(a.rope);
+    toast('You netted a '+a.sp.n+'! ('+me.pack.length+'/'+PACK+') '+(me.pack.length<PACK?'Catch more, or lead them to the cages on your truck.':'Now lead them to the cages on your truck.'))}
   else toast(a.state==='flee'?'Missed! It\'s too fast. Wait until it gets tired.':'Missed! Try again.');
 }
 function trailerPos(){return car.trailer.localToWorld(V(0,0,0))}
 function cageIt(){
-  const a=me.leash;if(!a)return;
-  if(S.cages.length>=CAGES){toast('All 4 cages are full! Drive to the zoo to empty them.');return}
-  const first=!S.dex[a.sp.k];S.dex[a.sp.k]=(S.dex[a.sp.k]||0)+1;
-  S.cages.push({uid:S.uid++,k:a.sp.k});S.coins+=VALUE[a.sp.r];save();
-  world.scene.remove(a.net);world.scene.remove(me.rope);me.rope=null;me.leash=null;removeAnimal(a);refreshCages();
-  toast((first?'NEW ANIMAL! ':'')+a.sp.n+' is in a cage · +'+VALUE[a.sp.r]+' coins');
+  if(!me.pack.length)return;
+  if(S.cages.length>=CAGES){toast('All '+CAGES+' cages are full! Drive to the zoo to empty them.');return}
+  const names=[];let coinsWon=0,fresh=false;
+  while(me.pack.length&&S.cages.length<CAGES){const a=me.pack.shift();
+    if(!S.dex[a.sp.k])fresh=true;S.dex[a.sp.k]=(S.dex[a.sp.k]||0)+1;S.cages.push({uid:S.uid++,k:a.sp.k});coinsWon+=VALUE[a.sp.r];names.push(a.sp.n);
+    world.scene.remove(a.net);world.scene.remove(a.rope);removeAnimal(a)}
+  S.coins+=coinsWon;save();refreshCages();
+  toast((fresh?'NEW ANIMAL! ':'')+names.join(', ')+(names.length>1?' are':' is')+' in the cages · +'+coinsWon+' coins'+(me.pack.length?' · No room for '+me.pack.length+' more!':''));
 }
-function releaseLeash(){const a=me.leash;if(!a)return;world.scene.remove(a.net);a.net=null;world.scene.remove(me.rope);me.rope=null;a.state='wander';me.leash=null;toast('The '+a.sp.n+' wriggled out of the net!')}
+function releaseLeash(){if(!me.pack.length)return;for(const a of me.pack){world.scene.remove(a.net);a.net=null;world.scene.remove(a.rope);a.rope=null;a.state='wander'}
+  toast(me.pack.length>1?'Your animals wriggled out of the nets!':'The '+me.pack[0].sp.n+' wriggled out of the net!');me.pack=[]}
 function pressE(){
   if(!safari.running)return;
   if(mode==='car'){
     if(Math.abs(car.v)>3){toast('Slow down to jump out!');return}
     const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=H(me.x,me.z);me.vy=0;
     look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=true;setDriveUI();return}
-  if(me.leash){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<5.5){cageIt();return}}
+  if(me.pack.length){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<6.5){cageIt();return}}
   const tp=trailerPos();
   if(Math.hypot(me.x-car.x,me.z-car.z)<5.5||Math.hypot(me.x-tp.x,me.z-tp.z)<4){
-    if(me.leash)releaseLeash();mode='car';look.yaw=0;look.pitch=-.12;footRig.visible=false;setDriveUI()}
-  else toast('Walk back to your jeep to get in');
+    if(me.pack.length)releaseLeash();mode='car';look.yaw=0;look.pitch=-.12;footRig.visible=false;setDriveUI()}
+  else toast('Walk back to your truck to get in');
 }
-function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the jeep first!')}
+function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
 function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';$('#netBtn').hidden=mode==='car';$('#cross').hidden=mode==='car'}
 
 /* ---------- moving ---------- */
@@ -282,11 +314,11 @@ function updateFoot(dt){
   const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),spd=keys.run||pad.run?8:5.5;
   me.x-=Math.sin(look.yaw)*mv*spd*dt;me.z-=Math.cos(look.yaw)*mv*spd*dt;keepIn(me);collide(me,.5);
   const cl=o=>{const dx=me.x-o.x,dz=me.z-o.z,d=Math.hypot(dx,dz);if(d<o.r){me.x=o.x+dx/d*o.r;me.z=o.z+dz/d*o.r}};
-  cl({x:car.x,z:car.z,r:2.1});const tp=trailerPos();cl({x:tp.x,z:tp.z,r:1.6});
+  cl({x:car.x,z:car.z,r:2.1});for(const z of[-2.2,0,2.2]){const p=car.trailer.localToWorld(V(0,0,z));cl({x:p.x,z:p.z,r:1.5})}
   const gh=H(me.x,me.z);me.vy-=18*dt;me.y+=me.vy*dt;if(me.y<=gh){me.y=gh;me.vy=0;me.ground=true}
   if(mv&&me.ground)me.bob+=dt*spd*1.6;
-  if(me.leash&&me.rope){const pts=me.rope.geometry.attributes.position,hp=cam.localToWorld(V(.26,-.35,-.5)),a=me.leash;
-    pts.setXYZ(0,hp.x,hp.y,hp.z);pts.setXYZ(1,a.x,a.m.g.position.y+a.m.h*.6,a.z);pts.needsUpdate=true}
+  me.pack.forEach((a,i)=>{if(!a.rope)return;const pts=a.rope.geometry.attributes.position,lead=i?me.pack[i-1]:null,hp=lead?V(lead.x,lead.m.g.position.y+lead.m.h*.5,lead.z):cam.localToWorld(V(.26,-.35,-.5));
+    pts.setXYZ(0,hp.x,hp.y,hp.z);pts.setXYZ(1,a.x,a.m.g.position.y+a.m.h*.6,a.z);pts.needsUpdate=true});
 }
 function placeCamera(){
   if(mode==='car'){cam.position.copy(car.g.localToWorld(V(-.45,2.08,.42)));
@@ -323,7 +355,7 @@ function hud(){
   let msg;
   if(world.zoo)msg=mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome':'Walk around · <b>Space</b> jump · <b>E</b> by the jeep to get in';
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
-  else if(me.leash){const tp=trailerPos();msg=Math.hypot(me.x-tp.x,me.z-tp.z)<5.5?`Press <b>E</b> to put the ${me.leash.sp.n} in a cage`:`Lead the <b>${me.leash.sp.n}</b> back to the cages on your jeep`}
+  else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<6.5?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
   else msg=target?(target.dist<=16?`Press <b>F</b> to throw your net at the ${target.a.sp.n}`:`Walk closer to the ${target.a.sp.n}`):'Look at an animal · <b>F</b> net · <b>Space</b> jump · <b>E</b> by the jeep to get in';
   if(pr.dataset.m!==msg){pr.innerHTML=msg;pr.dataset.m=msg}
   if((hudT++)%3)return;

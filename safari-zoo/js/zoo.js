@@ -100,7 +100,7 @@ function buildArea(area,i){
   const scaled=types.map(t=>Object.assign({},t,{s:[t.s[0]*scale,Math.min(t.s[1]*scale,t.col>3?1.1:t.s[1]*scale)],col:t.col?Math.min(t.col,1.2):0}));
   cols.push(...NATURE.scatter(grp,scaled,26,q=>{const a=q()*6.28,d=Math.sqrt(q())*lim;const p=V(Math.sin(a)*d,0,Math.cos(a)*d);
     if(Math.hypot(p.x-px,p.z-pz)<pr+2||d<9||(d>17&&d<23)||Math.abs(p.x)<7&&p.z>0)return null;return p},rr));
-  buildDome(grp);
+  const doors=buildDome(grp);
   // sign at the doorway
   const st=new T.Mesh(new T.PlaneGeometry(6,1.9),new T.MeshStandardMaterial({map:signTexture([(i+1)+'. '+HAB[area.hab].name,'Big Glass Dome']),roughness:.7}));
   st.position.set(10,2,R0+3);st.rotation.y=-.2;grp.add(st);
@@ -108,7 +108,7 @@ function buildArea(area,i){
   // the glass wall is solid except for the doorway; pond and trees block the jeep too
   for(let a=0;a<Math.PI*2;a+=.06){const d=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(d)<DOOR)continue;cols.push({x:Math.sin(a)*R0,z:Math.cos(a)*R0,r:.9})}
   cols.push({x:px,z:pz,r:pr});
-  zoo.areas.set(area.id,{grp,area,x,z,R0,cols:cols.map(c=>({x:c.x+x,z:c.z+z,r:c.r})),pond:{x:px,z:pz,r:pr}});
+  zoo.areas.set(area.id,{grp,area,x,z,R0,doors,open:0,cols:cols.map(c=>({x:c.x+x,z:c.z+z,r:c.r})),pond:{x:px,z:pz,r:pr}});
 }
 let domeCache=null;
 function domeGeometry(){
@@ -135,6 +135,16 @@ function buildDome(grp){
   const dx=Math.sin(DOOR)*DOME,dz=Math.cos(DOOR)*DOME;
   for(const s of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.6,8.5,.6),frame);p.position.set(s*dx,4.25,dz);p.castShadow=true;grp.add(p)}
   const top=new T.Mesh(new T.BoxGeometry(dx*2+.6,.7,.6),frame);top.position.set(0,8.5,dz);top.castShadow=true;grp.add(top);
+  // two sliding gates that open when someone comes near
+  const doors=[];
+  const pane=new T.MeshPhysicalMaterial({color:'#dff2fa',transparent:true,opacity:.25,roughness:.05,clearcoat:1,side:T.DoubleSide,depthWrite:false});
+  for(const sd of[-1,1]){const d=new T.Group();d.position.set(sd*dx/2,0,dz+.5);grp.add(d);
+    const w=dx;const f=(x,y,sx,sy)=>{const m=new T.Mesh(new T.BoxGeometry(sx,sy,.25),frame);m.position.set(x,y,0);m.castShadow=true;d.add(m)};
+    f(-w/2,4,.25,8);f(w/2,4,.25,8);f(0,8,w,.25);f(0,.15,w,.3);f(0,3,w,.15);
+    for(let i=1;i<6;i++)f(-w/2+i*w/6,4,.08,8);
+    const g=new T.Mesh(new T.PlaneGeometry(w,8),pane);g.position.y=4;d.add(g);
+    d.userData={sd,w};doors.push(d)}
+  return doors;
 }
 
 /* ---------- animals living in the zoo ---------- */
@@ -171,6 +181,12 @@ function zooCamera(dt){
 function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;w.tx=A.x;w.tz=A.z;w.dist=85;w.pitch=Math.max(.45,Math.min(w.pitch,.8))}
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);
+  const driving=curView==='drive'&&world&&world.zoo;
+  for(const A of zoo.areas.values()){const gx=A.x,gz=A.z+DOME;let near=false;
+    if(driving&&Math.hypot((mode==='car'?car.x:me.x)-gx,(mode==='car'?car.z:me.z)-gz)<16)near=true;
+    if(!near&&zoo.people)for(const v of zoo.people)if(Math.abs(v.x-gx)<9&&Math.abs(v.z-gz)<9){near=true;break}
+    A.open+=((near?1:0)-A.open)*Math.min(1,dt*2.5);
+    for(const d of A.doors){const{sd,w}=d.userData;d.position.x=sd*(w/2+A.open*w*.95)}}
   for(const w of zoo.waters){w.userData.water.offset.x+=dt*.015;w.userData.water.offset.y+=dt*.01}
 }
 function zooFrame(dt,time){
@@ -240,7 +256,8 @@ function pathGraph(){
   const gate={x:0,z:44,nb:[],gate:1};nodes.push(gate);link(gate,at(0,ZTOP));
   // spots in front of every dome doorway where people stop and look in
   S.areas.forEach((a,i)=>{const p=slotXZ(i),pz=p.z+SLOT/2,v={x:p.x,z:p.z+DOME+4,nb:[],view:1};nodes.push(v);
-    const l=at(p.x-SLOT/2,pz),r=at(p.x+SLOT/2,pz);if(l)link(v,l);if(r)link(v,r)});
+    const l=at(p.x-SLOT/2,pz),r=at(p.x+SLOT/2,pz);if(l)link(v,l);if(r)link(v,r);
+    const inside={x:p.x+(Math.random()-.5)*6,z:p.z+DOME-10,nb:[],inside:1};nodes.push(inside);link(v,inside)});
   return{nodes,gate};
 }
 function syncVisitors(){
@@ -258,12 +275,12 @@ function updateVisitors(dt,time){
   const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const v of zoo.people){
     let spd=0,look=0;
-    if(v.wait>0){v.wait-=dt;if(v.from.view){const ty=Math.PI;let d=ty-v.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));v.yaw+=d*Math.min(1,dt*3);look=Math.sin(time*.7+v.off)*.4}}
+    if(v.wait>0){v.wait-=dt;if(v.from.view||v.from.inside){const ty=Math.PI;let d=ty-v.yaw;d=Math.atan2(Math.sin(d),Math.cos(d));v.yaw+=d*Math.min(1,dt*3);look=Math.sin(time*.7+v.off)*.4}}
     else{
       const dx=v.to.x-v.from.x,dz=v.to.z-v.from.z,L=Math.hypot(dx,dz)||1,ox=-dz/L*v.off,oz=dx/L*v.off;
-      const tx=v.to.x+(v.to.view?0:ox),tz=v.to.z+(v.to.view?0:oz),ex=tx-v.x,ez=tz-v.z,d=Math.hypot(ex,ez);
+      const tx=v.to.x+(v.to.view||v.to.inside?0:ox),tz=v.to.z+(v.to.view||v.to.inside?0:oz),ex=tx-v.x,ez=tz-v.z,d=Math.hypot(ex,ez);
       if(d<.5){const prev=v.from;v.from=v.to;const opts=v.from.nb.filter(n=>n!==prev);v.to=(opts.length?opts:v.from.nb)[Math.floor(Math.random()*(opts.length||v.from.nb.length))];
-        if(v.from.view)v.wait=3+Math.random()*6;else if(Math.random()<.12)v.wait=1+Math.random()*3}
+        if(v.from.inside)v.wait=6+Math.random()*8;else if(v.from.view)v.wait=2+Math.random()*4;else if(Math.random()<.12)v.wait=1+Math.random()*3}
       else{spd=v.spd;v.x+=ex/d*spd*dt;v.z+=ez/d*spd*dt;const ty=Math.atan2(ex,ez);let dy=ty-v.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));v.yaw+=dy*Math.min(1,dt*5)}
     }
     // step out of the way of the jeep or of you

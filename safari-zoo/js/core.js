@@ -18,6 +18,7 @@ const HAB={
   woodland:{name:'Woodland',c:'#5e8f47',i:'🌲'},
   outback:{name:'Outback',c:'#dc8645',i:'🌵'},
   polar:{name:'Polar Ice',c:'#d6eef9',i:'🧊'},
+  dino:{name:'Dino Zone',c:'#5a7a3a',i:'🦖'},
 };
 // how each habitat looks in 3D
 const ENV={
@@ -26,6 +27,7 @@ const ENV={
   jungle:{zen:'#5f9cd6',hor:'#e6eedb',fog:'#d5e2cb',ground:'#6f8f45',patch:'#587a35',rock:'#7d8576',water:'#4a8798',grass:['#4a7a2a','#9cc860'],grassH:.75,grassN:50000,sunEl:.6},
   woodland:{zen:'#4f86cc',hor:'#dfe9ee',fog:'#c9d8dc',ground:'#5b7d38',patch:'#46652a',rock:'#7a7c78',water:'#3f7896',grass:['#3c6a24','#88b850'],grassH:.55,grassN:55000,sunEl:.5},
   outback:{zen:'#2f74cc',hor:'#f2c99a',fog:'#e3b688',ground:'#b55f32',patch:'#9a4c26',rock:'#9a4a26',water:'#4f8a94',grass:['#8a8040','#d8c070'],grassH:.5,grassN:14000,sunEl:.6},
+  dino:{zen:'#5d8fb8',hor:'#e2d8c0',fog:'#b8b8a0',ground:'#4f6a2c',patch:'#3a5222',rock:'#4a4440',water:'#3a6658',grass:['#2f5a1e','#7aa040'],grassH:.9,grassN:45000,sunEl:.5},
   polar:{zen:'#6d9fd2',hor:'#eef4fa',fog:'#e4ecf3',ground:'#f2f6f9',patch:'#dde8f0',rock:'#4f5660',water:'#24557a',grass:null,grassN:0,sunEl:.25},
 };
 // [name, emoji, rarity, walk speed m/s, body plan + look]
@@ -101,10 +103,19 @@ const CONT=[
    ['Snowy Owl','🦉',2,1.2,{plan:'bird',s:.55,body:'#f6f6f2',wing:'#e8e8e2',head:'#f6f6f2',beak:'#333',leg:.1,neck:0,upright:1,owl:1,fly:1,sz:1.6}],
    ['Polar Bear','🐻‍❄️',3,1.6,{L:2.3,W:1.05,Hb:1.1,leg:.8,legW:.18,neck:.55,neckW:.36,neckAng:1,headL:.55,headW:.42,headH:.42,col:'#f0ece0',snout:'#f0ece0',ears:'round',tail:'short',paws:1,noBelly:1}],
   ]},
+ {id:'dino',name:'Dino Island',place:'Land of the dinosaurs, by the volcano',hab:'dino',deco:['🦖','🌋','🦕'],
+  animals:[
+   ['Velociraptor','🦖',1,2.6,{plan:'theropod',hip:.95,L:1.6,W:.42,Hb:.55,neck:.5,neckW:.13,headL:.48,headW:.18,headH:.2,tail:1.8,arm:.55,legW:.1,col:'#8a6a42',col2:'#3a2a18',belly:'#d8c8a0',tex:'stripes',freq:9,thin:.35,raptor:1}],
+   ['Triceratops','🦕',1,1.4,{L:4.4,W:2,Hb:2,leg:1.1,legW:.3,neck:.3,neckW:.7,neckAng:1.35,headL:1.6,headW:.9,headH:.9,hp:.45,col:'#7a6a4a',col2:'#a8703a',belly:'#a89878',tri:1,ears:'none',tail:'dino',tl:2.6,scaly:1,graze:1,nose:'#5a4a38'}],
+   ['Stegosaurus','🦕',1,1.2,{L:4.4,W:1.5,Hb:2,leg:1.25,legW:.27,neck:.6,neckW:.38,neckAng:1.5,headL:.6,headW:.28,headH:.3,hp:.6,col:'#6a7a4a',col2:'#b0583a',belly:'#a8a888',plates:1,ears:'none',tail:'dino',tl:3,scaly:1,graze:1}],
+   ['Pteranodon','🦅',2,1.5,{plan:'bird',s:1.3,body:'#8a6a4a',wing:'#7a5a3a',head:'#8a6a4a',beak:'#d8c8a0',beakL:2.4,leg:.35,neck:.35,fly:1,crest:1,tailL:.1,legCol:'#5a4a3a'}],
+   ['Brachiosaurus','🦕',2,1.2,{L:5,W:2.2,Hb:2.6,leg:3,legW:.42,neck:6.5,neckW:.5,neckAng:.32,headL:1,headW:.45,headH:.5,hp:.6,col:'#7a8070',belly:'#a8ab98',ears:'none',tail:'dino',tl:5,scaly:1,hoof:'#5a5a50'}],
+   ['T-Rex','🦖',3,2.2,{plan:'theropod',hip:3,L:4.2,W:1.6,Hb:1.9,neck:1,neckW:.55,headL:1.5,headW:.8,headH:.9,tail:5.5,arm:.8,legW:.45,col:'#5a5040',col2:'#3a3428',belly:'#a89878',tex:'stripes',freq:4,thin:.55,chase:1}],
+  ]},
 ];
 const SP={};
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:c.hab}}));
-const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:9999,dome:9999},CAGES=4;
+const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:9999,dome:9999},CAGES=8;
 
 /* ---- save game ---- */
 function fresh(){return{coins:150,holding:[],cages:[],dex:{},uid:1,aid:4,areas:[

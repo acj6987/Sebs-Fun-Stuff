@@ -42,7 +42,7 @@ $('#conts').addEventListener('click',e=>{const b=e.target.closest('.cont');if(b)
 async function startSafari(c){
   if(!initRenderer())return;
   show('drive');loading(true,'Driving to '+c.name+'…');await nextFrame();
-  me.leash=null;me.rope=null;car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
+  me.pack=[];car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
   try{await buildSafari(c,t=>$('#loadTxt').textContent=t)}catch(e){console.error(e);loading(false);toast('Something went wrong building '+c.name+'.');show('map');return}
   footRig.visible=false;setDriveUI();$('#where').textContent=c.name+' · '+c.place;$('#cagesTxt').hidden=false;$('#toZoo2').textContent='🏛️ Drive to zoo';
   loading(false);safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
@@ -147,10 +147,10 @@ document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;
 $('#netBtn').addEventListener('click',throwNet);
 $('#eBtn').addEventListener('click',pressE);
 $('#jumpBtn').addEventListener('click',jump);
-function goMap(){if(me.leash)releaseLeash();show('map')}
+function goMap(){if(me.pack.length)releaseLeash();show('map')}
 $('#back').onclick=goMap;
 $('#toZoo1').onclick=openZoo;
-$('#toZoo2').onclick=()=>{if(me.leash)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
+$('#toZoo2').onclick=()=>{if(me.pack.length)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
 $('#zooMap').onclick=()=>show('map');
 function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages);S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They went straight into their domes.'),50)}
 
@@ -159,6 +159,7 @@ let selected=null;
 $('#habSel').innerHTML=Object.entries(HAB).map(([k,h])=>`<option value="${k}">${h.i} ${h.name}</option>`).join('');
 function renderZooUI(){
   coins();
+  $('#truckInfo').innerHTML=S.cages.length?`🚚 ${S.cages.length} animal${S.cages.length>1?'s':''} in your truck cages: ${S.cages.map(x=>SP[x.k].e).join('')} <button class="mini" id="unload">Put them back in their domes</button>`:'🚚 Your truck cages are empty.';
   const all=S.areas.flatMap(a=>a.animals.map(an=>[an,a])),h=all.filter(([an,a])=>happy(an,a)).length;
   const score=all.length?Math.min(5,Math.round((h/all.length)*3+Math.min(2,all.length/8))):0;
   $('#stars').textContent='★'.repeat(score)+'☆'.repeat(5-score)+`  ${all.length} animals · ${h} happy`;
@@ -176,7 +177,7 @@ function renderAreaCard(){
   $('#acTitle').textContent=(S.areas.indexOf(area)+1)+'. '+HAB[area.hab].i+' '+HAB[area.hab].name+' Dome';
   $('#acCount').textContent=area.animals.length+' animal'+(area.animals.length===1?'':'s')+' live here · room for as many as you catch';
   $('#acList').innerHTML=area.animals.length?area.animals.map(an=>{const s=SP[an.k],ok=happy(an,area);
-    return `<li><span class="e">${s.e}</span><span><b>${s.n}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span></li>`}).join('')
+    return `<li><span class="e">${s.e}</span><span><b>${s.n}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span><span class="two"><button class="mini" data-load="${an.uid}">🚚 Truck</button><button class="mini" data-free="${an.uid}">🌿 Set free</button></span></li>`}).join('')
     :'<li class="empty">No animals here yet. Catch some '+HAB[area.hab].name+' animals on safari!</li>';
 }
 function tapArea(id){
@@ -192,8 +193,16 @@ function tapArea(id){
 }
 $('#holding').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const u=+b.dataset.uid;selected=selected===u?null:u;renderZooUI();
   if(selected!==null&&matchMedia('(max-width:700px)').matches)$('#zooSide').classList.add('min')});
-$('#acList').addEventListener('click',e=>{const b=e.target.closest('[data-back]');if(!b)return;const area=S.areas.find(a=>a.id===zoo.sel),u=+b.dataset.back;
-  const i=area.animals.findIndex(x=>x.uid===u);S.holding.push(area.animals.splice(i,1)[0]);save();syncZooAnimals();renderZooUI()});
+$('#acList').addEventListener('click',e=>{const area=S.areas.find(a=>a.id===zoo.sel);if(!area)return;
+  const ld=e.target.closest('[data-load]'),fr=e.target.closest('[data-free]');
+  if(ld){if(S.cages.length>=CAGES){toast('The truck cages are full ('+CAGES+'). Unload some first!');return}
+    const u=+ld.dataset.load,i=area.animals.findIndex(x=>x.uid===u),an=area.animals.splice(i,1)[0];S.cages.push(an);save();syncZooAnimals();renderZooUI();
+    toast('The '+SP[an.k].n+' is in a cage on your truck. Take it for a drive!')}
+  if(fr){if(fr.dataset.sure!=='1'){fr.dataset.sure='1';fr.textContent='Tap again to set free';setTimeout(()=>{if(fr.isConnected){fr.dataset.sure='';fr.textContent='🌿 Set free'}},3000);return}
+    const u=+fr.dataset.free,i=area.animals.findIndex(x=>x.uid===u),an=area.animals.splice(i,1)[0];save();syncZooAnimals();renderZooUI();
+    toast('Bye bye '+SP[an.k].n+'! It went back to the wild.')}});
+$('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0));const made=autoHome();
+  [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are back in their domes!')});
 $('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=150;w.tx=0;w.tz=-60};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
 function build(type){const cost=250;
@@ -215,7 +224,7 @@ async function startZooDrive(id){
   world=zooDriveWorld();
   if(zoo.carG)zoo.scene.remove(zoo.carG);
   buildCar(zoo.scene);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
-  mode='car';me.leash=null;me.rope=null;car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
+  mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
   if(A){car.x=A.x;car.z=A.z+A.R0-10;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}
   else{car.x=0;car.z=48;$('#where').textContent='My Zoo'}

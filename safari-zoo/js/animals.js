@@ -73,6 +73,9 @@ function quad(p){
   if(p.horn){k.extra('head','horn',at(hl*.78,hh*.08),{len:.55,r:.09,tilt:.35});k.extra('head','horn',at(hl*.5,hh*.2),{len:.28,r:.07,tilt:.2})}
   if(p.horns)for(const s of[-1,1])k.extra('head','horns',at(0,hh*.4,s*hw*.38),{s,kind2:p.horns});
   if(p.antlers)for(const s of[-1,1])k.extra('head','antler',at(-hl*.05,hh*.42,s*hw*.22),{s});
+  if(p.tri){k.extra('head','trifrill',at(-hl*.15,hh*.35),{r:hw*1.15,col:p.col2||p.col,tilt:hp});
+    for(const sx of[-1,1])k.extra('head','horn',at(hl*.15,hh*.45,sx*hw*.25),{len:.9,r:.09,tilt:1.1-hp,col:'#e8dcc0'});k.extra('head','horn',at(hl*.78,hh*.05),{len:.35,r:.08,tilt:.6,col:'#e8dcc0'})}
+  if(p.plates)for(let i=0;i<9;i++){const z=L*(.42-i*.11),y=by+Hb*(.45-Math.abs(i-3.5)*.02)+Hb*.12*Math.sin(Math.PI*i/8.5);k.extra('root','plate',[i%2?.08:-.08,y,z],{size:(.45+Math.sin(Math.PI*i/8.5)*.5)*Hb*.55,col:p.col2||'#a85a3a'})}
   if(p.ossicones)for(const s of[-1,1])k.extra('head','ossicone',at(-hl*.05,hh*.5,s*.07),{});
   // tail
   const tb=[0,by+Hb*.15,-L*.5],tl=p.tl||.4;k.bone('tail','root',tb);
@@ -80,6 +83,9 @@ function quad(p){
   if(p.tail==='bushy'){const end=ad(tb,p.stripe?[0,tl*.8,-tl*.4]:[0,-tl*.35,-tl*.85]);
     k.cap(tb,end,W*.12,W*.24,'tail',{k:W*.15,col:tcol,pat:1,rough:.02,rf:20});
     if(p.tip)k.ell(ad(end,sc([0,end[1]-tb[1],end[2]-tb[2]],.12)),[W*.2,W*.2,W*.2],'tail',{k:W*.12,col:p.tip,rough:.02,rf:20})}
+  else if(p.tail==='dino'){const t1=ad(tb,[0,-Hb*.15,-tl*.5]),t2=ad(tb,[0,-Hb*.35,-tl]);k.bone('tail2','tail',t1);
+    k.cap(ad(tb,[0,0,L*.08]),t1,W*.32,W*.17,'tail',{k:W*.15,pat:1});k.cap(t1,t2,W*.17,W*.035,'tail2',{k:W*.08,pat:1});
+    if(p.plates)for(let i=0;i<4;i++)k.extra(i<2?'tail':'tail2','spike',ad(i<2?ad(tb,[0,-Hb*.1,-tl*(.7+i*.08)]):t1,i<2?[0,0,0]:[0,-Hb*.05*(i-1),-tl*.12*(i-1)]),{s:i%2?1:-1,len:.6,r:.07})}
   else if(p.tail==='ringed')k.cap(tb,ad(tb,[0,-tl*.3,-tl*.95]),W*.14,W*.16,'tail',{k:W*.1,pat:'rings'});
   else if(p.tail==='short')k.ell(ad(tb,[0,-.02,-.04]),[W*.13,W*.15,W*.12],'tail',{k:W*.1,col:tcol,pat:1,detail:1});
   else if(p.tail==='flat')k.ell(ad(tb,[0,-by+.12,-.32]),[W*.32,.05,.3],'tail',{k:.04,col:'#3a2a1e',detail:1});
@@ -246,6 +252,38 @@ function hedgehog(p){
   k.anim={kind:'quad0',stride:s*.4};
   return k;
 }
+/* ---------- dinosaurs on two legs ---------- */
+function theropod(p){
+  const k=kit(),s=p.s||1,hip=p.hip*s,L=p.L*s,W=p.W*s,Hb=p.Hb*s,lw=p.legW*s;
+  k.bone('root',null,[0,hip,0]);
+  k.ell([0,hip+Hb*.08,L*.12],[W*.5,Hb*.52,L*.36],'root',{k:Hb*.35,rot:[-.12,0,0],pat:1});
+  k.ell([0,hip,-L*.18],[W*.46,Hb*.46,L*.28],'root',{k:Hb*.35,pat:1});
+  const nb=[0,hip+Hb*.3,L*.38],ne=[0,hip+Hb*.45+p.neck*s*.55,L*.4+p.neck*s*.6];
+  k.bone('neck','root',nb);k.bone('head','neck',ne);
+  k.cap(nb,ne,p.neckW*s*1.2,p.neckW*s*.85,'neck',{k:p.neckW*s*.7,pat:1});
+  const hl=p.headL*s,hw=p.headW*s,hh=p.headH*s,at=(f,u,x=0)=>[ne[0]+x,ne[1]+u,ne[2]+f];
+  k.ell(at(hl*.2,hh*.08),[hw*.5,hh*.5,hl*.34],'head',{k:hh*.3,pat:1});
+  k.cap(at(hl*.35,hh*.05),at(hl*.95,-hh*.05),hh*.36,hh*.24,'head',{k:hh*.25,pat:1});
+  k.cap(at(hl*.25,-hh*.3),at(hl*.85,-hh*.32),hh*.24,hh*.14,'head',{k:hh*.15,pat:1,col:p.belly||null});
+  for(const sx of[-1,1]){
+    k.extra('head','eye',at(hl*.3,hh*.22,sx*hw*.4),{r:Math.max(.03,hw*.08)});
+    k.extra('head','teeth',at(hl*.35,-hh*.18,sx*hw*.3),{s:sx,len:hl*.6,size:hh*.09});
+    const i=sx>0?0:1,sh=[sx*W*.35,hip+Hb*.1,L*.36];
+    k.cap(sh,ad(sh,[sx*W*.05,-p.arm*s*.5,p.arm*s*.45]),Math.max(.04,W*.07),Math.max(.03,W*.05),'root',{k:.04*s,pat:1,detail:1});
+    const top=[sx*W*.32,hip,-L*.08],knee=[sx*W*.36,hip*.52,L*.06],ank=[sx*W*.36,hip*.15,-L*.08],toe=[sx*W*.36,.06*s,L*.12];
+    k.bone('leg'+i,'root',top);k.bone('low'+i,'leg'+i,knee);
+    k.ell([sx*W*.33,hip-Hb*.05,-L*.06],[lw*1.6,Hb*.55,lw*2.6],'leg'+i,{k:Hb*.3,pat:1});
+    k.cap(top,knee,lw*1.25,lw*.85,'leg'+i,{k:lw*.7,pat:1});
+    k.cap(knee,ank,lw*.75,lw*.55,'low'+i,{k:lw*.4,pat:1});k.cap(ank,toe,lw*.55,lw*.45,'low'+i,{k:lw*.3,pat:1});
+    if(p.raptor)k.extra('low'+i,'claw',ad(ank,[0,-hip*.08,L*.1]),{size:.12*s});
+  }
+  const tb=[0,hip+Hb*.08,-L*.4],t1=[0,hip-Hb*.05,-L*.4-p.tail*s*.45],t2=[0,hip-Hb*.25,-L*.4-p.tail*s];
+  k.bone('tail','root',tb);k.bone('tail2','tail',t1);
+  k.cap(tb,t1,Hb*.4,Hb*.2,'tail',{k:Hb*.2,pat:1});k.cap(t1,t2,Hb*.2,Math.max(.03,Hb*.03),'tail2',{k:Hb*.1,pat:1});
+  if(p.raptor)for(let i=0;i<6;i++)k.extra('neck','quill',ad(nb,[0,Hb*.3+i*p.neck*s*.09,i*p.neck*s*.1-.05]),{size:.15*s,col:p.col2});
+  k.anim={kind:'biped',stride:hip*1.1};
+  return k;
+}
 /* ---------- zoo visitors ---------- */
 function person(p){
   const k=kit(),s=p.s,sk=p.skin,sh=p.shirt,pa=p.pants;
@@ -272,7 +310,7 @@ function person(p){
   k.anim={kind:'person',stride:.45*s};
   return k;
 }
-const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person};
+const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person,theropod};
 
 /* ---------- coat colours ---------- */
 const colCache={};
@@ -341,6 +379,7 @@ function mats(){
 function rngA(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
 function matFor(p){const plan=p.plan||'quad',m=mats();
   if(plan==='person')return m.cloth;
+  if(plan==='theropod'||p.scaly)return m.scale;
   if(plan==='bird')return m.feather;if(plan==='lizard'||plan==='snake')return m.scale;if(plan==='frog'||plan==='seal')return m.wet;return m.fur}
 
 /* ---------- extras (thin parts attached to bones) ---------- */
@@ -352,7 +391,7 @@ function extraMesh(e,p){
   switch(e.kind){
     case'eye':add(new T.SphereGeometry(e.r,14,10),e.owl?m.owlEye:m.eye);if(e.owl)add(new T.SphereGeometry(e.r*.5,10,8),m.eye,[0,0,e.r*.6]);break;
     case'tusk':{const geo=new T.ConeGeometry(e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,m.ivory,null,e.down?[Math.PI*.95,0,0]:[1.25,e.s*.12,0]);break}
-    case'horn':{const geo=new T.ConeGeometry(e.r,e.len,12);geo.translate(0,e.len/2,0);add(geo,smat('#9b948a',{roughness:.6}),null,[e.tilt,0,0]);break}
+    case'horn':{const geo=new T.ConeGeometry(e.r,e.len,12);geo.translate(0,e.len/2,0);add(geo,smat(e.col||'#9b948a',{roughness:.6}),null,[e.tilt,0,0]);break}
     case'horns':{const big=e.kind2==='buffalo',curve=new T.QuadraticBezierCurve3(new T.Vector3(0,0,0),new T.Vector3(e.s*(big?.55:.2),big?.05:.12,-.05),new T.Vector3(e.s*(big?.7:.22),big?.4:.28,-.15));
       add(new T.TubeGeometry(curve,12,big?.06:.045,8),m.horn);break}
     case'antler':{const am=m.antler,mk=(a,b,r)=>{const c=new T.LineCurve3(new T.Vector3(...a),new T.Vector3(...b));add(new T.TubeGeometry(c,2,r,6),am)};const s=e.s;
@@ -368,6 +407,12 @@ function extraMesh(e,p){
     case'beak':{const geo=new T.ConeGeometry(e.r,e.len,10);geo.rotateX(Math.PI/2);geo.translate(0,0,e.len/2-.01);add(geo,smat(e.col,{roughness:.4}),null,null,[1,.8,1]);break}
     case'crest':for(let i=-2;i<=2;i++){const geo=new T.CylinderGeometry(.004,.006,.16,4);geo.translate(0,.08,0);add(geo,smat(e.col),[i*.018,0,0],[-.3,0,i*.18]);add(new T.SphereGeometry(.018,6,5),smat('#2a6fd6'),[i*.018+Math.sin(i*.18)*-.16,.15,-.05])}break;
     case'fan':{const tex=fanTexture();const f=add(new T.CircleGeometry(e.s*1.5,40,0,Math.PI),new T.MeshStandardMaterial({map:tex,side:T.DoubleSide,roughness:.6,alphaTest:.5,transparent:false}));f.rotation.x=.3;break}
+    case'trifrill':{const f=add(new T.CircleGeometry(e.r,28,0,Math.PI),smat(e.col,{side:T.DoubleSide,roughness:.7}));f.rotation.x=-.5+e.tilt*.5;f.position.y=e.r*.1;break}
+    case'plate':{const geo=new T.CircleGeometry(e.size,4);geo.rotateY(Math.PI/2);geo.scale(1,1.2,.9);const o=add(geo,smat(e.col,{side:T.DoubleSide,roughness:.6}));o.position.y=e.size*.7;break}
+    case'spike':{const geo=new T.ConeGeometry(e.r,e.len,8);geo.translate(0,e.len/2,0);add(geo,m.ivory,null,[0,0,e.s*1.1]);break}
+    case'teeth':for(let i=0;i<9;i++){const geo=new T.ConeGeometry(e.size*.35,e.size,5);geo.rotateX(Math.PI);add(geo,m.ivory,[0,0,i*e.len/9])}break;
+    case'claw':{const geo=new T.ConeGeometry(e.size*.25,e.size,6);add(geo,m.horn,null,[-.8,0,0]);break}
+    case'quill':{const geo=new T.ConeGeometry(e.size*.15,e.size,5);geo.translate(0,e.size/2,0);add(geo,smat(e.col||'#3a2a1a'),null,[-.6,0,0]);break}
     case'frill':{const f=add(new T.CircleGeometry(e.s*.3,24),smat(e.col,{side:T.DoubleSide}));break}
   }
   return g;
@@ -423,6 +468,7 @@ function animate(a,dt,spd,time,o={}){
     if(B.neck)B.neck.rotation.x+=((o.graze?.95:Math.sin(ph*2)*amp*.05)-B.neck.rotation.x)*Math.min(1,dt*2.5);
     if(B.head)B.head.rotation.y=Math.sin(time*.4+sd)*.25*(spd<.2?1:.2);
     if(B.tail)B.tail.rotation.z=Math.sin(time*2.4+sd)*.3;
+    if(B.tail2)B.tail2.rotation.y=Math.sin(time*1.5+sd-.6)*.2+Math.sin(ph)*amp*.15;
     if(B.trunk){B.trunk.rotation.x=Math.sin(time*1.1+sd)*.18;B.trunk2.rotation.x=Math.sin(time*1.1+sd+1)*.25}
   }else if(A.kind==='quad0'){B.root.position.y=a.rest+Math.abs(Math.sin(ph*2))*.01*spd}
   else if(A.kind==='bird'){
@@ -447,6 +493,11 @@ function animate(a,dt,spd,time,o={}){
   }else if(A.kind==='lizard'){
     for(let i=0;i<4;i++){const q=ph+[0,Math.PI,Math.PI,0][i];B['leg'+i].rotation.y=Math.sin(q)*amp*1.3;B['low'+i].rotation.z=Math.max(0,Math.cos(q))*amp*.4}
     B.root.rotation.y=Math.sin(ph)*amp*.25;B.tail.rotation.y=-Math.sin(ph)*amp*.5+Math.sin(time*.8+sd)*.08;B.tail2.rotation.y=-Math.sin(ph-.8)*amp*.6;
+  }else if(A.kind==='biped'){
+    for(let i=0;i<2;i++){const q=ph+i*Math.PI;B['leg'+i].rotation.x=Math.sin(q)*amp*.8;B['low'+i].rotation.x=-Math.max(0,-Math.cos(q))*amp}
+    B.root.position.y=a.rest+Math.abs(Math.cos(ph))*amp*.06;B.root.rotation.x=Math.sin(ph*2)*amp*.03;
+    B.tail.rotation.y=Math.sin(ph)*amp*.15+Math.sin(time*.8+sd)*.12;B.tail2.rotation.y=Math.sin(ph-.6)*amp*.2+Math.sin(time*.8+sd-.5)*.15;
+    B.neck.rotation.x=Math.sin(ph*2)*amp*.06;B.head.rotation.y=Math.sin(time*.7+sd)*.3*(spd<.2?1:.2);B.head.rotation.x=o.roar?-.35:0;
   }else if(A.kind==='person'){
     for(let i=0;i<2;i++){const q=ph+i*Math.PI;B['leg'+i].rotation.x=Math.sin(q)*amp;B['low'+i].rotation.x=Math.max(0,-Math.cos(q))*amp*1.2;
       B['arm'+i].rotation.x=-Math.sin(q)*amp*.7;B['fore'+i].rotation.x=-.15-Math.max(0,Math.sin(q))*amp*.4}
