@@ -77,9 +77,9 @@ function pollPad(dt){
     if(!pedals.length){pad.gas=Math.max(0,-dz(ax[1]||0));pad.brake=Math.max(0,dz(ax[1]||0))}
     pad.gas=Math.max(pad.gas,val(7));pad.brake=Math.max(pad.brake,val(6));
   }
-  // buttons: A / cross = jump out or get in, X / square = net, B / circle = jump, Start = map
+  // buttons: A / cross = jump out or get in, X / square = net, B / circle = jump, Y = back to zoo, LB = food (zoo), RB = ride (safari)
   const edge=i=>pressed(i)&&!pad.prev[i];
-  if(curView==='drive'&&safari.running){if(edge(0))pressE();if(edge(2))throwNet();if(edge(1))jump();if(edge(3)&&world&&world.zoo)$('#toZoo2').click()}
+  if(curView==='drive'&&safari.running){if(edge(0))pressE();if(edge(2))throwNet();if(edge(1))jump();if(edge(3)&&world&&world.zoo)$('#toZoo2').click();if(edge(4)&&world&&world.zoo)foodAction();if(edge(5)&&!(world&&world.zoo))rideToggle()}
   pad.prev=bt.map((b,i)=>pressed(i));
 }
 // a clicked button keeps the keyboard focus, so Space would press it again: give the focus back to the game
@@ -119,6 +119,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyE'){pressE();e.preventDefault()}
   if(e.code==='KeyF'){throwNet();e.preventDefault()}
   if(e.code==='KeyR'){rideToggle();e.preventDefault()}
+  if(e.code==='KeyG'){foodAction();e.preventDefault()}
   if(e.code==='Space'){e.preventDefault();jump()}
   if(e.code==='Escape')goMap()});
 addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=false});
@@ -148,6 +149,7 @@ document.querySelectorAll('[data-k]').forEach(b=>{const k=b.dataset.k;
 $('#netBtn').addEventListener('click',throwNet);
 $('#rideBtn').addEventListener('click',rideToggle);
 $('#eBtn').addEventListener('click',pressE);
+$('#foodBtn').addEventListener('click',foodAction);
 $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.pack.length)releaseLeash();show('map')}
 $('#back').onclick=goMap;

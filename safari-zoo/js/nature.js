@@ -203,6 +203,7 @@ function rockMat(col){const k='rock'+col;if(matCache[k])return matCache[k];const
 
 // a tree type = list of [geometry, material] parts; scattered later with instancing
 function treeTypes(hab){
+  if(hab==='carnivore')hab='dino';
   const r=rng(hash(hab)+1),out=[];
   const T2=(w,parts,o={})=>out.push(Object.assign({w,parts},o));
   const bark=barkMat(false),pale=barkMat(true);

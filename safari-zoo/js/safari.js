@@ -100,6 +100,7 @@ function addVolcano(scene){
   world.tick=dt=>{for(const q of world.smoke){q.t=(q.t+dt*.03)%1;const k=q.t;q.sp.position.set(vx+Math.sin(k*9)*12*k,base+hgt+k*170,vz+Math.cos(k*7)*10*k);q.sp.scale.setScalar(30+k*120);q.sp.material.opacity=1-k}};
 }
 /* ---------- the jeep ---------- */
+const TS=1.7;
 function buildCar(scene,opts={}){
   const g=new T.Group();scene.add(g);car.g=g;
   const paint=new T.MeshPhysicalMaterial({color:'#c4843a',roughness:.38,metalness:.25,clearcoat:.7,clearcoatRoughness:.2});
@@ -173,6 +174,7 @@ function buildCar(scene,opts={}){
     const P=(x,y,z,sx,sy,sz)=>{const o=new T.Mesh(SPH,skin);o.position.set(x,y,z);o.scale.set(sx,sy,sz);h.add(o)};
     P(0,0,.015,.048,.058,.042);for(let f=0;f<4;f++)P((f-1.5)*.021,.033,-.008,.0125,.024,.021);P(a>Math.PI/2?.038:-.038,-.018,.028,.017,.03,.015);
     car.hands.push(h);const arm=new T.Mesh(CY,sleeve);arm.scale.set(.05,1,.05);arm.castShadow=true;g.add(arm);const cuff=new T.Mesh(CY,skin);cuff.scale.set(.034,1,.034);g.add(cuff);car.arms.push([arm,cuff])}
+  g.scale.setScalar(TS); // a ginormous safari truck
 }
 function buildCage(cg,w=.98,h=1.1,d=1.3){
   const bar=new T.MeshStandardMaterial({color:'#3b3d40',metalness:.8,roughness:.35});
@@ -265,8 +267,8 @@ function updateAnimals(dt,time){
     if(G&&G.fleeT>0)G.fleeT-=dt/Math.max(1,G.members.length);
     if(a.state==='netted'){
       // netted animals follow you in a line, each one behind the one before
-      const i=me.pack.indexOf(a),lead=i>0?me.pack[i-1]:me,gap=i>0?2.2+a.m.rad+lead.m.rad:3.2,td=Math.hypot(lead.x-a.x,lead.z-a.z);
-      if(mode==='foot'&&td>gap){const s=Math.min(7,(td-gap+.2)*2.2);a.vx=(lead.x-a.x)/td*s;a.vz=(lead.z-a.z)/td*s}else{a.vx*=.8;a.vz*=.8}}
+      const own=me.pack.includes(a)?me:world.asst,i=own.pack.indexOf(a),lead=i>0?own.pack[i-1]:own,gap=i>0?2.2+a.m.rad+lead.m.rad:3.2,td=Math.hypot(lead.x-a.x,lead.z-a.z);
+      if((mode==='foot'||own!==me)&&td>gap){const s=Math.min(7,(td-gap+.2)*2.2);a.vx=(lead.x-a.x)/td*s;a.vz=(lead.z-a.z)/td*s}else{a.vx*=.8;a.vz*=.8}}
     else if(a.state==='caught'){a.vx=a.vz=0;a.dead=(a.dead||0)+dt;a.m.g.rotation.z=Math.min(Math.PI/2,a.dead*2.5);if(a.dead>4){removeAnimal(a);continue}}
     else if(a.state==='hunt'){
       const q=a.prey;if(!q||!world.animals.includes(q)||q.state==='caught'||q.state==='netted'||(a.huntT-=dt)<=0){a.state='rest';a.restT=6;a.vx=a.vz=0}
@@ -345,23 +347,23 @@ function updateNet(dt){
   else toast(a.state==='flee'?'Missed! It\'s too fast. Wait until it gets tired.':'Missed! Try again.');
 }
 function trailerPos(){return car.trailer.localToWorld(V(0,0,0))}
-function cageIt(){
-  if(!me.pack.length)return;
+function cageIt(own=me){
+  if(!own.pack.length)return;
   const names=[],caged=[];let coinsWon=0,fresh=false;
   const store=(a,pen)=>{if(!S.dex[a.sp.k])fresh=true;S.dex[a.sp.k]=(S.dex[a.sp.k]||0)+1;S.cages.push(pen==null?{uid:S.uid++,k:a.sp.k}:{uid:S.uid++,k:a.sp.k,pen});
     coinsWon+=VALUE[a.sp.r];names.push(a.sp.n);caged.push(a)};
   // whole herds and packs go into a big pen together
-  const groups=new Map();for(const a of me.pack)if(a.grp){if(!groups.has(a.grp))groups.set(a.grp,[]);groups.get(a.grp).push(a)}
+  const groups=new Map();for(const a of own.pack)if(a.grp){if(!groups.has(a.grp))groups.set(a.grp,[]);groups.get(a.grp).push(a)}
   for(const[g,list]of groups){if(list.length<2)continue;const used=new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen));
     let pen=-1;for(let i=0;i<PENS;i++)if(!used.has(i)){pen=i;break}if(pen<0)break;
     list.slice(0,PEN_SIZE).forEach(a=>store(a,pen))}
-  for(const a of me.pack)if(!caged.includes(a)&&smallUsed()<CAGES)store(a,null);
+  for(const a of own.pack)if(!caged.includes(a)&&smallUsed()<CAGES)store(a,null);
   if(!caged.length){toast('The cages and pens are full! Drive to the zoo to empty them.');return}
-  me.pack=me.pack.filter(a=>!caged.includes(a));
+  own.pack=own.pack.filter(a=>!caged.includes(a));
   for(const a of caged){world.scene.remove(a.net);world.scene.remove(a.rope);removeAnimal(a)}
   S.coins+=coinsWon;save();refreshCages();
   const count={};names.forEach(n=>count[n]=(count[n]||0)+1);
-  toast((fresh?'NEW ANIMAL! ':'')+Object.entries(count).map(([n,c])=>c>1?c+' '+n+'s':n).join(', ')+' in the truck · +'+coinsWon+' coins'+(me.pack.length?' · No room for '+me.pack.length+' more!':''));
+  toast((fresh?'NEW ANIMAL! ':'')+Object.entries(count).map(([n,c])=>c>1?c+' '+n+'s':n).join(', ')+' in the truck'+(own!==me?' (your assistant brought them)':'')+' · +'+coinsWon+' coins'+(own.pack.length?' · No room for '+own.pack.length+' more!':''));
 }
 function releaseLeash(){if(!me.pack.length)return;for(const a of me.pack){world.scene.remove(a.net);a.net=null;world.scene.remove(a.rope);a.rope=null;a.state='wander'}
   toast(me.pack.length>1?'Your animals wriggled out of the nets!':'The '+me.pack[0].sp.n+' wriggled out of the net!');me.pack=[]}
@@ -371,24 +373,27 @@ function pressE(){
     if(Math.abs(car.v)>3){toast('Slow down to jump out!');return}
     const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=H(me.x,me.z);me.vy=0;
     look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=true;placePets();setDriveUI();return}
-  if(me.pack.length){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<7.5){cageIt();return}}
+  if(me.pack.length){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS){cageIt();return}}
   const tp=trailerPos();
-  if(Math.hypot(me.x-car.x,me.z-car.z)<5.5||Math.hypot(me.x-tp.x,me.z-tp.z)<4){
+  if(Math.hypot(me.x-car.x,me.z-car.z)<5.5*TS||Math.hypot(me.x-tp.x,me.z-tp.z)<5*TS){
     if(me.pack.length)releaseLeash();dismount(true);mode='car';look.yaw=0;look.pitch=-.12;footRig.visible=false;setDriveUI()}
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
-function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode==='car'||!!(world&&world.zoo);rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#cross').hidden=mode==='car'}
+function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode==='car'||!!(world&&world.zoo);rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#foodBtn').hidden=!(world&&world.zoo);$('#cross').hidden=mode==='car'}
 
 /* ---------- your pet dinosaurs: they follow you, and you can ride them ---------- */
-const PET_KEYS=['dino:1','dino:0']; // Triceratops and Velociraptor
+const PET_KEYS=['dino:0']; // your Velociraptor
 function ensurePets(){
   if(world.pets||world.zoo)return;world.pets=[];
   PET_KEYS.forEach((k,i)=>{const inst=ANIMALS.make(SP[k]);world.scene.add(inst.g);
-    const tag=makeIcon();tag.material=tag.material.clone();tag.material.map=iconTex(i?'🦖':'🦕',i?'#8a2a14':'#2f6a32');tag.visible=true;tag.scale.set(1.1,1.1,1);tag.position.y=inst.h+1;inst.g.add(tag);
-    world.pets.push({sp:SP[k],inst,x:car.x,z:car.z,yaw:car.yaw,side:i?1:-1,fast:i===1,saddle:i?inst.h*.8:inst.h*1.15,tag})});
+    const tag=makeIcon();tag.material=tag.material.clone();tag.material.map=iconTex('🦖','#8a2a14');tag.visible=true;tag.scale.set(1.1,1.1,1);tag.position.y=inst.h+1;inst.g.add(tag);
+    world.pets.push({sp:SP[k],inst,x:car.x,z:car.z,yaw:car.yaw,side:-1,fast:true,saddle:inst.h*.8,tag})});
+  // your assistant comes along to help carry the animals you catch
+  const ai=ANIMALS.make(personSp('staff'));world.scene.add(ai.g);world.asst={inst:ai,x:car.x,z:car.z,yaw:0,pack:[],state:'follow'};
 }
-function placePets(){ensurePets();if(!world.pets)return;for(const p of world.pets){const q=car.g.localToWorld(V(p.side*3.5,0,-1));p.x=q.x;p.z=q.z;p.yaw=car.yaw+Math.PI}}
+function placePets(){ensurePets();if(!world.pets)return;for(const p of world.pets){const q=car.g.localToWorld(V(p.side*3.5,0,-1));p.x=q.x;p.z=q.z;p.yaw=car.yaw+Math.PI}
+  const a=world.asst;if(a&&a.state==='follow'){const q=car.g.localToWorld(V(2.6,0,-.5));a.x=q.x;a.z=q.z}}
 function rideToggle(){
   if(!safari.running)return;if(mode==='car'){toast('Jump out of the truck first, then press R to ride a dinosaur!');return}
   if(me.mount){dismount();return}
@@ -398,7 +403,22 @@ function rideToggle(){
   me.mount=p[0];p[0].tag.visible=false;me.x=p[0].x;me.z=p[0].z;toast('You jumped on your '+p[0].sp.n+'! Hold Shift to go even faster. Press R to get off.');setDriveUI();
 }
 function dismount(quiet){if(!me.mount)return;const p=me.mount;me.mount=null;p.tag.visible=true;me.x+=Math.cos(look.yaw)*2.5;me.z-=Math.sin(look.yaw)*2.5;if(!quiet)toast('You hopped off your '+p.sp.n+'.');setDriveUI()}
+function updateAssistant(dt,time){
+  const a=world.asst;if(!a)return;let tx,tz,spd=0;const tp=trailerPos();
+  if(a.state==='follow'){
+    // when you're leading animals far from the truck, your assistant comes to take them
+    if(mode==='foot'&&me.pack.length&&Math.hypot(me.x-tp.x,me.z-tp.z)>25){tx=me.x;tz=me.z;
+      if(Math.hypot(a.x-me.x,a.z-me.z)<4){a.pack=me.pack;me.pack=[];a.state='carry';toast('Your assistant took the '+(a.pack.length>1?a.pack.length+' animals':a.pack[0].sp.n)+' back to the truck. Keep catching!')}}
+    else if(mode==='foot'){tx=me.x+Math.cos(look.yaw)*3.5+Math.sin(look.yaw)*3;tz=me.z-Math.sin(look.yaw)*3.5+Math.cos(look.yaw)*3}
+    else{const q=car.g.localToWorld(V(2.6,0,-.5));a.x=q.x;a.z=q.z;a.inst.g.visible=false;return}}
+  else{tx=tp.x;tz=tp.z;if(Math.hypot(a.x-tp.x,a.z-tp.z)<7.5*TS){cageIt(a);if(a.pack.length){for(const b of a.pack){world.scene.remove(b.net);b.net=null;world.scene.remove(b.rope);b.rope=null;b.state='wander'}a.pack=[]}a.state='follow'}}
+  a.inst.g.visible=true;
+  const dx=tx-a.x,dz=tz-a.z,d=Math.hypot(dx,dz);if(d>1.5){spd=Math.min(a.state==='carry'?7:9,d*1.5);a.x+=dx/d*spd*dt;a.z+=dz/d*spd*dt;const ty=Math.atan2(dx,dz);let dy=ty-a.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));a.yaw+=dy*Math.min(1,dt*6)}
+  ANIMALS.animate(a.inst,dt,spd,time,{});a.inst.g.position.set(a.x,H(a.x,a.z),a.z);a.inst.g.rotation.y=a.yaw;
+  if(a.pack.length)ropes(a,V(a.x,H(a.x,a.z)+1.2,a.z));
+}
 function updatePets(dt,time){
+  updateAssistant(dt,time);
   if(!world.pets)return;
   world.pets.forEach((p,i)=>{
     let tx,tz,spd=0;
@@ -424,11 +444,11 @@ function updateCar(dt){
   car.yaw+=car.steer*1.05*dt*Math.min(1,Math.abs(car.v)/5)*Math.sign(car.v);
   car.x-=Math.sin(car.yaw)*car.v*dt;car.z-=Math.cos(car.yaw)*car.v*dt;
   keepIn(car);
-  if(collide(car,1.7)){if(Math.abs(car.v)>6)toast('Bump!');car.v*=-.25}
+  if(collide(car,1.7*TS)){if(Math.abs(car.v)>6)toast('Bump!');car.v*=-.25}
   const sy=Math.sin(car.yaw),cy=Math.cos(car.yaw);
-  const hf=H(car.x-sy*1.6,car.z-cy*1.6),hb=H(car.x+sy*1.6,car.z+cy*1.6),hl=H(car.x-cy,car.z+sy),hr=H(car.x+cy,car.z-sy);
+  const hf=H(car.x-sy*1.6*TS,car.z-cy*1.6*TS),hb=H(car.x+sy*1.6*TS,car.z+cy*1.6*TS),hl=H(car.x-cy*TS,car.z+sy*TS),hr=H(car.x+cy*TS,car.z-sy*TS);
   car.y=(hf+hb+hl+hr)/4;
-  const g=car.g;g.position.set(car.x,car.y+Math.sin(performance.now()*.03)*.006*Math.min(1,Math.abs(car.v)),car.z);g.rotation.set(Math.atan2(hf-hb,3.2),car.yaw,Math.atan2(hr-hl,2),'YXZ');
+  const g=car.g;g.position.set(car.x,car.y+Math.sin(performance.now()*.03)*.006*Math.min(1,Math.abs(car.v)),car.z);g.rotation.set(Math.atan2(hf-hb,3.2*TS),car.yaw,Math.atan2(hr-hl,2*TS),'YXZ');
   for(const w of car.wheels)w.rotation.x-=car.v*dt/.47;
   for(const f of car.front)f.rotation.y=car.steer*.45;
   car.sw.rotation.z=car.steer*1.6;
@@ -441,10 +461,12 @@ function updateFoot(dt){
   const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),run=keys.run||pad.run,spd=me.mount?(me.mount.fast?(run?22:16):(run?15:11)):(run?8:5.5);
   me.x-=Math.sin(look.yaw)*mv*spd*dt;me.z-=Math.cos(look.yaw)*mv*spd*dt;keepIn(me);collide(me,.5);
   const cl=o=>{const dx=me.x-o.x,dz=me.z-o.z,d=Math.hypot(dx,dz);if(d<o.r){me.x=o.x+dx/d*o.r;me.z=o.z+dz/d*o.r}};
-  cl({x:car.x,z:car.z,r:2.1});for(const z of[-3.2,-1.1,1.1,3.2]){const p=car.trailer.localToWorld(V(0,0,z));cl({x:p.x,z:p.z,r:1.5})}
+  cl({x:car.x,z:car.z,r:2.1*TS});for(const z of[-3.2,-1.1,1.1,3.2]){const p=car.trailer.localToWorld(V(0,0,z));cl({x:p.x,z:p.z,r:1.5*TS})}
   const gh=H(me.x,me.z);me.vy-=18*dt;me.y+=me.vy*dt;if(me.y<=gh){me.y=gh;me.vy=0;me.ground=true}
   if(mv&&me.ground)me.bob+=dt*spd*1.6;
-  me.pack.forEach((a,i)=>{if(!a.rope)return;const pts=a.rope.geometry.attributes.position,lead=i?me.pack[i-1]:null,hp=lead?V(lead.x,lead.m.g.position.y+lead.m.h*.5,lead.z):cam.localToWorld(V(.26,-.35,-.5));
+  ropes(me,cam.localToWorld(V(.26,-.35,-.5)));
+}
+function ropes(own,hand){own.pack.forEach((a,i)=>{if(!a.rope)return;const pts=a.rope.geometry.attributes.position,lead=i?own.pack[i-1]:null,hp=lead?V(lead.x,lead.m.g.position.y+lead.m.h*.5,lead.z):hand;
     pts.setXYZ(0,hp.x,hp.y,hp.z);pts.setXYZ(1,a.x,a.m.g.position.y+a.m.h*.6,a.z);pts.needsUpdate=true});
 }
 function placeCamera(){
@@ -480,9 +502,9 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;
-  if(world.zoo)msg=mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in';
+  if(world.zoo)msg=foodHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
-  else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
+  else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
   else msg=target?(target.dist<=16?`Press <b>F</b> to throw your net at the ${target.a.sp.n}`:`Walk closer to the ${target.a.sp.n}`):'Look at an animal · <b>F</b> net · <b>Space</b> jump · <b>E</b> by the truck to get in';
   if(pr.dataset.m!==msg){pr.innerHTML=msg;pr.dataset.m=msg}
   if((hudT++)%3)return;

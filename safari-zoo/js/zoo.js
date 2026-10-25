@@ -51,7 +51,7 @@ function buildZoo(){
   zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
     return(Math.abs(x)<ROAD+10+MEGA*2+40||x>0&&x<ULTRA.x+ULTRA.R+40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*900,z=60+rr()*300;return Math.abs(x)<110&&z<190?null:V(x,0,z)},r);
-  buildEntrance();
+  buildEntrance();buildFoodStore();
   // entrance gate
   const gate=new T.Group();gate.position.set(0,0,30);scene.add(gate);
   const stone=NATURE.rockMat('#b8a890'),wood=NATURE.barkMat(false);
@@ -66,7 +66,7 @@ function rebuildPaths(){
   const pv=zoo.pave||(zoo.pave=pavingTexture()),L=zooLayout();
   const strip=(x0,z0,x1,z1)=>{const w=Math.abs(x1-x0),d=Math.abs(z1-z0),m=pv.map.clone(),n=pv.normal.clone();m.needsUpdate=n.needsUpdate=true;m.repeat.set(w/4,d/4);n.repeat.set(w/4,d/4);
     const o=new T.Mesh(new T.PlaneGeometry(w,d),new T.MeshStandardMaterial({map:m,normalMap:n,roughness:.9}));o.rotation.x=-Math.PI/2;o.position.set((x0+x1)/2,.04,(z0+z1)/2);o.receiveShadow=true;P.add(o)};
-  strip(-ROAD,L.end,ROAD,40);strip(RIDE.x+RIDE.rx-1,RIDE.z-2.5,-ROAD,RIDE.z+2.5);
+  strip(-ROAD,L.end,ROAD,40);strip(RIDE.x+RIDE.rx-1,RIDE.z-2.5,-ROAD,RIDE.z+2.5);strip(ROAD,FOOD.z-4,FOOD.x-FOOD.D/2+1,FOOD.z+4);
   for(const d of L.list)if(d.ultra)strip(ROAD,d.z-9,d.x-d.R+2,d.z+9);else strip(d.side>0?ROAD:-ROAD-11,d.z-6,d.side>0?ROAD+11:-ROAD,d.z+6);
   const pole=new T.MeshStandardMaterial({color:'#2a2c2e',metalness:.7,roughness:.4}),glow=new T.MeshStandardMaterial({color:'#fff6d8',emissive:'#ffe8b0',emissiveIntensity:1.2});
   for(let z=20;z>L.end;z-=30)for(const sx of[-1,1]){const l=new T.Group();l.position.set(sx*(ROAD+1.2),0,z+(sx>0?15:0));
@@ -84,7 +84,7 @@ function rebuildPaths(){
 function drawMask(){
   const {g,tex}=zoo.mask,W=1024,k=W/MASK.size,X=x=>(x-MASK.x0)*k,Z=z=>(z-MASK.z0)*k,L=zooLayout();
   g.fillStyle='#fff';g.fillRect(0,0,W,W);g.fillStyle='#000';
-  g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);g.beginPath();g.ellipse(X(RIDE.x),Z(RIDE.z),(RIDE.rx+3)*k,(RIDE.rz+3)*k,0,0,7);g.fill();g.fillRect(X(RIDE.x+RIDE.rx),Z(RIDE.z-2.5),(-ROAD-RIDE.x-RIDE.rx)*k,5*k);g.fillRect(X(-75),Z(30),150*k,135*k);
+  g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);g.beginPath();g.ellipse(X(RIDE.x),Z(RIDE.z),(RIDE.rx+3)*k,(RIDE.rz+3)*k,0,0,7);g.fill();g.fillRect(X(RIDE.x+RIDE.rx),Z(RIDE.z-2.5),(-ROAD-RIDE.x-RIDE.rx)*k,5*k);g.fillRect(X(-75),Z(30),150*k,135*k);g.fillRect(X(ROAD),Z(FOOD.z-FOOD.W/2-2),(FOOD.x+FOOD.D/2+2-ROAD)*k,(FOOD.W+4)*k);
   for(const d of L.list){if(d.ultra)g.fillRect(X(ROAD),Z(d.z-10),(d.x-d.R-ROAD+3)*k,20*k);else g.fillRect(X(d.side>0?ROAD:-ROAD-12),Z(d.z-7),12*k,14*k);g.beginPath();g.arc(X(d.x),Z(d.z),(d.R+1.5)*k,0,7);g.fill()}
   tex.needsUpdate=true;
 }
@@ -114,17 +114,38 @@ function buildArea(area,i){
     const cr=new T.Mesh(new T.CircleGeometry(10,24),new T.MeshBasicMaterial({color:'#ff5a14'}));cr.rotation.x=-Math.PI/2;cr.position.set(-R0*.45,78,-R0*.4);grp.add(cr);cols.push({x:-R0*.45,z:-R0*.4,r:70})}
   const doors=buildDome(grp,R0);
   // sign beside the doorway
-  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:R0>250?signTexture(['ULTRA DINO DOME','Danger! Only with the zoo owner'],'#8a2a14'):signTexture([(i+1)+'. '+HAB[area.hab].name+' Mega Dome','Visitors only with the zoo owner']),roughness:.7}));
+  const st=new T.Mesh(new T.PlaneGeometry(8,2.5),new T.MeshStandardMaterial({map:R0>250?signTexture(['ULTRA DINO DOME','Danger! Only with the zoo owner'],'#8a2a14'):area.hab==='carnivore'?signTexture([(i+1)+'. CARNIVORE DINO DOME','Danger! Meat eaters! Only with the owner'],'#8a2a14'):signTexture([(i+1)+'. '+HAB[area.hab].name+' Mega Dome','Visitors only with the zoo owner']),roughness:.7}));
   st.position.set(13,2.6,R0+3);st.rotation.y=-.25;grp.add(st);
   const bw=NATURE.barkMat(false);for(const sd of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.25,3.2,.25),bw);p.position.set(13+sd*3.4,1.6,R0+3-sd*.85);p.castShadow=true;grp.add(p)}
   // the glass wall is solid except for the doorway; pond and trees block the truck too
   const da=doorAng(R0);
   for(let a=0;a<Math.PI*2;a+=1.8/R0){const d=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(d)<da)continue;cols.push({x:Math.sin(a)*R0,z:Math.cos(a)*R0,r:1})}
   cols.push({x:px,z:pz,r:pr});
+  const house=buildHouse(grp,R0,cols);
   grp.updateMatrixWorld(true);const W=(lx,lz)=>{const v=grp.localToWorld(V(lx,0,lz));return{x:v.x,z:v.z}};
   zoo.areas.set(area.id,{grp,area,x,z,R0,side,doors,open:0,cols:cols.map(c=>Object.assign(W(c.x,c.z),{r:c.r})),
-    pond:Object.assign(W(px,pz),{r:pr}),door:W(0,R0),inside:W(0,R0-16)});
+    pond:Object.assign(W(px,pz),{r:pr}),door:W(0,R0),inside:W(0,R0-16),house,food:[]});
 }
+// the animal house: a big barn inside the dome with an open front, where animals shelter and mums have their babies
+function buildHouse(grp,R0,cols){
+  const big=R0>250,r=Math.min(R0*.3,big?75:45),D=big?30:18,W=big?44:26,Ht=big?24:12,hx=-r*.66,hz=R0-r-22;
+  const wall=new T.MeshStandardMaterial({color:'#8a5a34',roughness:.9}),roofM=new T.MeshStandardMaterial({color:'#5a2a1c',roughness:.75}),straw=new T.MeshStandardMaterial({color:'#c8a85a',roughness:1});
+  const g=new T.Group();g.position.set(hx,0,hz);grp.add(g);
+  const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o)};
+  box(wall,-D/2,Ht/2,0,.6,Ht,W);for(const sd of[-1,1])box(wall,0,Ht/2,sd*W/2,D,Ht,.6);
+  for(const sd of[-1,1])box(wall,D/2,Ht/2,sd*(W/2-1.2),.8,Ht,2.4);
+  box(wall,D/2,Ht-1,0,.8,2,W);
+  const rs=new T.Shape();rs.moveTo(-W/2-1.5,0);rs.lineTo(W/2+1.5,0);rs.lineTo(0,W*.28);rs.closePath();
+  const rg=new T.ExtrudeGeometry(rs,{depth:D+2,bevelEnabled:false});rg.translate(0,0,-(D+2)/2);rg.rotateY(Math.PI/2);
+  const roof=new T.Mesh(rg,roofM);roof.position.y=Ht;roof.castShadow=true;g.add(roof);
+  const fl=new T.Mesh(new T.PlaneGeometry(D-1,W-1),straw);fl.rotation.x=-Math.PI/2;fl.position.y=.09;fl.receiveShadow=true;g.add(fl);
+  const st=new T.Mesh(new T.PlaneGeometry(big?10:6,big?3:1.8),new T.MeshStandardMaterial({map:signTexture(['ANIMAL HOUSE'],'#4a3020'),roughness:.7}));st.position.set(D/2+.45,Ht-1,0);st.rotation.y=Math.PI/2;g.add(st);
+  for(let z=-W/2;z<=W/2;z+=1.8)cols.push({x:hx-D/2,z:hz+z,r:1});
+  for(const sd of[-1,1]){for(let x=-D/2;x<=D/2;x+=1.8)cols.push({x:hx+x,z:hz+sd*W/2,r:1});cols.push({x:hx+D/2,z:hz+sd*(W/2-1.2),r:1.4})}
+  return{g,D,W}
+}
+// a spot inside the animal house
+function houseSpot(A,r=Math.random){const h=A.house,v=h.g.localToWorld(V((r()-.5)*(h.D-5),0,(r()-.5)*(h.W-5)));return{x:v.x,z:v.z}}
 const domeCache={};
 function domeGeometry(R){
   if(domeCache[R])return domeCache[R];
@@ -167,9 +188,17 @@ function buildDome(grp,R){
 function syncZooAnimals(){
   for(const a of zoo.animals)zoo.scene.remove(a.inst.g);zoo.animals=[];
   for(const area of S.areas){const A=zoo.areas.get(area.id);if(!A)continue;
-    for(const an of area.animals){const sp=SP[an.k],inst=ANIMALS.make(sp),r=rng(an.uid*13);
-      const p=randomSpot(A,r);const o={an,A,inst,x:p.x,z:p.z,tx:p.x,tz:p.z,yaw:r()*6.28,t:r()*3};
-      inst.g.position.set(o.x,0,o.z);zoo.scene.add(inst.g);zoo.animals.push(o)}}
+    for(const an of area.animals){const r=rng(an.uid*13),p=an.preg?houseSpot(A,r):randomSpot(A,r);addZooAnimal(an,A,p.x,p.z,r()*6.28)}}
+}
+function addZooAnimal(an,A,x,z,yaw){const inst=ANIMALS.make(SP[an.k]),o={an,A,inst,x,z,tx:x,tz:z,yaw,t:Math.random()*3};inst.g.position.set(x,0,z);zoo.scene.add(inst.g);zoo.animals.push(o);return o}
+// what an animal eats: meat for hunters, hay for everyone else
+const eats=sp=>sp.def.hunts||sp.hab==='carnivore'?'meat':'hay';
+// where an animal wants to go next: food, the house, or somewhere near the gate
+function nextSpot(o){
+  const pile=o.A.food.find(f=>f.type===eats(SP[o.an.k]));
+  if(pile){const a=(o.an.uid*2.4)%6.28,d=pile.r+1+SP[o.an.k].def.L*.6||3;return{x:pile.x+Math.sin(a)*d,z:pile.z+Math.cos(a)*d,pile}}
+  if(o.an.preg||Math.random()<.18)return houseSpot(o.A);
+  return randomSpot(o.A);
 }
 function homeOf(A){const r=Math.min(A.R0*.3,A.R0>250?75:45),k=(A.R0-r-22)/A.R0;return{x:A.x+(A.door.x-A.x)*k,z:A.z+(A.door.z-A.z)*k,r}}
 function randomSpot(A,r=Math.random){const h=homeOf(A);for(let i=0;i<30;i++){const a=r()*6.28,d=Math.sqrt(r())*h.r,x=h.x+Math.sin(a)*d,z=h.z+Math.cos(a)*d;if(Math.hypot(x-A.pond.x,z-A.pond.z)<A.pond.r+2)continue;return{x,z}}return{x:h.x,z:h.z}}
@@ -181,13 +210,15 @@ function updateZooAnimals(dt,time){
     const dx=o.tx-o.x,dz=o.tz-o.z,d=Math.hypot(dx,dz);let spd=0;
     if(d>.4){spd=Math.min(SP[o.an.k].s*(driving&&o.t===2?1.4:.55),d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
       const ty=Math.atan2(dx,dz);let dy=ty-o.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.yaw+=dy*Math.min(1,dt*4)}
-    else{o.t-=dt;if(o.t<=0){o.t=3+Math.random()*6;const p=randomSpot(o.A);o.tx=p.x;o.tz=p.z}}
+    else{o.t-=dt;if(o.pile&&o.pile.left>0){o.pile.left-=dt;o.t=Math.max(o.t,.5)}
+      if(o.t<=0){o.t=3+Math.random()*6;const p=nextSpot(o);o.tx=p.x;o.tz=p.z;o.pile=p.pile||null}}
+    if(o.pile&&o.pile.left<=0)o.pile=null;
     const far=Math.hypot(o.x-cam.position.x,o.z-cam.position.z)>110;if(far!==o.far){o.far=far;ANIMALS.setLOD(o.inst,far)}
-    ANIMALS.animate(o.inst,dt,spd,time,{graze:spd<.1&&Math.sin(time*.3+o.an.uid)>.3});
+    ANIMALS.animate(o.inst,dt,spd,time,{graze:spd<.1&&(!!o.pile||Math.sin(time*.3+o.an.uid)>.3)});
     o.inst.g.position.set(o.x,.06+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
     if(o.an.born){const g=Math.min(1,(Date.now()-o.an.born)/GROW);o.inst.g.scale.setScalar(.35+.65*g);if(g>=1)delete o.an.born}
   }
-  breed(dt);
+  breed(dt);updateFood(dt);
 }
 
 /* ---------- camera you can fly around ---------- */
@@ -455,12 +486,12 @@ function buildFence(L){
 /* ---------- eggs and babies ---------- */
 const eggMeshes=new Map();
 function eggMesh(e,A){
-  const g=new T.Group(),r=rng(e.uid*31),sp=SP[e.k],big=sp.hab==='dino'?2.2:1;
+  const g=new T.Group(),r=rng(e.uid*31),sp=SP[e.k],big=sp.hab==='dino'||sp.hab==='carnivore'?2.2:1;
   const nest=new T.Mesh(new T.TorusGeometry(.55*big,.22*big,8,20),new T.MeshStandardMaterial({color:'#7a5a32',roughness:1}));nest.rotation.x=-Math.PI/2;nest.position.y=.15*big;nest.scale.z=.6;g.add(nest);
-  const [c,cg]=NATURE.canvas(64);cg.fillStyle=sp.hab==='dino'?'#e8dcc0':'#f4efe4';cg.fillRect(0,0,64,64);cg.fillStyle='rgba(120,90,60,.5)';for(let i=0;i<30;i++){cg.beginPath();cg.arc(r()*64,r()*64,1+r()*3,0,7);cg.fill()}
+  const [c,cg]=NATURE.canvas(64);cg.fillStyle=big>1?'#e8dcc0':'#f4efe4';cg.fillRect(0,0,64,64);cg.fillStyle='rgba(120,90,60,.5)';for(let i=0;i<30;i++){cg.beginPath();cg.arc(r()*64,r()*64,1+r()*3,0,7);cg.fill()}
   const em=new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.5});
   const n=1+Math.floor(r()*3);for(let i=0;i<n;i++){const egg=new T.Mesh(new T.SphereGeometry(.22*big,14,10),em);egg.scale.set(1,1.3,1);egg.position.set((i-(n-1)/2)*.32*big,.32*big,(r()-.5)*.2);egg.castShadow=true;g.add(egg)}
-  const p=randomSpot(A,r);g.position.set(p.x,0,p.z);zoo.scene.add(g);return g;
+  const p=houseSpot(A,r);g.position.set(p.x,0,p.z);zoo.scene.add(g);return g;
 }
 function syncEggs(){
   for(const m of eggMeshes.values())zoo.scene.remove(m);eggMeshes.clear();
@@ -471,15 +502,21 @@ function breed(dt){
   // eggs hatch
   for(const a of S.areas)for(const e of a.eggs.slice())if(now>=e.hatch){a.eggs.splice(a.eggs.indexOf(e),1);a.animals.push({uid:S.uid++,k:e.k,born:now});changed=true;
     const m=eggMeshes.get(e.uid);if(m){zoo.scene.remove(m);eggMeshes.delete(e.uid)}toast('🐣 A baby '+SP[e.k].n+' hatched!')}
+  // mums go into the animal house and have their babies there
+  for(const a of S.areas)for(const an of a.animals.slice())if(an.preg&&now>=an.preg){delete an.preg;const b={uid:S.uid++,k:an.k,born:now};a.animals.push(b);
+    const A=zoo.areas.get(a.id),mum=zoo.animals.find(o=>o.an===an);if(A){const p=mum?{x:mum.x+1.5,z:mum.z}:houseSpot(A);addZooAnimal(b,A,p.x,p.z,Math.random()*6.28)}
+    save();if(curView==='zoo')renderZooUI();toast('🍼 A baby '+SP[an.k].n+' was born in the animal house!')}
   zoo.breedT=(zoo.breedT??45)-dt;
   if(zoo.breedT<=0){zoo.breedT=75;
     for(const a of S.areas){const A=zoo.areas.get(a.id);if(!A)continue;
       const grown={};for(const an of a.animals)if(!an.born)grown[an.k]=(grown[an.k]||0)+1;
-      const total={};for(const an of a.animals)total[an.k]=(total[an.k]||0)+1;for(const e of a.eggs)total[e.k]=(total[e.k]||0)+1;
+      const total={};for(const an of a.animals)total[an.k]=(total[an.k]||0)+(an.preg?2:1);for(const e of a.eggs)total[e.k]=(total[e.k]||0)+1;
       const ks=Object.keys(grown).filter(k=>grown[k]>=2&&total[k]<10);if(!ks.length||Math.random()>.3)continue;
       const k=ks[Math.floor(Math.random()*ks.length)],sp=SP[k];
       if(laysEggs(sp)){const e={uid:S.uid++,k,hatch:now+90000};a.eggs.push(e);eggMeshes.set(e.uid,eggMesh(e,A));toast('🥚 The '+sp.n+'s laid an egg in the '+HAB[a.hab].name+' dome! It will hatch soon.')}
-      else{a.animals.push({uid:S.uid++,k,born:now});changed=true;toast('🍼 A baby '+sp.n+' was born in the '+HAB[a.hab].name+' dome!')}
+      else{const mum=a.animals.find(x=>x.k===k&&!x.born&&!x.preg);if(!mum||a.animals.some(x=>x.k===k&&x.preg))continue;mum.preg=now+60000;save();
+        const o=zoo.animals.find(o=>o.an===mum);if(o){const p=houseSpot(A);o.tx=p.x;o.tz=p.z;o.t=99;o.pile=null}
+        toast('🤰 A '+sp.n+' is going to have a baby! She has gone into the animal house in the '+HAB[a.hab].name+' dome.')}
       break}}
   if(changed){save();syncZooAnimals();if(curView==='zoo')renderZooUI()}
   else if(zoo.breedT===75)save();
@@ -497,7 +534,7 @@ function buildRideArea(){
   const rg=new T.BoxGeometry(1,.1,.07),rim=new T.InstancedMesh(rg,wood,posts.length*2);let j=0;
   for(let i=0;i<posts.length-1;i++){const[a,b]=posts[i],[c,d]=posts[i+1];if(Math.hypot(c-a,d-b)>5)continue;for(const y of[.7,1.4]){m4.compose(V((a+c)/2,y,(b+d)/2),new T.Quaternion().setFromAxisAngle(V(0,1,0),Math.atan2(-(d-b),c-a)),V(Math.hypot(c-a,d-b),1,1));rim.setMatrixAt(j++,m4)}}
   rim.count=j;rim.castShadow=true;g.add(rim);
-  const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['TRICERATOPS RIDES',RIDE.fee+' coins per rider'],'#2f6a32'),roughness:.7,side:T.DoubleSide}));
+  const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['BABY TRICERATOPS RIDES',RIDE.fee+' coins per rider'],'#2f6a32'),roughness:.7,side:T.DoubleSide}));
   st.position.set(RIDE.x+RIDE.rx-6,3,RIDE.z+RIDE.rz+4);g.add(st);
   for(const sd of[-1,1]){const p=new T.Mesh(new T.BoxGeometry(.25,3.6,.25),wood);p.position.set(RIDE.x+RIDE.rx-6+sd*4.3,1.8,RIDE.z+RIDE.rz+4);p.castShadow=true;g.add(p)}
 }
@@ -506,10 +543,11 @@ function syncRides(){
   for(const t of zoo.rides||[])zoo.scene.remove(t.inst.g);zoo.rides=[];
   const owned=S.areas.some(a=>a.animals.some(x=>x.k==='dino:1'))||S.cages.some(x=>x.k==='dino:1');
   if(!owned){if(!zoo.rideNote){toast('Catch a Triceratops in the 🦖 Dino Zone to open Triceratops Rides!');zoo.rideNote=1}return}
-  for(let i=0;i<3;i++){const inst=ANIMALS.make(SP['dino:1']);zoo.scene.add(inst.g);
-    // two visitors sit on its back
-    const riders=[];for(const z of[.3,-.9]){const r=ANIMALS.make(personSp((i*2+(z>0?0:1))%LOOKS.length));seat(r);r.g.position.set(0,inst.h*.92-.95*LOOKS[(i*2+(z>0?0:1))%LOOKS.length].s,z-.6);inst.inner.add(r.g);riders.push(r)}
-    zoo.rides.push({inst,a:i*Math.PI*2/3,riders,laps:0})}
+  // only baby triceratops give rides: one visitor sits on each little one's back
+  const BS=.6;
+  for(let i=0;i<4;i++){const inst=ANIMALS.make(SP['dino:1']);inst.g.scale.setScalar(BS);zoo.scene.add(inst.g);
+    const look=(i*3+1)%LOOKS.length,r=ANIMALS.make(personSp(look));seat(r);r.g.scale.setScalar(1/BS);r.g.position.set(0,inst.h*.92-.95*LOOKS[look].s/BS,-.6);inst.inner.add(r.g);
+    zoo.rides.push({inst,a:i*Math.PI/2,riders:[r],laps:0})}
   // baby triceratops play in the middle
   for(let i=0;i<2;i++){const inst=ANIMALS.make(SP['dino:1']);inst.g.scale.setScalar(.4);zoo.scene.add(inst.g);zoo.rides.push({inst,baby:1,x:RIDE.x-10+i*20,z:RIDE.z,tx:RIDE.x,tz:RIDE.z,t:0,yaw:0})}
 }
@@ -520,9 +558,80 @@ function updateRides(dt,time){
       if(d>.5){spd=1.2;t.x+=dx/d*spd*dt;t.z+=dz/d*spd*dt;t.yaw=Math.atan2(dx,dz)}else if((t.t-=dt)<=0){t.t=3+Math.random()*4;t.tx=RIDE.x+(Math.random()-.5)*RIDE.rx;t.tz=RIDE.z+(Math.random()-.5)*RIDE.rz*.6}
       ANIMALS.animate(t.inst,dt,spd,time,{});t.inst.g.position.set(t.x,.05,t.z);t.inst.g.rotation.y=t.yaw;continue}
     const prev=t.a;t.a+=dt*1.6/((RIDE.rx+RIDE.rz)*.5);
-    if(Math.floor(t.a/(Math.PI*2))>Math.floor(prev/(Math.PI*2))){const fee=RIDE.fee*t.riders.length;S.coins+=fee;save();coins();t.laps++;if(curView==='zoo')toast('🦕 Triceratops ride finished! '+t.riders.length+' riders paid '+fee+' coins')}
+    if(Math.floor(t.a/(Math.PI*2))>Math.floor(prev/(Math.PI*2))){const fee=RIDE.fee*t.riders.length;S.coins+=fee;save();coins();t.laps++;if(curView==='zoo')toast('🦕 Baby Triceratops ride finished! '+t.riders.length+' riders paid '+fee+' coins')}
     const x=RIDE.x+Math.cos(t.a)*(RIDE.rx-6),z=RIDE.z+Math.sin(t.a)*(RIDE.rz-4),vx=-Math.sin(t.a)*(RIDE.rx-6),vz=Math.cos(t.a)*(RIDE.rz-4);
     ANIMALS.animate(t.inst,dt,1.6,time,{});t.inst.g.position.set(x,.05,z);t.inst.g.rotation.y=Math.atan2(vx,vz);
     for(const r of t.riders)r.B.head.rotation.y=Math.sin(time*.9+r.seed)*.6;
   }
+}
+
+/* ---------- the Food Store: only you can go in, load food into your truck and feed the animals ---------- */
+const FOOD={x:62,z:5,D:22,W:30,max:3};
+function buildFoodStore(){
+  const g=new T.Group();g.position.set(FOOD.x,0,FOOD.z);zoo.scene.add(g);
+  const wall=new T.MeshStandardMaterial({color:'#9aa4a8',roughness:.6,metalness:.3}),roofM=new T.MeshStandardMaterial({color:'#4a5a62',roughness:.5,metalness:.5}),floor=new T.MeshStandardMaterial({color:'#8a8a84',roughness:.9});
+  const {D,W}=FOOD,Ht=9;
+  const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o);return o};
+  box(floor,0,.05,0,D,.1,W);box(wall,D/2,Ht/2,0,.5,Ht,W);for(const sd of[-1,1])box(wall,0,Ht/2,sd*W/2,D,Ht,.5);
+  for(const sd of[-1,1])box(wall,-D/2,Ht/2,sd*(W/2-4),.5,Ht,8);box(wall,-D/2,Ht-1,0,.5,2,W);box(roofM,0,Ht+.2,0,D+1.5,.4,W+1.5);
+  // meat in the cold room on one side, hay bales on the other
+  const meat=new T.MeshStandardMaterial({color:'#9a2a22',roughness:.5}),hay=new T.MeshStandardMaterial({color:'#d8b860',roughness:1}),crate=new T.MeshStandardMaterial({color:'#6a4a2a',roughness:.9});
+  for(let i=0;i<5;i++)for(let j=0;j<2;j++){box(crate,D/2-2-j*2.2,.6,-W/2+3+i*2.4,1.8,1.1,1.8);const m=box(meat,D/2-2-j*2.2,1.3,-W/2+3+i*2.4,1.3,.4,1.3)}
+  for(let i=0;i<5;i++)for(let j=0;j<2;j++){const b=new T.Mesh(new T.CylinderGeometry(.9,.9,1.6,16),hay);b.rotation.z=Math.PI/2;b.position.set(D/2-2-j*2.2,.9,W/2-3-i*2.4);b.castShadow=true;g.add(b)}
+  const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['FOOD STORE','Zoo owner only - press G'],'#8a2a14'),roughness:.7}));st.position.set(-D/2-.3,Ht-1,0);st.rotation.y=-Math.PI/2;g.add(st);
+  for(let z=-W/2;z<=W/2;z+=1.8)zoo.cols.push({x:FOOD.x+D/2,z:FOOD.z+z,r:1});
+  for(const sd of[-1,1]){for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:FOOD.x+x,z:FOOD.z+sd*W/2,r:1});for(let z=0;z<=8;z+=1.8)zoo.cols.push({x:FOOD.x-D/2,z:FOOD.z+sd*(W/2-z),r:1})}
+  for(let z=-W/2+3;z<=W/2-3;z+=2.4)zoo.cols.push({x:FOOD.x+D/2-3,z:FOOD.z+z,r:1.6});
+  zoo.foodStore=g;
+}
+function truckFood(){return S.food||(S.food={meat:0,hay:0})}
+function nearStore(){return Math.abs(car.x-FOOD.x)<FOOD.D/2+12&&Math.abs(car.z-FOOD.z)<FOOD.W/2+4}
+function domeAt(x,z){return[...zoo.areas.values()].find(a=>Math.hypot(x-a.x,z-a.z)<a.R0-3)||null}
+// G: load food at the store, or drop food in the dome you are in
+function foodAction(){
+  if(!(world&&world.zoo))return;const f=truckFood();
+  if(nearStore()){if(f.meat>=FOOD.max&&f.hay>=FOOD.max){toast('Your truck is full of food! Drive it to a dome and press G to feed the animals.');return}
+    f.meat=FOOD.max;f.hay=FOOD.max;save();showFood();toast('🥩🌾 Loaded '+FOOD.max+' crates of meat and '+FOOD.max+' bales of hay onto your truck! Take them to the domes and press G.');return}
+  const A=domeAt(car.x,car.z);
+  if(!A){toast(f.meat+f.hay?'Drive into a dome, then press G to feed the animals':'Drive to the 🥩 Food Store (right of the gate) and press G to load food');return}
+  const need=[...new Set(A.area.animals.map(an=>eats(SP[an.k])))];
+  if(!need.length){toast('There are no animals in this dome to feed');return}
+  const type=need.find(t=>f[t]>0&&!A.food.some(p=>p.type===t))||need.find(t=>f[t]>0);
+  if(!type){toast('You have no '+need.map(t=>t==='meat'?'🥩 meat':'🌾 hay').join(' or ')+' left! Go back to the Food Store.');return}
+  f[type]--;save();showFood();
+  const p=car.g.localToWorld(V(4,0,0)),pile=dropPile(A,type,p.x,p.z);
+  for(const o of zoo.animals)if(o.A===A&&!o.an.preg&&eats(SP[o.an.k])===type){const s=nextSpot(o);o.tx=s.x;o.tz=s.z;o.pile=s.pile||null;o.t=0}
+  const who=[...new Set(A.area.animals.filter(an=>eats(SP[an.k])===type).map(an=>SP[an.k].n))].slice(0,3).join(', ');
+  toast((type==='meat'?'🥩 Feeding time! Here come the ':'🌾 Fresh hay for the ')+who+'!');
+}
+function dropPile(A,type,x,z){
+  const g=new T.Group(),big=A.R0>250||A.area.hab==='carnivore'?1.8:1,r=1.6*big;
+  if(type==='meat'){const m=new T.MeshStandardMaterial({color:'#9a2a22',roughness:.45}),bone=new T.MeshStandardMaterial({color:'#efe6d0',roughness:.6});
+    for(let i=0;i<6;i++){const c=new T.Mesh(new T.SphereGeometry(.45*big,10,8),m);c.scale.set(1.4,.6,1);c.position.set((Math.random()-.5)*r,.25*big,(Math.random()-.5)*r);c.rotation.y=Math.random()*3;c.castShadow=true;g.add(c);
+      const b=new T.Mesh(new T.CylinderGeometry(.07*big,.07*big,1.2*big,6),bone);b.rotation.z=Math.PI/2;b.position.copy(c.position);b.position.y+=.15*big;b.rotation.y=c.rotation.y;g.add(b)}}
+  else{const m=new T.MeshStandardMaterial({color:'#d8b860',roughness:1});for(let i=0;i<5;i++){const h=new T.Mesh(new T.SphereGeometry(.8*big,10,8),m);h.scale.set(1,.45,1);h.position.set((Math.random()-.5)*r,.3*big,(Math.random()-.5)*r);h.castShadow=true;g.add(h)}}
+  g.position.set(x,.05,z);zoo.scene.add(g);
+  const pile={type,x,z,r,g,left:40,full:40};A.food.push(pile);return pile;
+}
+function updateFood(dt){
+  for(const A of zoo.areas.values())for(const p of A.food.slice()){p.g.scale.setScalar(Math.max(.15,p.left/p.full));
+    if(p.left<=0){zoo.scene.remove(p.g);A.food.splice(A.food.indexOf(p),1);S.coins+=100;save();coins();
+      toast((p.type==='meat'?'🍖 The meat is all gone! ':'🌾 The hay is all eaten! ')+'Visitors loved feeding time: +100 coins')}}
+  if(world&&world.zoo&&car.g)showFood();
+}
+// food crates ride on the roof rack of your truck
+function showFood(){
+  if(!car.g)return;const f=truckFood(),key=f.meat+','+f.hay;
+  if(car.rack&&car.rack.parent===car.g&&car.rack.userData.key===key)return;
+  if(car.rack)car.rack.parent&&car.rack.parent.remove(car.rack);
+  const g=new T.Group();g.userData.key=key;car.rack=g;car.g.add(g);
+  const meat=new T.MeshStandardMaterial({color:'#9a2a22',roughness:.5}),hay=new T.MeshStandardMaterial({color:'#d8b860',roughness:1}),crate=new T.MeshStandardMaterial({color:'#6a4a2a',roughness:.9});
+  for(let i=0;i<f.meat;i++){const c=new T.Mesh(new T.BoxGeometry(.5,.32,.5),crate);c.position.set(-.55+i*.55,2.95,.15);c.castShadow=true;g.add(c);const m=new T.Mesh(new T.BoxGeometry(.38,.1,.38),meat);m.position.set(-.55+i*.55,3.15,.15);g.add(m)}
+  for(let i=0;i<f.hay;i++){const b=new T.Mesh(new T.BoxGeometry(.5,.36,.55),hay);b.position.set(-.55+i*.55,2.97,1.05);b.castShadow=true;g.add(b)}
+}
+function foodHint(){
+  if(nearStore())return'<b>G</b> load food into your truck at the Food Store';
+  const f=truckFood(),A=domeAt(car.x,car.z);
+  if(A&&f.meat+f.hay)return'<b>G</b> drop food for the animals ('+f.meat+' 🥩 '+f.hay+' 🌾)';
+  return'';
 }

@@ -18,7 +18,8 @@ const HAB={
   woodland:{name:'Woodland',c:'#5e8f47',i:'🌲'},
   outback:{name:'Outback',c:'#dc8645',i:'🌵'},
   polar:{name:'Polar Ice',c:'#d6eef9',i:'🧊'},
-  dino:{name:'Dino Zone',c:'#5a7a3a',i:'🦖'},
+  dino:{name:'Dino Zone',c:'#5a7a3a',i:'🦕'},
+  carnivore:{name:'Carnivore Dino Zone',c:'#7a3a2a',i:'🦖'},
 };
 // how each habitat looks in 3D
 const ENV={
@@ -106,21 +107,22 @@ const CONT=[
   ]},
  {id:'dino',name:'🦖 Dino Zone',place:'Dinosaur island with a volcano',hab:'dino',deco:['🦖','🌋','🦕'],
   animals:[
-   ['Velociraptor','🦖',1,2.6,{hunts:['Parasaurolophus'],herd:[10,12],plan:'theropod',hip:.95,L:1.6,W:.42,Hb:.55,neck:.5,neckW:.13,headL:.48,headW:.18,headH:.2,tail:1.8,arm:.55,legW:.1,col:'#8a6a42',col2:'#3a2a18',belly:'#d8c8a0',tex:'stripes',freq:9,thin:.35,raptor:1}],
+   ['Velociraptor','🦖',1,2.6,{home:'carnivore',hunts:['Parasaurolophus'],herd:[10,12],plan:'theropod',hip:.95,L:1.6,W:.42,Hb:.55,neck:.5,neckW:.13,headL:.48,headW:.18,headH:.2,tail:1.8,arm:.55,legW:.1,col:'#8a6a42',col2:'#3a2a18',belly:'#d8c8a0',tex:'stripes',freq:9,thin:.35,raptor:1}],
    ['Triceratops','🦕',1,1.4,{herd:[3,4],L:4.4,W:2,Hb:2,leg:1.1,legW:.3,neck:.3,neckW:.7,neckAng:1.35,headL:1.6,headW:.9,headH:.9,hp:.45,col:'#7a6a4a',col2:'#a8703a',belly:'#a89878',tri:1,ears:'none',tail:'dino',tl:2.6,scaly:1,graze:1,nose:'#5a4a38'}],
    ['Stegosaurus','🦕',1,1.2,{herd:[2,3],L:4.4,W:1.5,Hb:2,leg:1.25,legW:.27,neck:.6,neckW:.38,neckAng:1.5,headL:.6,headW:.28,headH:.3,hp:.6,col:'#6a7a4a',col2:'#b0583a',belly:'#a8a888',plates:1,ears:'none',tail:'dino',tl:3,scaly:1,graze:1}],
    ['Pteranodon','🦅',2,1.5,{herd:[2,3],plan:'bird',s:1.3,body:'#8a6a4a',wing:'#7a5a3a',head:'#8a6a4a',beak:'#d8c8a0',beakL:2.4,leg:.35,neck:.35,fly:1,crest:1,tailL:.1,legCol:'#5a4a3a'}],
    ['Brachiosaurus','🦕',2,1.2,{herd:[2,3],L:5,W:2.2,Hb:2.6,leg:3,legW:.42,neck:6.5,neckW:.5,neckAng:.32,headL:1,headW:.45,headH:.5,hp:.6,col:'#7a8070',belly:'#a8ab98',ears:'none',tail:'dino',tl:5,scaly:1,hoof:'#5a5a50'}],
    ['Parasaurolophus','🦕',1,1.4,{herd:[4,6],L:3.4,W:1.15,Hb:1.5,leg:1.5,legW:.24,neck:1.1,neckW:.32,neckAng:.65,headL:.8,headW:.3,headH:.34,hp:.55,col:'#7a8a5a',col2:'#4a5a3a',belly:'#c8c8a0',tex:'stripes',freq:3,thin:.6,ears:'none',tail:'dino',tl:3,scaly:1,graze:1,crestTube:1}],
    ['Ankylosaurus','🦕',2,1,{herd:[1,2],L:4.2,W:2.3,Hb:1.4,leg:.75,legW:.3,neck:.3,neckW:.6,neckAng:1.45,headL:.7,headW:.6,headH:.45,hp:.4,col:'#7a6a50',col2:'#5a4a38',belly:'#a89878',tex:'spots',ears:'none',tail:'dino',tl:3,scaly:1,armor:1,club:1}],
-   ['Dilophosaurus','🦖',2,2.2,{hunts:['Parasaurolophus'],herd:[2,3],plan:'theropod',hip:1.35,L:2.2,W:.6,Hb:.8,neck:.8,neckW:.18,headL:.6,headW:.24,headH:.26,tail:2.6,arm:.6,legW:.16,col:'#7a7a3a',col2:'#2a4a6a',belly:'#d8d0a0',tex:'stripes',freq:7,thin:.4,dcrest:1}],
-   ['Spinosaurus','🦖',2,2,{hunts:['Velociraptor','Triceratops','Stegosaurus','Brachiosaurus','Parasaurolophus','Ankylosaurus','Dilophosaurus','Diplodocus'],plan:'theropod',hip:2.6,L:4.6,W:1.3,Hb:1.7,neck:1.2,neckW:.42,headL:1.7,headW:.5,headH:.5,tail:5,arm:1.2,legW:.36,col:'#6a5a48',col2:'#a84a2a',belly:'#b8a888',sail:1}],
-   ['T-Rex','🦖',3,2.2,{hunts:['Velociraptor','Triceratops','Stegosaurus','Brachiosaurus','Parasaurolophus','Ankylosaurus','Dilophosaurus','Diplodocus','Spinosaurus'],plan:'theropod',hip:3,L:4.2,W:1.6,Hb:1.9,neck:1,neckW:.55,headL:1.5,headW:.8,headH:.9,tail:5.5,arm:.8,legW:.45,col:'#5a5040',col2:'#3a3428',belly:'#a89878',tex:'stripes',freq:4,thin:.55,chase:1}],
+   ['Dilophosaurus','🦖',2,2.2,{home:'carnivore',hunts:['Parasaurolophus'],herd:[2,3],plan:'theropod',hip:1.35,L:2.2,W:.6,Hb:.8,neck:.8,neckW:.18,headL:.6,headW:.24,headH:.26,tail:2.6,arm:.6,legW:.16,col:'#7a7a3a',col2:'#2a4a6a',belly:'#d8d0a0',tex:'stripes',freq:7,thin:.4,dcrest:1}],
+   ['Spinosaurus','🦖',2,2,{home:'carnivore',hunts:['Velociraptor','Triceratops','Stegosaurus','Brachiosaurus','Parasaurolophus','Ankylosaurus','Dilophosaurus','Diplodocus'],plan:'theropod',hip:2.6,L:4.6,W:1.3,Hb:1.7,neck:1.2,neckW:.42,headL:1.7,headW:.5,headH:.5,tail:5,arm:1.2,legW:.36,col:'#6a5a48',col2:'#a84a2a',belly:'#b8a888',sail:1}],
+   ['T-Rex','🦖',3,2.2,{home:'carnivore',hunts:['Velociraptor','Triceratops','Stegosaurus','Brachiosaurus','Parasaurolophus','Ankylosaurus','Dilophosaurus','Diplodocus','Spinosaurus'],plan:'theropod',hip:3,L:4.2,W:1.6,Hb:1.9,neck:1,neckW:.55,headL:1.5,headW:.8,headH:.9,tail:5.5,arm:.8,legW:.45,col:'#5a5040',col2:'#3a3428',belly:'#a89878',tex:'stripes',freq:4,thin:.55,chase:1}],
    ['Diplodocus','🦕',2,1.1,{herd:[2,3],L:6,W:2.1,Hb:2.3,leg:2.5,legW:.4,neck:7.5,neckW:.45,neckAng:1.0,headL:.8,headW:.32,headH:.34,hp:.25,col:'#8a8a72',col2:'#6a6a58',belly:'#b8b8a0',tex:'stripes',freq:2,thin:.7,ears:'none',tail:'dino',tl:9,scaly:1,graze:1,hoof:'#5a5a50'}],
   ]},
 ];
 const SP={};
-CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:c.hab}}));
+ENV.carnivore=ENV.dino;
+CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:a[4].home||c.hab}}));
 const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:9999,dome:9999},CAGES=6,PENS=2,PEN_SIZE=6;
 
 /* ---- save game ---- */
