@@ -271,7 +271,10 @@ function seal(p){
     k.ell([sx*s*.29,s*.08,s*.25],[s*.15,s*.03,s*.09],'root',{k:s*.05,rot:[0,sx*.4,0],pat:1,detail:1});
     k.ell([sx*s*.09,s*.08,-s*.85],[s*.1,s*.025,s*.15],'tail',{k:s*.04,rot:[0,sx*.5,0],pat:1,detail:1});
     if(p.walrus)k.extra('head','tusk',[sx*s*.05,s*.36,s*.76],{s:sx,len:s*.28,r:s*.022,down:1});
+    // the Great White Seal: a bear's head with round ears and a shark's sharp teeth
+    if(p.shark){k.ell([sx*s*.11,s*.6,s*.52],[s*.055,s*.055,s*.03],'head',{k:s*.02,pat:1,detail:1});k.extra('head','teeth',[sx*s*.07,s*.38,s*.64],{s:sx,len:s*.16,size:s*.035})}
   }
+  if(p.shark){k.ell([0,s*.47,s*.6],[s*.2,s*.17,s*.2],'head',{k:s*.1,pat:1});k.extra('root','dfin',[0,s*.5,-s*.05],{size:s*.32,tall:1.1,col:p.fin||p.col})}
   k.anim={kind:'seal',stride:s*.5};
   return k;
 }
