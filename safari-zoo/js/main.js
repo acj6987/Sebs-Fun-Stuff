@@ -11,8 +11,8 @@ function initRenderer(){
 function resize(){if(!R)return;R.setPixelRatio(Math.min(devicePixelRatio||1,QUALITY.pixel));R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}
 addEventListener('resize',resize);
 function loop(t){
-  const dt=Math.min(.05,(t-lastT)/1000||0);lastT=t;const time=t/1000;
-  pollPad(dt);
+  const dt=Math.min(.25,(t-lastT)/1000||0);lastT=t;const time=t/1000;
+  pollPad(dt);inputStatus();autoQuality(dt);
   if(curView==='drive'&&safari.running)safari.frame(dt,time);
   else if(curView==='zoo'&&zoo.running)zooFrame(dt,time);
   requestAnimationFrame(loop);
@@ -45,7 +45,7 @@ async function startSafari(c){
   me.leash=null;me.rope=null;car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
   try{await buildSafari(c,t=>$('#loadTxt').textContent=t)}catch(e){console.error(e);loading(false);toast('Something went wrong building '+c.name+'.');show('map');return}
   footRig.visible=false;setDriveUI();$('#where').textContent=c.name+' · '+c.place;$('#cagesTxt').hidden=false;$('#toZoo2').textContent='🏛️ Drive to zoo';
-  loading(false);safari.running=true;
+  loading(false);safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
 }
 async function openZoo(){
   if(!initRenderer())return;
@@ -84,11 +84,36 @@ function pollPad(dt){
 }
 // a clicked button keeps the keyboard focus, so Space would press it again: give the focus back to the game
 $('#drive').addEventListener('click',e=>{if(e.target.closest('button'))setTimeout(()=>document.activeElement&&document.activeElement.blur(),0)});
+// shows whether the game can hear you, and lightens the graphics on slow computers
+let heard=0;
+function inputStatus(){
+  const el=$('#inStat');if(curView!=='drive'||!safari.running){el.hidden=true;return}
+  const anyKey=keys.up||keys.down||keys.left||keys.right,anyPad=pad.gas>.05||pad.brake>.05||Math.abs(pad.steer)>.05;
+  if(anyKey||anyPad)heard=performance.now();
+  el.hidden=false;const on=performance.now()-heard<600;el.classList.toggle('on',on);
+  el.textContent=on?(mode==='car'?'🚙 Driving!':'🚶 Walking!'):(pad.id?'🎮 Controller ready: press the gas':'⌨️ Press W or ↑ to drive');
+}
+const fps={t:0,n:0,done:false};
+function autoQuality(dt){
+  if(curView!=='drive'||!safari.running||fps.done){return}
+  fps.t+=dt;fps.n++;
+  if(fps.t>4){const f=fps.n/fps.t;fps.done=true;
+    if(f<24&&R){R.setPixelRatio(Math.max(.6,R.getPixelRatio()*.65));R.setSize(innerWidth,innerHeight,false);
+      if(world&&world.grass)world.grass.geometry.instanceCount=Math.round(world.grass.geometry.instanceCount*.4);
+      R.shadowMap.enabled=f>12;toast('Your computer was a bit slow, so I made the graphics lighter to help the jeep drive smoothly.')}}
+}
+function startDriving(){
+  $('#startDrive').hidden=true;try{window.focus();cv.focus()}catch(e){}
+  if(document.activeElement&&document.activeElement!==document.body&&document.activeElement!==cv)document.activeElement.blur();
+}
+$('#startDrive').addEventListener('click',startDriving);
+addEventListener('gamepadconnected',()=>$('#startDrive').hidden=true);
 addEventListener('gamepadconnected',e=>toast('🎮 Controller connected: '+(e.gamepad.id.split('(')[0].trim()||'game controller')+'. Steer and press the pedals or triggers to drive!'));
 addEventListener('gamepaddisconnected',()=>toast('🎮 Controller disconnected'));
 const KM={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ShiftLeft:'run',ShiftRight:'run'};
 addEventListener('keydown',e=>{
   if(curView!=='drive'||!safari.running)return;
+  $('#startDrive').hidden=true;
   if(KM[e.code]){keys[KM[e.code]]=true;e.preventDefault()}
   if(e.repeat)return;
   if(e.code==='KeyE'){pressE();e.preventDefault()}
@@ -196,7 +221,7 @@ async function startZooDrive(id){
   else{car.x=0;car.z=48;$('#where').textContent='My Zoo'}
   car.yaw=0;footRig.visible=false;setDriveUI();
   $('#cagesTxt').hidden=true;$('#toZoo2').textContent='🏛️ Zoo view';
-  show('drive');safari.running=true;
+  show('drive');safari.running=true;fps.t=fps.n=0;fps.done=false;$('#startDrive').hidden=false;
 }
 $('#driveZoo').onclick=()=>startZooDrive(null);
 $('#goEnc').onclick=()=>{renderEncPick();$('#encPick').hidden=false};

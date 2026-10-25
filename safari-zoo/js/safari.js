@@ -296,8 +296,10 @@ function placeCamera(){
 }
 const safari={running:false,
   frame(dt,time){
-    if(mode==='car'){updateCar(dt);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
-    else{car.g.updateMatrixWorld(true);updateFoot(dt)}
+    // move in small steps so the jeep keeps full speed even when the computer draws few pictures a second
+    const n=Math.min(8,Math.ceil(dt/(1/30))),h=dt/n;
+    if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
+    else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
     updateAnimals(dt,time);placeCamera();updateNet(dt);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
     if(world.tick)world.tick(dt,time);

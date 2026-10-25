@@ -77,8 +77,15 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 .pad button{border:0;border-radius:14px;background:rgba(255,250,240,.85);font-size:24px;font-weight:900;touch-action:none;color:var(--ink)}
 .pad .up{grid-column:2;grid-row:1}.pad .lt{grid-column:1;grid-row:2}.pad .dn{grid-column:2;grid-row:2}.pad .rt{grid-column:3;grid-row:2}
 #jumpBtn{display:none}
+.pad button:active{background:var(--sun)}
+#inStat{position:absolute;left:max(14px,env(safe-area-inset-left,0px));bottom:calc(150px + env(safe-area-inset-bottom,0px));background:rgba(15,25,15,.8);color:var(--paper);border-radius:999px;padding:7px 14px;font-weight:800;font-size:14px;pointer-events:none!important}
+#inStat.on{background:var(--leaf)}
+#startDrive{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(10,20,15,.35);text-align:center;padding-inline:16px}
+#startDrive p{color:var(--paper);font-weight:800;font-size:17px;text-shadow:0 2px 6px rgba(0,0,0,.7);max-width:46ch;margin:0}
+#startDrive b{color:var(--sun)}
+.act.big{font-size:30px;padding:18px 34px}
 @media (hover:none),(pointer:coarse){#jumpBtn{display:block}.act small{display:none}#prompt{display:none}}
-@media (hover:hover) and (pointer:fine){.pad{display:none}#prompt{max-width:calc(100% - 340px)}}
+@media (hover:hover) and (pointer:fine){.pad{grid-template-columns:repeat(3,46px);grid-template-rows:repeat(2,46px);opacity:.85}.pad button{font-size:20px}#prompt{max-width:calc(100% - 380px)}}
 #loading{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#2a6b48,var(--canopy) 70%);color:var(--sun);font-family:var(--display);font-size:30px;text-align:center;padding-inline:16px}
 #loading small{font-family:var(--body);font-weight:700;font-size:16px;color:#d7ead9}
 .spinner{width:54px;height:54px;border-radius:50%;border:6px solid rgba(255,201,60,.25);border-top-color:var(--sun);animation:spin 1s linear infinite}
@@ -132,7 +139,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 #toast{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--paper);color:var(--ink);padding:10px 18px;border-radius:14px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.3);z-index:40;max-width:calc(100% - 32px);text-align:center;pointer-events:none}
 </style>
 
-<canvas id="cv" hidden></canvas>
+<canvas id="cv" tabindex="-1" hidden></canvas>
 
 <section id="map" class="screen">
   <div class="wrap">
@@ -168,6 +175,8 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
   </div>
   <canvas id="mm" width="280" height="280"></canvas>
   <div id="prompt"></div>
+  <div id="inStat" hidden></div>
+  <div id="startDrive" hidden><button class="act green big" id="startBtn">🚙 Start driving</button><p>Then use <b>W A S D</b> or the <b>arrow keys</b>, the buttons on the screen, or your controller or wheel.</p></div>
   <div class="pad">
     <button class="up" data-k="up" aria-label="Forward">▲</button>
     <button class="lt" data-k="left" aria-label="Turn left">◀</button>
