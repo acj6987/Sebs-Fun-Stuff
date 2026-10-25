@@ -301,6 +301,11 @@ function updateAnimals(dt,time){
     else if(a.state==='chased'){
       const h=a.hunter,dx=a.x-h.x,dz=a.z-h.z,dd=Math.hypot(dx,dz)||1,fs=Math.max(a.sp.s*2.6,7.6);a.vx=dx/dd*fs;a.vz=dz/dd*fs;
       if((a.chT-=dt)<=0||!world.animals.includes(h)||h.state!=='hunt'){a.state='wander';a.t=0}}
+    else if(a.state==='follow'){
+      // they smelled your food: they come to you and stay close, happy and calm
+      const dx=px-a.x,dz=pz-a.z,dd=Math.hypot(dx,dz)||1,gap=4+a.m.rad;a.soar=dd>40;
+      if(dd>gap){const s=Math.min(14,(dd-gap)*1.5+1);a.vx=dx/dd*s;a.vz=dz/dd*s;a.graze=0}else{a.vx*=.8;a.vz*=.8;a.graze=1}
+      if((a.followT-=dt)<=0){a.state='wander';a.t=0;a.soar=0}}
     else if(a.state==='sleep'){a.vx*=.8;a.vz*=.8;a.graze=1;a.soar=0;if((a.sleepT-=dt)<=0&&(!G||G.members[0]===a)){for(const m of G?G.members:[a])if(m.state==='sleep'){m.state='wander';m.graze=0;m.t=0}}}
     else if(a.state==='rest'){a.vx*=.9;a.vz*=.9;if((a.restT-=dt)<=0){a.state='wander';a.graze=0}}
     else if(a.state==='tired'){a.tired-=dt;a.vx*=.9;a.vz*=.9;a.stam=Math.min(1,a.stam+dt*.2);if(a.tired<=0){a.state='wander';a.stam=1}}
@@ -430,7 +435,7 @@ function pressE(){
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
-function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#foodBtn').hidden=!(world&&world.zoo);$('#cross').hidden=mode==='car';
+function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car';
   const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&mode!=='foot');sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
   $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub';
   if(mode==='sub')$('#eBtn').firstChild.textContent='SNORKEL';else if(mode==='foot'&&sub.on)$('#eBtn').firstChild.textContent='GET IN SUB'}
@@ -553,7 +558,7 @@ let hudT=0;
 function hud(){
   const tag=$('#tag'),pr=$('#prompt');let target=null;
   if(mode==='foot'||mode==='sub')target=aimTarget();
-  else{let bd=60;for(const a of world.animals){const d=Math.hypot(a.x-car.x,a.z-car.z);if(d<bd&&!(a.sp.def.mate&&d>22)){const v=V(a.x,a.m.g.position.y+a.m.h,a.z).project(cam);if(v.z<1&&Math.abs(v.x)<.8&&Math.abs(v.y)<.9){bd=d;target={a,dist:d}}}}}
+  else{let bd=60;for(const a of world.animals){const d=Math.hypot(a.x-car.x,a.z-car.z);if(d<bd&&!(a.sp.def.mate&&d>22&&a.state!=='follow')){const v=V(a.x,a.m.g.position.y+a.m.h,a.z).project(cam);if(v.z<1&&Math.abs(v.x)<.8&&Math.abs(v.y)<.9){bd=d;target={a,dist:d}}}}}
   $('#cross').classList.toggle('on',!!(target&&(mode==='foot'&&target.dist<=16||mode==='sub'&&target.dist<=26)));
   if(target){const a=target.a,v=V(a.x,a.m.g.position.y+a.m.h+.4,a.z).project(cam);
     tag.hidden=false;tag.style.left=((v.x+1)/2*innerWidth)+'px';tag.style.top=((1-v.y)/2*innerHeight)+'px';
@@ -576,7 +581,7 @@ function hud(){
   if(world.domes)for(const d of world.domes){c.fillStyle='rgba(220,240,255,.55)';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(W/2+(d.x-cx)*k,W/2+(d.z-cz)*k,d.r*k,0,7);c.fill();c.stroke()}
   if(world.zoo)for(const o of zoo.animals){c.fillStyle='#1d2116';c.beginPath();c.arc(W/2+(o.x-cx)*k,W/2+(o.z-cz)*k,5,0,7);c.fill()}
   c.fillStyle=world.E.water;for(const p of world.ponds){c.beginPath();c.arc(W/2+(p.x-cx)*k,W/2+(p.z-cz)*k,p.r*k,0,7);c.fill()}
-  for(const a of world.animals){if(a.sp.def.mate)continue;c.fillStyle=a.sp.r===3?'#ffc93c':a.sp.r===2?'#d4602f':'#1d2116';c.beginPath();c.arc(W/2+(a.x-cx)*k,W/2+(a.z-cz)*k,a.sp.r===3?9:7,0,7);c.fill();if(a.sp.r===3){c.strokeStyle='#fff';c.lineWidth=2;c.stroke()}}
+  for(const a of world.animals){if(a.sp.def.mate&&a.state!=='follow')continue;c.fillStyle=a.sp.def.mate?'#ff4fa3':a.sp.r===3?'#ffc93c':a.sp.r===2?'#d4602f':'#1d2116';c.beginPath();c.arc(W/2+(a.x-cx)*k,W/2+(a.z-cz)*k,a.sp.r===3?9:7,0,7);c.fill();if(a.sp.r===3){c.strokeStyle='#fff';c.lineWidth=2;c.stroke()}}
   const arrow=(x,z,yaw,col)=>{c.save();c.translate(W/2+(x-cx)*k,W/2+(z-cz)*k);c.rotate(-yaw);c.fillStyle=col;c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-14);c.lineTo(10,10);c.lineTo(0,5);c.lineTo(-10,10);c.closePath();c.fill();c.stroke();c.restore()};
   if(!sub.on)arrow(car.x,car.z,car.yaw,'#d38a2c');if(mode==='foot')arrow(me.x,me.z,look.yaw,'#2f6fa8');if(mode==='sub')arrow(sub.x,sub.z,sub.yaw,'#ffcf1f');
   c.restore();
@@ -625,6 +630,16 @@ function updateTreasure(dt,time){
   for(const q of world.treasure.slice()){if(q.kind==='coin')q.g.rotation.y=time*2+q.x;q.g.position.y=q.y+Math.sin(time*1.5+q.z)*.15;
     if(Math.hypot(p.x-q.x,p.y-q.y,p.z-q.z)<reach){world.scene.remove(q.g);world.treasure.splice(world.treasure.indexOf(q),1);S.coins+=q.val;save();coins();
       toast(q.kind==='chest'?'🏴‍☠️ You found a TREASURE CHEST! +500 coins!':'🪙 You found a gold coin! +50 ('+world.treasure.filter(t=>t.kind==='coin').length+' left to find)')}}
+}
+// hold out food and the Mummy Dreams come to you
+function callDreams(){
+  if(mode!=='foot'){toast('Jump out first, then press G to hold out food for the Mummy Dreams!');return}
+  if(DREAM.every(owns)){toast('Both Mummy Dreams are already in your zoo!');return}
+  const d=world.animals.filter(a=>a.sp.def.mate&&a.state!=='netted');
+  if(!d.length){toast(DREAM_KEYS.every(owns)?'The Mummy Dreams are not here right now. Come back to the Deep Blue Sea!':'The Mummy Dreams only come when you have a dolphin and a sea turtle in your zoo.');return}
+  const f=truckFood();if(f.hay>0){f.hay--;save()}
+  for(const a of d){a.state='follow';a.followT=90;a.vx=a.vz=0}
+  toast('🌾 You hold out some yummy food… 💖💙 The Mummy Dreams smelled it and are coming to you! They will follow you, so catch them!',7000);
 }
 function toggleSub(){
   if(!safari.running||!world.sea)return;
