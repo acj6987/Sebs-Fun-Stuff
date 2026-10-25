@@ -62,15 +62,19 @@ async function buildSafari(c,progress){
 
 /* ---------- the volcano on Dino Island ---------- */
 function addVolcano(scene){
-  const vx=150,vz=-395,base=H(vx,vz)-25,hgt=125;
-  const geo=new T.CylinderGeometry(20,105,hgt,64,16,true),p=geo.attributes.position;
+  const vx=60,vz=-345,base=Math.min(H(vx,vz),H(vx,vz-60),H(vx,vz+60))-8,hgt=150;
+  const geo=new T.CylinderGeometry(22,150,hgt,64,16,true),p=geo.attributes.position;
   for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),n=MESHER.fbm(x*.03,y*.03,z*.03);const k=1+(n-.5)*.35;p.setX(i,x*k);p.setZ(i,z*k)}
   geo.computeVertexNormals();
-  const cone=new T.Mesh(geo,NATURE.rockMat('#3a3330'));cone.position.set(vx,base+hgt/2,vz);cone.receiveShadow=true;scene.add(cone);
+  // glowing lava streams painted down the sides
+  const [lc,lg]=NATURE.canvas(512);lg.fillStyle='#000';lg.fillRect(0,0,512,512);
+  for(let i=0;i<9;i++){let x=Math.random()*512;const w=4+Math.random()*7;lg.strokeStyle=i%2?'#ff7a1a':'#ff3a08';lg.lineWidth=w;lg.beginPath();lg.moveTo(x,0);
+    const end=180+Math.random()*330;for(let y=0;y<end;y+=12){x+=(Math.random()-.5)*10;lg.lineTo(x,y)}lg.stroke()}
+  const lava=NATURE.toTex(lc,true);
+  const cone=new T.Mesh(geo,new T.MeshStandardMaterial({color:'#3a3330',roughness:.95,map:NATURE.rockMat('#3a3330').map,emissive:'#ff5a14',emissiveMap:lava,emissiveIntensity:1.4}));cone.position.set(vx,base+hgt/2,vz);cone.receiveShadow=true;scene.add(cone);
   const lavaM=new T.MeshBasicMaterial({color:'#ff5a14',fog:false});
   const crater=new T.Mesh(new T.CircleGeometry(19,32),lavaM);crater.rotation.x=-Math.PI/2;crater.position.set(vx,base+hgt-3,vz);scene.add(crater);
-  for(let i=0;i<5;i++){const a=-1.2+i*.45+Math.random()*.2,len=hgt*1.15;const st=new T.Mesh(new T.PlaneGeometry(4+Math.random()*3,len),new T.MeshBasicMaterial({color:i%2?'#ff7a1a':'#ff4410',fog:false,side:T.DoubleSide}));
-    const r0=20,r1=100,mid=(r0+r1)/2;st.position.set(vx+Math.sin(a)*mid,base+hgt/2,vz+Math.cos(a)*mid);st.rotation.order='YXZ';st.rotation.y=a;st.rotation.x=-Math.atan2(hgt,r1-r0)+Math.PI/2;st.translateZ(1.2);scene.add(st)}
+    const r0=22,r1=145,mid=(r0+r1)/2;st.position.set(vx+Math.sin(a)*mid,base+hgt/2,vz+Math.cos(a)*mid);st.rotation.order='YXZ';st.rotation.y=a;st.rotation.x=-Math.atan2(hgt,r1-r0)+Math.PI/2;st.translateZ(1.2);scene.add(st)}
   const glow=new T.PointLight('#ff7a30',2.2,700,1.5);glow.position.set(vx,base+hgt+15,vz);scene.add(glow);
   const [c,g]=NATURE.canvas(128);const gr=g.createRadialGradient(64,64,0,64,64,62);gr.addColorStop(0,'rgba(90,85,80,.75)');gr.addColorStop(1,'rgba(90,85,80,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
   const sm=new T.SpriteMaterial({map:NATURE.toTex(c,true),transparent:true,depthWrite:false,fog:false});

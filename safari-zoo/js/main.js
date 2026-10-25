@@ -100,7 +100,7 @@ function autoQuality(dt){
   if(fps.t>4){const f=fps.n/fps.t;fps.done=true;
     if(f<24&&R){R.setPixelRatio(Math.max(.6,R.getPixelRatio()*.65));R.setSize(innerWidth,innerHeight,false);
       if(world&&world.grass)world.grass.geometry.instanceCount=Math.round(world.grass.geometry.instanceCount*.4);
-      R.shadowMap.enabled=f>12;toast('Your computer was a bit slow, so I made the graphics lighter to help the jeep drive smoothly.')}}
+      R.shadowMap.enabled=f>12;toast('Your computer was a bit slow, so I made the graphics lighter to help the truck drive smoothly.')}}
 }
 function startDriving(){
   $('#startDrive').hidden=true;try{window.focus();cv.focus()}catch(e){}
