@@ -12,11 +12,13 @@ function resize(){if(!R)return;R.setPixelRatio(Math.min(devicePixelRatio||1,QUAL
 addEventListener('resize',resize);
 function loop(t){
   const dt=Math.min(.05,(t-lastT)/1000||0);lastT=t;const time=t/1000;
+  pollPad(dt);
   if(curView==='drive'&&safari.running)safari.frame(dt,time);
   else if(curView==='zoo'&&zoo.running)zooFrame(dt,time);
   requestAnimationFrame(loop);
 }
 function show(id){
+  try{document.activeElement&&document.activeElement.blur();window.focus()}catch(e){}
   curView=id;['map','drive','zoo'].forEach(s=>$('#'+s).hidden=s!==id);cv.hidden=id==='map';coins();
   if(id!=='drive'){safari.running=false;for(const k in keys)keys[k]=false}
   if(id!=='zoo')zoo.running=false;
@@ -53,6 +55,37 @@ async function openZoo(){
 }
 
 /* ---------- controls ---------- */
+// game controllers and USB steering wheels with pedals (Gamepad API)
+const pad={steer:0,gas:0,brake:0,run:false,rest:null,id:'',prev:[]};
+const dz=v=>Math.abs(v)<.12?0:v;
+function pollPad(dt){
+  let g=null;try{const gs=navigator.getGamepads?navigator.getGamepads():[];for(const x of gs)if(x&&x.connected){g=x;break}}catch(e){}
+  if(!g){pad.steer=pad.gas=pad.brake=0;pad.run=false;return}
+  if(pad.id!==g.id+g.index){pad.id=g.id+g.index;pad.rest=g.axes.slice();pad.prev=[]}
+  const ax=g.axes,bt=g.buttons,val=i=>bt[i]?(typeof bt[i]==='object'?bt[i].value:bt[i]):0,pressed=i=>bt[i]&&(bt[i].pressed||val(i)>.5);
+  if(g.mapping==='standard'){
+    // controller: left stick steers, right trigger = gas, left trigger = brake / reverse
+    pad.steer=dz(ax[0]||0);pad.gas=Math.max(val(7),dz(-(ax[1]||0))>0?-dz(ax[1]):0);pad.brake=Math.max(val(6),dz(ax[1]||0)>0?dz(ax[1]):0);
+    if(curView==='drive'&&(ax[2]||ax[3])){look.yaw-=dz(ax[2]||0)*2.5*dt;look.pitch=clamp(look.pitch-dz(ax[3]||0)*2*dt,-1.2,1.1);if(dz(ax[2]||0)||dz(ax[3]||0))look.idle=0}
+    pad.run=pressed(10);
+  }else{
+    // steering wheel: axis 0 is the wheel; pedals are the other axes that move away from where they rest
+    pad.steer=dz(ax[0]||0);
+    const moved=[];for(let i=1;i<ax.length;i++){const d=Math.abs(ax[i]-(pad.rest[i]??0));if(Math.abs(pad.rest[i]??0)>.5||d>.05)moved.push([i,Math.min(1,d/ (Math.abs(pad.rest[i]??0)>.5?2:1))])}
+    const pedals=moved.filter(([i])=>Math.abs(pad.rest[i]??0)>.5);
+    pad.gas=pedals[0]?pedals[0][1]:0;pad.brake=pedals[1]?pedals[1][1]:0;
+    if(!pedals.length){pad.gas=Math.max(0,-dz(ax[1]||0));pad.brake=Math.max(0,dz(ax[1]||0))}
+    pad.gas=Math.max(pad.gas,val(7));pad.brake=Math.max(pad.brake,val(6));
+  }
+  // buttons: A / cross = jump out or get in, X / square = net, B / circle = jump, Start = map
+  const edge=i=>pressed(i)&&!pad.prev[i];
+  if(curView==='drive'&&safari.running){if(edge(0))pressE();if(edge(2))throwNet();if(edge(1))jump();if(edge(3)&&world&&world.zoo)$('#toZoo2').click()}
+  pad.prev=bt.map((b,i)=>pressed(i));
+}
+// a clicked button keeps the keyboard focus, so Space would press it again: give the focus back to the game
+$('#drive').addEventListener('click',e=>{if(e.target.closest('button'))setTimeout(()=>document.activeElement&&document.activeElement.blur(),0)});
+addEventListener('gamepadconnected',e=>toast('🎮 Controller connected: '+(e.gamepad.id.split('(')[0].trim()||'game controller')+'. Steer and press the pedals or triggers to drive!'));
+addEventListener('gamepaddisconnected',()=>toast('🎮 Controller disconnected'));
 const KM={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ShiftLeft:'run',ShiftRight:'run'};
 addEventListener('keydown',e=>{
   if(curView!=='drive'||!safari.running)return;

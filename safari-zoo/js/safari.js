@@ -256,9 +256,9 @@ function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':
 
 /* ---------- moving ---------- */
 function updateCar(dt){
-  const up=keys.up,dn=keys.down,turn=(keys.left?1:0)-(keys.right?1:0);
+  const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,up=gas>.05,dn=brk>.05,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
   const wet=inPond(car.x,car.z)&&world.c.hab!=='polar',max=wet?7:21;
-  if(up)car.v+=(car.v<0?16:8)*dt;if(dn)car.v-=(car.v>0?16:7)*dt;
+  if(up)car.v+=(car.v<0?16:8)*gas*dt;if(dn)car.v-=(car.v>0?16:7)*brk*dt;
   if(!up&&!dn)car.v*=Math.pow(.35,dt);
   car.v=clamp(car.v,-7,max);
   car.steer=lerp(car.steer,turn,Math.min(1,dt*6));
@@ -278,8 +278,8 @@ function updateCar(dt){
     setBetween(car.arms[i][0],sh,hp.clone().lerp(sh,.25));setBetween(car.arms[i][1],hp.clone().lerp(sh,.28),hp)});
 }
 function updateFoot(dt){
-  const turn=(keys.left?1:0)-(keys.right?1:0);look.yaw+=turn*2.2*dt;
-  const mv=(keys.up?1:0)-(keys.down?1:0),spd=keys.run?8:5.5;
+  const turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;look.yaw+=turn*2.2*dt;
+  const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),spd=keys.run||pad.run?8:5.5;
   me.x-=Math.sin(look.yaw)*mv*spd*dt;me.z-=Math.cos(look.yaw)*mv*spd*dt;keepIn(me);collide(me,.5);
   const cl=o=>{const dx=me.x-o.x,dz=me.z-o.z,d=Math.hypot(dx,dz);if(d<o.r){me.x=o.x+dx/d*o.r;me.z=o.z+dz/d*o.r}};
   cl({x:car.x,z:car.z,r:2.1});const tp=trailerPos();cl({x:tp.x,z:tp.z,r:1.6});
