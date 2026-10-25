@@ -42,7 +42,7 @@ async function startSafari(c){
   show('drive');loading(true,'Driving to '+c.name+'…');await nextFrame();
   me.leash=null;me.rope=null;car.x=0;car.z=0;car.yaw=0;car.v=0;car.steer=0;me.x=me.z=0;mode='car';look.yaw=0;look.pitch=-.12;
   try{await buildSafari(c,t=>$('#loadTxt').textContent=t)}catch(e){console.error(e);loading(false);toast('Something went wrong building '+c.name+'.');show('map');return}
-  footRig.visible=false;setDriveUI();$('#where').textContent=c.name+' · '+c.place;
+  footRig.visible=false;setDriveUI();$('#where').textContent=c.name+' · '+c.place;$('#cagesTxt').hidden=false;$('#toZoo2').textContent='🏛️ Drive to zoo';
   loading(false);safari.running=true;
 }
 async function openZoo(){
@@ -92,7 +92,7 @@ $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.leash)releaseLeash();show('map')}
 $('#back').onclick=goMap;
 $('#toZoo1').onclick=openZoo;
-$('#toZoo2').onclick=()=>{if(me.leash)releaseLeash();deliver();openZoo()};
+$('#toZoo2').onclick=()=>{if(me.leash)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
 $('#zooMap').onclick=()=>show('map');
 function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages);S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo!'),50)}
 
@@ -115,7 +115,7 @@ function renderAreaCard(){
   const card=$('#areaCard'),area=S.areas.find(a=>a.id===zoo.sel);
   if(!area){card.hidden=true;return}
   card.hidden=false;
-  $('#acTitle').textContent=HAB[area.hab].i+' '+HAB[area.hab].name+' '+(area.type==='dome'?'Big Dome':'Paddock');
+  $('#acTitle').textContent=(S.areas.indexOf(area)+1)+'. '+HAB[area.hab].i+' '+HAB[area.hab].name+' Dome';
   $('#acCount').textContent=area.animals.length+' of '+CAP[area.type]+' places used';
   $('#acList').innerHTML=area.animals.length?area.animals.map(an=>{const s=SP[an.k],ok=happy(an,area);
     return `<li><span class="e">${s.e}</span><span><b>${s.n}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span><button class="mini" data-back="${an.uid}">To truck</button></li>`}).join('')
@@ -138,12 +138,37 @@ $('#acList').addEventListener('click',e=>{const b=e.target.closest('[data-back]'
   const i=area.animals.findIndex(x=>x.uid===u);S.holding.push(area.animals.splice(i,1)[0]);save();syncZooAnimals();renderZooUI()});
 $('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=150;w.tx=0;w.tz=-60};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
-function build(type){const cost=type==='dome'?400:100;
+function build(type){const cost=250;
   if(S.coins<cost){toast('You need '+cost+' coins. Catch more animals!');return}
   S.coins-=cost;const area={id:S.aid++,type,hab:$('#habSel').value,animals:[]};S.areas.push(area);save();
   buildArea(area,S.areas.length-1);rebuildPaths();zoo.sel=area.id;focusArea(area.id);renderZooUI();
-  toast('Built a new '+HAB[area.hab].name+(type==='dome'?' Big Dome!':' paddock!'))}
-$('#buildP').onclick=()=>build('paddock');$('#buildD').onclick=()=>build('dome');
+  toast('Built dome '+S.areas.length+': '+HAB[area.hab].name+'!')}
+$('#buildD').onclick=()=>build('dome');
+
+/* ---------- driving in the zoo ---------- */
+function renderEncPick(){
+  $('#encGrid').innerHTML='<button class="enc gate" data-enc="gate"><b>🚪</b><span>Zoo gate</span><small>Drive around</small></button>'+
+    S.areas.map((a,i)=>`<button class="enc" data-enc="${a.id}"><b>${i+1}</b><span>${HAB[a.hab].i} ${HAB[a.hab].name}</span><small>${a.animals.map(x=>SP[x.k].e).join('')||'empty'}</small></button>`).join('');
+}
+async function startZooDrive(id){
+  if(!initRenderer())return;
+  $('#encPick').hidden=true;
+  if(!zoo.built||curView!=='zoo'){show('zoo');loading(true,'Opening your zoo…');await nextFrame();await enterZoo(t=>$('#loadTxt').textContent=t);loading(false)}
+  world=zooDriveWorld();
+  if(zoo.carG)zoo.scene.remove(zoo.carG);
+  buildCar(zoo.scene);zoo.carG=car.g;buildFootRig();zoo.scene.add(cam);refreshCages();
+  mode='car';me.leash=null;me.rope=null;car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
+  const A=id!=null&&zoo.areas.get(id);
+  if(A){car.x=A.x;car.z=A.z+A.R0-10;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}
+  else{car.x=0;car.z=48;$('#where').textContent='My Zoo'}
+  car.yaw=0;footRig.visible=false;setDriveUI();
+  $('#cagesTxt').hidden=true;$('#toZoo2').textContent='🏛️ Zoo view';
+  show('drive');safari.running=true;
+}
+$('#driveZoo').onclick=()=>startZooDrive(null);
+$('#goEnc').onclick=()=>{renderEncPick();$('#encPick').hidden=false};
+$('#encClose').onclick=()=>$('#encPick').hidden=true;
+$('#encGrid').addEventListener('click',e=>{const b=e.target.closest('[data-enc]');if(!b)return;startZooDrive(b.dataset.enc==='gate'?null:+b.dataset.enc)});
 
 // visitors pay for happy animals
 setInterval(()=>{let h=0;for(const a of S.areas)for(const an of a.animals)if(happy(an,a))h++;if(h){S.coins+=h;save();coins()}},5000);

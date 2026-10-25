@@ -97,6 +97,16 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 .build{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .build select{font:inherit;font-weight:800;padding:8px 10px;border-radius:10px;border:2px solid #cdbf98;background:#fff;color:var(--ink);flex:1 1 100%}
 .build .btn{flex:1;padding:9px 12px;font-size:14px}
+.zooGo{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+#encPick{position:fixed;inset:0;z-index:25;display:flex;align-items:center;justify-content:center;background:rgba(10,20,15,.55);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.encBox{width:min(640px,100%);max-height:85%;overflow-y:auto}
+.encBox .row{display:flex;justify-content:space-between;align-items:center}
+.encGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.enc{border:0;border-radius:14px;background:var(--sand);padding:10px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ink);box-shadow:0 4px 0 #cdbf98}
+.enc b{font-family:var(--display);font-size:40px;line-height:1;color:var(--leaf)}
+.enc span{font-weight:800;font-size:14px}
+.enc small{font-size:18px;min-height:22px}
+.enc.gate{background:#dfeee0}
 #areaCard{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:calc(70px + env(safe-area-inset-top,0px));width:300px;max-height:calc(100% - 140px);overflow-y:auto}
 #areaCard .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 #areaCard ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -108,6 +118,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 .x{border:0;background:none;font-size:22px;font-weight:900;color:var(--ink);padding:0 4px}
 #zoo .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:rgba(15,25,15,.75);color:var(--paper);padding:8px 14px;border-radius:999px;font-weight:700;font-size:14px;white-space:nowrap}
 @media (max-width:700px){
+  .zooGo{top:calc(64px + env(safe-area-inset-top,0px));bottom:auto}.zooGo .act{font-size:15px;padding:9px 14px}
   #zooSide{top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:auto;right:max(12px,env(safe-area-inset-right,0px));max-height:45%}
   #areaCard{left:max(12px,env(safe-area-inset-left,0px));width:auto;max-height:40%}
   #zoo .hint{display:none}}
@@ -134,7 +145,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
       <div><b>Drive</b><br><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys. Drag the mouse (or your finger) to look around.</div>
       <div><b>Jump out</b><br>Stop near an animal and press <kbd>E</kbd>. Press <kbd>Space</kbd> to jump. Press <kbd>E</kbd> by the jeep to get back in.</div>
       <div><b>Catch</b><br>Look at the animal and press <kbd>F</kbd> to throw your net. Rare animals run away, so wait until they get tired!</div>
-      <div><b>Your zoo</b><br>Bring caged animals home, then put them in paddocks and big glass domes. Fly around your zoo to watch them.</div>
+      <div><b>Your zoo</b><br>Bring caged animals home and put them in big glass domes. Then drive your jeep around the zoo and right inside the domes.</div>
     </div>
   </div>
 </section>
@@ -171,6 +182,17 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <span class="stars" id="stars"></span>
     <span class="coins coinTxt">🪙 0</span>
   </div>
+  <div class="zooGo">
+    <button class="act green" id="driveZoo">🚙 Drive around the zoo</button>
+    <button class="act" id="goEnc">Go into an enclosure</button>
+  </div>
+  <div id="encPick" hidden>
+    <div class="panel encBox">
+      <div class="row"><h2>Which enclosure?</h2><button class="x" id="encClose" aria-label="Close">×</button></div>
+      <p>Pick a number. Your jeep starts inside that dome so you can drive around with the animals.</p>
+      <div class="encGrid" id="encGrid"></div>
+    </div>
+  </div>
   <div id="zooSide">
     <div class="sideTop"><button class="btn dark" id="sideToggle">🚚 Truck &amp; build</button></div>
     <div class="panel">
@@ -180,12 +202,11 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
       <p id="placeHint" hidden></p>
     </div>
     <div class="panel">
-      <h2>Build a new area</h2>
-      <p>Paddocks hold 4 animals. Big glass domes hold 10.</p>
+      <h2>Build a new dome</h2>
+      <p>Every enclosure is a big glass dome. Each one holds 10 animals, and you can drive inside.</p>
       <div class="build">
         <select id="habSel" aria-label="Habitat"></select>
-        <button class="btn" id="buildP">Paddock · 🪙 100</button>
-        <button class="btn" id="buildD">Dome · 🪙 400</button>
+        <button class="btn" id="buildD">Build dome · 🪙 250</button>
       </div>
     </div>
   </div>
@@ -194,7 +215,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <p id="acCount"></p>
     <ul id="acList"></ul>
   </div>
-  <div class="hint">Drag to look around · scroll to zoom · right-drag to move · tap an area</div>
+  <div class="hint">Drag to look around · scroll to zoom · right-drag to move · tap a dome</div>
 </section>
 
 <div id="loading" hidden><div class="spinner"></div><span id="loadTxt">Loading…</span><small>Building the 3D world takes a few seconds</small></div>

@@ -108,15 +108,16 @@ const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:4,d
 
 /* ---- save game ---- */
 function fresh(){return{coins:150,holding:[],cages:[],dex:{},uid:1,aid:4,areas:[
-  {id:1,type:'paddock',hab:'savanna',animals:[]},
+  {id:1,type:'dome',hab:'savanna',animals:[]},
   {id:2,type:'dome',hab:'rainforest',animals:[]},
-  {id:3,type:'paddock',hab:'polar',animals:[]}]}}
+  {id:3,type:'dome',hab:'polar',animals:[]}]}}
 function load(){try{const t=localStorage.getItem('safariZoo1');return t?JSON.parse(t):null}catch(e){return null}}
 function save(){try{localStorage.setItem('safariZoo1',JSON.stringify(S))}catch(e){}}
 let S=load()||fresh();
 S.cages=S.cages||[];
 {const ok=x=>SP[x.k];S.holding=S.holding.filter(ok);S.cages=S.cages.filter(ok);S.areas.forEach(a=>a.animals=a.animals.filter(ok));
  for(const k in S.dex)if(!SP[k])delete S.dex[k]}
+S.areas.forEach(a=>a.type='dome'); // every area is a big glass dome now
 function happy(an,area){return SP[an.k].hab===area.hab}
 
 let toastT;

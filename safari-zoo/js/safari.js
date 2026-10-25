@@ -7,7 +7,7 @@ const car={x:0,z:0,y:0,yaw:0,v:0,steer:0,g:null};
 const me={x:0,z:0,y:0,vy:0,ground:true,bob:0,leash:null};
 
 function baseH(x,z){return 2.4*Math.sin(x*.012)*Math.cos(z*.010)+1.3*Math.sin(x*.029+z*.018)+.55*Math.sin(x*.071)*Math.sin(z*.063)+1.8*Math.sin(x*.004+1)*Math.cos(z*.005+.4)}
-function H(x,z){let h=baseH(x,z);
+function H(x,z){if(world.flat)return 0;let h=baseH(x,z);
   const d=Math.max(Math.abs(x),Math.abs(z));if(d>HALF-60)h+=Math.pow(d-(HALF-60),1.5)*.09;
   for(const p of world.ponds){const dd=Math.hypot(x-p.x,z-p.z);if(dd<p.r*1.4){const t=sm(p.r*.75,p.r*1.4,dd);h=h*t+(p.lvl-.9)*(1-t)}}
   return h}
@@ -18,6 +18,7 @@ function collide(o,rad){
   for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=world.cols.get((cx+i)+','+(cz+j));if(!L)continue;
     for(const c of L){const dx=o.x-c.x,dz=o.z-c.z,d=Math.hypot(dx,dz),m=c.r+rad;if(d<m&&d>.001){o.x=c.x+dx/d*m;o.z=c.z+dz/d*m;hit=true}}}
   return hit}
+function keepIn(o){const b=world.bounds||{x0:-LIMIT,x1:LIMIT,z0:-LIMIT,z1:LIMIT};o.x=clamp(o.x,b.x0,b.x1);o.z=clamp(o.z,b.z0,b.z1)}
 const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
 
 async function buildSafari(c,progress){
@@ -263,7 +264,7 @@ function updateCar(dt){
   car.steer=lerp(car.steer,turn,Math.min(1,dt*6));
   car.yaw+=car.steer*1.05*dt*Math.min(1,Math.abs(car.v)/5)*Math.sign(car.v);
   car.x-=Math.sin(car.yaw)*car.v*dt;car.z-=Math.cos(car.yaw)*car.v*dt;
-  car.x=clamp(car.x,-LIMIT,LIMIT);car.z=clamp(car.z,-LIMIT,LIMIT);
+  keepIn(car);
   if(collide(car,1.7)){if(Math.abs(car.v)>6)toast('Bump!');car.v*=-.25}
   const sy=Math.sin(car.yaw),cy=Math.cos(car.yaw);
   const hf=H(car.x-sy*1.6,car.z-cy*1.6),hb=H(car.x+sy*1.6,car.z+cy*1.6),hl=H(car.x-cy,car.z+sy),hr=H(car.x+cy,car.z-sy);
@@ -279,7 +280,7 @@ function updateCar(dt){
 function updateFoot(dt){
   const turn=(keys.left?1:0)-(keys.right?1:0);look.yaw+=turn*2.2*dt;
   const mv=(keys.up?1:0)-(keys.down?1:0),spd=keys.run?8:5.5;
-  me.x=clamp(me.x-Math.sin(look.yaw)*mv*spd*dt,-LIMIT,LIMIT);me.z=clamp(me.z-Math.cos(look.yaw)*mv*spd*dt,-LIMIT,LIMIT);collide(me,.5);
+  me.x-=Math.sin(look.yaw)*mv*spd*dt;me.z-=Math.cos(look.yaw)*mv*spd*dt;keepIn(me);collide(me,.5);
   const cl=o=>{const dx=me.x-o.x,dz=me.z-o.z,d=Math.hypot(dx,dz);if(d<o.r){me.x=o.x+dx/d*o.r;me.z=o.z+dz/d*o.r}};
   cl({x:car.x,z:car.z,r:2.1});const tp=trailerPos();cl({x:tp.x,z:tp.z,r:1.6});
   const gh=H(me.x,me.z);me.vy-=18*dt;me.y+=me.vy*dt;if(me.y<=gh){me.y=gh;me.vy=0;me.ground=true}
@@ -299,6 +300,7 @@ const safari={running:false,
     else{car.g.updateMatrixWorld(true);updateFoot(dt)}
     updateAnimals(dt,time);placeCamera();updateNet(dt);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
+    if(world.tick)world.tick(dt,time);
     if(world.grass)world.grass.userData.update(cam.position,time,world.scene.fog,world.sky.sunDir);
     for(const w of world.waters){w.userData.water.offset.x+=dt*.015;w.userData.water.offset.y+=dt*.01}
     R.render(world.scene,cam);hud();
@@ -317,7 +319,8 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;
-  if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
+  if(world.zoo)msg=mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome':'Walk around · <b>Space</b> jump · <b>E</b> by the jeep to get in';
+  else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.leash){const tp=trailerPos();msg=Math.hypot(me.x-tp.x,me.z-tp.z)<5.5?`Press <b>E</b> to put the ${me.leash.sp.n} in a cage`:`Lead the <b>${me.leash.sp.n}</b> back to the cages on your jeep`}
   else msg=target?(target.dist<=16?`Press <b>F</b> to throw your net at the ${target.a.sp.n}`:`Walk closer to the ${target.a.sp.n}`):'Look at an animal · <b>F</b> net · <b>Space</b> jump · <b>E</b> by the jeep to get in';
   if(pr.dataset.m!==msg){pr.innerHTML=msg;pr.dataset.m=msg}
@@ -325,6 +328,8 @@ function hud(){
   const c=$('#mm').getContext('2d'),W=280,k=W/2/90,cx=mode==='car'?car.x:me.x,cz=mode==='car'?car.z:me.z;
   c.save();c.clearRect(0,0,W,W);c.beginPath();c.arc(W/2,W/2,W/2,0,7);c.clip();
   c.fillStyle=world.E.ground;c.fillRect(0,0,W,W);
+  if(world.domes)for(const d of world.domes){c.fillStyle='rgba(220,240,255,.55)';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(W/2+(d.x-cx)*k,W/2+(d.z-cz)*k,d.r*k,0,7);c.fill();c.stroke()}
+  if(world.zoo)for(const o of zoo.animals){c.fillStyle='#1d2116';c.beginPath();c.arc(W/2+(o.x-cx)*k,W/2+(o.z-cz)*k,5,0,7);c.fill()}
   c.fillStyle=world.E.water;for(const p of world.ponds){c.beginPath();c.arc(W/2+(p.x-cx)*k,W/2+(p.z-cz)*k,p.r*k,0,7);c.fill()}
   for(const a of world.animals){c.fillStyle=a.sp.r===3?'#ffc93c':a.sp.r===2?'#d4602f':'#1d2116';c.beginPath();c.arc(W/2+(a.x-cx)*k,W/2+(a.z-cz)*k,a.sp.r===3?9:7,0,7);c.fill();if(a.sp.r===3){c.strokeStyle='#fff';c.lineWidth=2;c.stroke()}}
   const arrow=(x,z,yaw,col)=>{c.save();c.translate(W/2+(x-cx)*k,W/2+(z-cz)*k);c.rotate(-yaw);c.fillStyle=col;c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-14);c.lineTo(10,10);c.lineTo(0,5);c.lineTo(-10,10);c.closePath();c.fill();c.stroke();c.restore()};
