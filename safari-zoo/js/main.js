@@ -211,7 +211,7 @@ $('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dis
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
 function build(type){const cost=250;
   if(S.coins<cost){toast('You need '+cost+' coins. Catch more animals!');return}
-  S.coins-=cost;const area={id:S.aid++,type,hab:$('#habSel').value,animals:[]};S.areas.push(area);save();
+  S.coins-=cost;const area={id:S.aid++,type,hab:$('#habSel').value,animals:[],eggs:[]};S.areas.push(area);save();
   buildArea(area,S.areas.length-1);rebuildPaths();syncVisitors();zoo.sel=area.id;focusArea(area.id);renderZooUI();
   toast('Built dome '+S.areas.length+': '+HAB[area.hab].name+'!')}
 $('#buildD').onclick=()=>build('dome');

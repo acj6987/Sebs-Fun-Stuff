@@ -290,7 +290,7 @@ function autoHome(){
   const moving=S.holding.splice(0),made=[];
   for(const a of S.areas)for(const an of a.animals.slice())if(SP[an.k].hab!==a.hab){a.animals.splice(a.animals.indexOf(an),1);moving.push(an)}
   for(const an of moving){const hab=SP[an.k].hab;let d=S.areas.find(a=>a.hab===hab);
-    if(!d){d={id:S.aid++,type:'dome',hab,animals:[]};S.areas.push(d);made.push(hab)}d.animals.push(an)}
+    if(!d){d={id:S.aid++,type:'dome',hab,animals:[],eggs:[]};S.areas.push(d);made.push(hab)}d.animals.push(an)}
   save();return made;
 }
 
