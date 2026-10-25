@@ -633,14 +633,16 @@ function updateTreasure(dt,time){
 }
 // hold out food and the Mummy Dreams come to you
 function callDreams(){
-  if(mode!=='foot'){toast('Jump out first, then press G to hold out food for the Mummy Dreams!');return}
-  if(DREAM.every(owns)){toast('Both Mummy Dreams are already in your zoo!');return}
-  // if they are not here, they fly in straight away
-  if(!world.animals.some(a=>a.sp.def.mate))spawnAnimal(true,SP[DREAM[0]]);
-  const d=world.animals.filter(a=>a.sp.def.mate&&a.state!=='netted');if(!d.length)return;
-  const f=truckFood();if(f.hay>0){f.hay--;save()}
-  for(const a of d){a.state='follow';a.followT=90;a.vx=a.vz=0}
-  toast('🌾 You hold out some yummy food… 💖💙 The Mummy Dreams smelled it and are coming to you! They will follow you, so catch them!',7000);
+  if(mode!=='foot'){toast('Jump out first, then press G to hold out food!');return}
+  const f=truckFood(),said=[];
+  // the Mummy Dreams love plants; if they are not here, they fly in straight away
+  if(!DREAM.every(owns)){if(!world.animals.some(a=>a.sp.def.mate))spawnAnimal(true,SP[DREAM[0]]);
+    const d=world.animals.filter(a=>a.sp.def.mate&&a.state!=='netted');if(d.length){if(f.hay>0)f.hay--;for(const a of d){a.state='follow';a.followT=90;a.vx=a.vz=0}said.push('💖💙 the Mummy Dreams')}}
+  // the Great White Seal smells meat and swims over, calm and hungry instead of hunting you
+  const gk='ocean:17';if(!world.animals.some(a=>a.sp.k===gk))spawnAnimal(true,SP[gk]);
+  const g=world.animals.filter(a=>a.sp.k===gk&&a.state!=='netted');if(g.length){if(f.meat>0)f.meat--;for(const a of g){a.state='follow';a.followT=90;a.vx=a.vz=0;a.prey=null}said.push('🦭 the Great White Seal')}
+  save();if(!said.length){toast('Nothing came for the food this time');return}
+  toast('🍖🌾 You hold out some yummy food… '+said.join(' and ')+' smelled it and '+(said.length>1?'are':'is')+' coming to you! Catch them while they follow you!',7000);
 }
 function toggleSub(){
   if(!safari.running||!world.sea)return;
