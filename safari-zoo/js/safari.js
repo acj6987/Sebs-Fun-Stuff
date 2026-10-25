@@ -366,6 +366,7 @@ function aimTarget(){
 function throwNet(){
   if(!safari.running)return;
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
+  if(world.zoo){zooCatch();return}
   if(world.net)return;
   if(me.pack.length>=PACK){toast('You are already leading '+PACK+' animals! Take them to the cages first.');return}
   const t=aimTarget();

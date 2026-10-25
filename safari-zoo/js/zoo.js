@@ -527,7 +527,7 @@ function pickEgg(){
   if(mode!=='foot')return false;const n=nearEgg();if(!n)return false;
   n.a.eggs.splice(n.a.eggs.indexOf(n.e),1);zoo.scene.remove(n.m);eggMeshes.delete(n.e.uid);(S.truckEggs=S.truckEggs||[]).push(n.e);save();showTruckEggs();
   toast('🥚 You picked up the '+SP[n.e.k].n+' egg and put it in your truck! Take it to the Egg Nursery to hatch it.');return true}
-function eggHint(){const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&(S.truckEggs||[]).length)return'Press <b>G</b> to put your eggs in the Egg Nursery';return''}
+function eggHint(){const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';return''}
 function showTruckEggs(){
   if(!car.g||!car.trailer)return;if(car.eggRack)car.eggRack.parent&&car.eggRack.parent.remove(car.eggRack);const g=new T.Group();car.eggRack=g;car.trailer.add(g);
   const em=new T.MeshStandardMaterial({color:'#f4efe4',roughness:.5}),box=new T.Mesh(new T.BoxGeometry(1.2,.25,.9),new T.MeshStandardMaterial({color:'#e8d0a0',roughness:.9}));box.position.set(0,2.15,3.6);if((S.truckEggs||[]).length)g.add(box);
@@ -550,18 +550,35 @@ function buildNursery(){
   for(const sd of[-1,1]){for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:NURSE.x+x,z:NURSE.z+sd*W/2,r:1});for(let z=0;z<=8;z+=1.8)zoo.cols.push({x:NURSE.x-D/2,z:NURSE.z+sd*(W/2-z),r:1})}
   zoo.nurseEggs=new Map();
 }
+// catch an animal in your zoo (like a mum who is having a baby) and put it in your truck
+function zooCatch(){
+  const f=V(0,0,-1).applyQuaternion(cam.quaternion);let best=null,bs=1e9;
+  for(const o of zoo.animals){const p=V(o.x,o.inst.g.position.y+o.inst.h*.5,o.z),d=p.clone().sub(cam.position),dist=d.length();if(dist>16)continue;const ang=f.angleTo(d.normalize());if(ang<.4&&ang*30+dist<bs){bs=ang*30+dist;best=o}}
+  if(!best){toast('Walk up to an animal in a dome and look right at it to catch it');return}
+  const big=S.cages.filter(c=>c.pen==null).length>=CAGES;if(big){toast('Your truck cages are full! Put some animals back in their domes first.');return}
+  const area=best.A.area,an=best.an;area.animals.splice(area.animals.indexOf(an),1);zoo.scene.remove(best.inst.g);zoo.animals.splice(zoo.animals.indexOf(best),1);
+  S.cages.push(Object.assign({},an));save();refreshCages();syncMumTags();
+  toast(an.preg?'🤰 You caught the '+SP[an.k].n+' mum! Drive her to the Egg Nursery and press G so she can have her baby safe and warm.':'You caught the '+SP[an.k].n+'! It is in your truck. Put it back with "Put them back in their domes".',6000);
+}
 function nearNursery(){return Math.abs(car.x-NURSE.x)<NURSE.D/2+10&&Math.abs(car.z-NURSE.z)<NURSE.W/2+3}
 function dropEggs(){
-  const n=(S.truckEggs||[]).length;if(!n)return false;S.nursery=S.nursery||[];
-  for(const e of S.truckEggs.splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}save();showTruckEggs();syncNurseryEggs();
-  toast('🥚 You put '+n+' egg'+(n>1?'s':'')+' in the warm incubators. They will hatch in 30 seconds and the babies go to their dome!');return true}
+  const n=(S.truckEggs||[]).length,mums=S.cages.filter(c=>c.preg);if(!n&&!mums.length)return false;S.nursery=S.nursery||[];
+  for(const e of S.truckEggs.splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}
+  for(const c of mums){S.cages.splice(S.cages.indexOf(c),1);delete c.pen;S.nursery.push({uid:c.uid,k:c.k,hatch:Date.now()+30000,mumAn:c})}
+  save();showTruckEggs();refreshCages();syncNurseryEggs();
+  toast((n?'🥚 You put '+n+' egg'+(n>1?'s':'')+' in the warm incubators. ':'')+(mums.length?'🤰 The '+mums.map(c=>SP[c.k].n).join(' and ')+' mum'+(mums.length>1?'s are':' is')+' in a cosy nursery pen. ':'')+'Babies come in 30 seconds!',7000);return true}
 function syncNurseryEggs(){
   if(!zoo.nurseEggs)return;for(const m of zoo.nurseEggs.values())zoo.scene.remove(m);zoo.nurseEggs.clear();
-  (S.nursery||[]).forEach((e,i)=>{const p=zoo.incubators[i%6],m=new T.Mesh(new T.SphereGeometry(.3,12,10),new T.MeshStandardMaterial({color:'#f4efe4',roughness:.5}));m.scale.y=1.3;m.position.set(p.x,p.y,p.z+(Math.floor(i/6)-.5)*.8);zoo.scene.add(m);zoo.nurseEggs.set(e.uid,m)});
+  (S.nursery||[]).forEach((e,i)=>{let m;
+    if(e.mumAn){const inst=ANIMALS.make(SP[e.k]),k=Math.min(1,6/inst.h,8/Math.max(inst.len,1));inst.g.scale.setScalar(k);m=inst.g;m.position.set(NURSE.x-3+(i%3)*-4,.1,NURSE.z-8+Math.floor(i/3)*8);m.rotation.y=-Math.PI/2}
+    else{const p=zoo.incubators[i%6];m=new T.Mesh(new T.SphereGeometry(.3,12,10),new T.MeshStandardMaterial({color:'#f4efe4',roughness:.5}));m.scale.y=1.3;m.position.set(p.x,p.y,p.z+(Math.floor(i/6)-.5)*.8)}
+    zoo.scene.add(m);zoo.nurseEggs.set(e.uid,m)});
 }
 function updateNursery(){
   const now=Date.now();let hatched=false;
   for(const e of (S.nursery||[]).slice())if(now>=e.hatch){S.nursery.splice(S.nursery.indexOf(e),1);const sp=SP[e.k];let d=S.areas.find(a=>a.hab===sp.hab);
+    if(e.mumAn){const mum=e.mumAn;delete mum.preg;const mate=sp.def.mate,b={uid:S.uid++,k:mate&&Math.random()<.5?mate:e.k,born:now,mum:mum.uid};
+      if(d)d.animals.push(mum,b);else S.holding.push(mum,b);hatched=true;toast('🍼 The '+sp.n+' mum had her baby '+SP[b.k].n+' in the Nursery! They both went home to their dome.',6000);continue}
     if(d)d.animals.push({uid:S.uid++,k:e.k,born:now,mum:e.mum});else S.holding.push({uid:S.uid++,k:e.k,born:now});hatched=true;toast('🐣 A baby '+sp.n+' hatched in the Egg Nursery and went to its dome!')}
   if(hatched){if(S.holding.length)autoHome();save();syncNurseryEggs();syncZooAnimals();if(curView==='zoo')renderZooUI()}
 }
