@@ -79,7 +79,7 @@ function pollPad(dt){
   }
   // buttons: A / cross = jump out or get in, X / square = net, B / circle = jump, Y = back to zoo, LB = food (zoo), RB = ride (safari)
   const edge=i=>pressed(i)&&!pad.prev[i];
-  if(curView==='drive'&&safari.running){if(edge(0))pressE();if(edge(2))throwNet();if(edge(1))jump();if(edge(3)&&world&&world.zoo)$('#toZoo2').click();if(edge(4)&&world&&world.zoo)foodAction();if(edge(5)&&!(world&&world.zoo))rideToggle()}
+  if(curView==='drive'&&safari.running){if(edge(0))pressE();if(edge(2))throwNet();if(edge(1))jump();if(edge(3)&&world&&world.zoo)$('#toZoo2').click();if(g.mapping==='standard'&&edge(4)&&world&&world.zoo)foodAction();if(g.mapping==='standard'&&edge(5)&&!(world&&world.zoo))rideToggle()}
   pad.prev=bt.map((b,i)=>pressed(i));
 }
 // a clicked button keeps the keyboard focus, so Space would press it again: give the focus back to the game
