@@ -20,6 +20,7 @@ const HAB={
   polar:{name:'Polar Ice',c:'#d6eef9',i:'🧊'},
   dino:{name:'Dino Zone',c:'#5a7a3a',i:'🦕'},
   carnivore:{name:'Carnivore Dino Zone',c:'#7a3a2a',i:'🦖'},
+  ocean:{name:'Ocean',c:'#2a9ad0',i:'🐠'},
 };
 // how each habitat looks in 3D
 const ENV={
@@ -29,6 +30,7 @@ const ENV={
   woodland:{zen:'#4f86cc',hor:'#dfe9ee',fog:'#c9d8dc',ground:'#5b7d38',patch:'#46652a',rock:'#7a7c78',water:'#3f7896',grass:['#3c6a24','#88b850'],grassH:.55,grassN:55000,sunEl:.5},
   outback:{zen:'#2f74cc',hor:'#f2c99a',fog:'#e3b688',ground:'#b55f32',patch:'#9a4c26',rock:'#9a4a26',water:'#4f8a94',grass:['#8a8040','#d8c070'],grassH:.5,grassN:14000,sunEl:.6},
   dino:{zen:'#5d8fb8',hor:'#e2d8c0',fog:'#b8b8a0',ground:'#4f6a2c',patch:'#3a5222',rock:'#4a4440',water:'#3a6658',grass:['#2f5a1e','#7aa040'],grassH:.9,grassN:45000,sunEl:.5},
+  ocean:{zen:'#2f86d8',hor:'#d8f0f4',fog:'#bfe2ea',ground:'#ead9a6',patch:'#d9c48a',rock:'#8a8478',water:'#1fa3b8',grass:null,grassN:0,sunEl:.7},
   polar:{zen:'#6d9fd2',hor:'#eef4fa',fog:'#e4ecf3',ground:'#f2f6f9',patch:'#dde8f0',rock:'#4f5660',water:'#24557a',grass:null,grassN:0,sunEl:.25},
 };
 // [name, emoji, rarity, walk speed m/s, body plan + look]
@@ -120,6 +122,22 @@ const CONT=[
    ['Diplodocus','🦕',2,1.1,{herd:[2,3],L:6,W:2.1,Hb:2.3,leg:2.5,legW:.4,neck:7.5,neckW:.45,neckAng:1.0,headL:.8,headW:.32,headH:.34,hp:.25,col:'#8a8a72',col2:'#6a6a58',belly:'#b8b8a0',tex:'stripes',freq:2,thin:.7,ears:'none',tail:'dino',tl:9,scaly:1,graze:1,hoof:'#5a5a50'}],
   ]},
 ];
+// the sea: islands, loads of fish, and the one and only Sparkle Zebraffe
+const FISHES=['Clownfish','Blue Tang','Yellow Tang','Angelfish','Pufferfish'];
+CONT.push({id:'ocean',name:'Ocean Islands',place:'Tropical sea with islands',hab:'ocean',sea:1,deco:['🏝️','🐠','✨'],
+  animals:[
+   ['Clownfish','🐠',1,1.6,{swim:1,herd:[4,6],plan:'fish',s:.5,tall:.42,wide:.17,col:'#ff7a12',tex:'stripes',col2:'#ffffff',freq:6,thin:.6,noBelly:1,fin:'#ff8a2a'}],
+   ['Blue Tang','🐟',1,1.8,{swim:1,herd:[5,8],plan:'fish',s:.55,tall:.5,wide:.15,col:'#2a5fe0',tex:'spots',col2:'#0e1a40',noBelly:1,fin:'#ffd23a'}],
+   ['Yellow Tang','🐟',1,1.6,{swim:1,herd:[6,9],plan:'fish',s:.5,tall:.6,wide:.14,col:'#ffd81f',noBelly:1,fin:'#ffe45a',fin2:1,belly2:1}],
+   ['Angelfish','🐟',1,1.3,{swim:1,herd:[3,5],plan:'fish',s:.5,tall:.75,wide:.12,col:'#f2ecc0',tex:'stripes',col2:'#1a1a1a',freq:9,thin:.5,noBelly:1,fin:'#e8d070',fin2:1.6,belly2:1}],
+   ['Pufferfish','🐡',2,1.1,{swim:1,herd:[1,2],plan:'fish',s:.6,tall:.7,wide:.32,col:'#d8c070',tex:'spots',col2:'#5a4a20',spikes:1,fin:'#c8b060',dorsalS:.15}],
+   ['Dolphin','🐬',2,3.2,{swim:1,jump:1,herd:[3,5],plan:'fish',s:2.6,tall:.22,wide:.13,col:'#8a98a8',belly:'#eef2f4',beak:1,flukes:1,dorsalS:.14,fin2:1,fin:'#7a8898'}],
+   ['Manta Ray','🐟',2,1.5,{swim:1,herd:[1,2],plan:'fish',ray:1,s:3,tall:.16,col:'#2a3038',belly:'#eaeaea'}],
+   ['Sea Turtle','🐢',2,.8,{amph:1,plan:'lizard',s:1.1,col:'#7a8a5a',shell:'#6a5232',belly:'#d8c890'}],
+   ['Seagull','🕊️',1,1.4,{herd:[3,5],plan:'bird',s:.45,body:'#f4f4f2',wing:'#9aa4ae',head:'#f4f4f2',beak:'#f2c12e',leg:.12,neck:.06,fly:1,tailL:.4,legCol:'#e8a04a'}],
+   ['Shark','🦈',3,2.4,{swim:1,hunts:FISHES,plan:'fish',s:4,tall:.2,wide:.12,col:'#7d8a96',belly:'#eef2f4',dorsalS:.13,fin2:1.2,fin:'#6d7a86'}],
+   ['Sparkle Zebraffe','✨',3,2,{amph:1,soar:1,fly:1,glam:1,L:1.9,W:.72,Hb:.95,leg:1.6,legW:.075,neck:1.7,neckW:.14,neckAng:.32,headL:.6,headW:.24,headH:.27,col:'#ffd83a',col2:'#ff4fa3',lineCol:'#ffd83a',belly:'#fff0a0',freq:16,thin:.1,mane:'#ff3d9a',ossicones:1,ears:'pointy',tail:'tuft',tuftCol:'#ff3d9a',tl:.8,hoof:'#ff2d8a',snout:'#ffc4dc',nose:'#ff6aa8',eyeS:1.8,top:'#9b3fd6',nails:['#ff2d8a','#a23cff'],graze:1}],
+  ]});
 const SP={};
 ENV.carnivore=ENV.dino;
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:a[4].home||c.hab}}));
@@ -139,7 +157,7 @@ S.cages=S.cages||[];
 S.areas.forEach(a=>a.type='dome'); // every area is a big glass dome now
 S.areas.forEach(a=>a.eggs=a.eggs||[]);
 // reptiles, birds, frogs and dinosaurs lay eggs; mammals have babies
-function laysEggs(sp){const p=sp.def.plan||'quad';return['bird','lizard','snake','frog','theropod'].includes(p)||!!sp.def.scaly||sp.hab==='dino'}
+function laysEggs(sp){const p=sp.def.plan||'quad';return['bird','lizard','snake','frog','theropod','fish'].includes(p)||!!sp.def.scaly||sp.hab==='dino'}
 const GROW=8*60*1000; // babies take 8 minutes to grow up
 function happy(an,area){return SP[an.k].hab===area.hab}
 

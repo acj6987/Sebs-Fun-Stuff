@@ -7,7 +7,13 @@ const car={x:0,z:0,y:0,yaw:0,v:0,steer:0,g:null};
 const me={x:0,z:0,y:0,vy:0,ground:true,bob:0,pack:[]};const PACK=5,MAXPACK=14;
 
 function baseH(x,z){return 2.4*Math.sin(x*.012)*Math.cos(z*.010)+1.3*Math.sin(x*.029+z*.018)+.55*Math.sin(x*.071)*Math.sin(z*.063)+1.8*Math.sin(x*.004+1)*Math.cos(z*.005+.4)}
-function H(x,z){if(world.flat)return 0;let h=baseH(x,z);
+// Ocean Islands: deep sea everywhere, with sandy islands poking out
+function seaH(x,z){let h=-7+baseH(x,z)*.5;
+  for(const I of world.islands){const d=Math.hypot(x-I.x,z-I.z)/I.r;if(d<1.6){const top=1.6+baseH(x,z)*.6+Math.max(0,1-d/.55)*I.hill;h=Math.max(h,lerp(-7,top,1-sm(.62,1.55,d)))}}
+  return h}
+// where you stand or drive: on the sea floor in shallow water, floating or swimming in deep water
+function HW(x,z){const h=H(x,z);return world.sea?Math.max(h,-1.15):h}
+function H(x,z){if(world.flat)return 0;if(world.sea)return seaH(x,z);let h=baseH(x,z);
   const d=Math.max(Math.abs(x),Math.abs(z));if(d>HALF-60)h+=Math.pow(d-(HALF-60),1.5)*.09;
   for(const p of world.ponds){const dd=Math.hypot(x-p.x,z-p.z);if(dd<p.r*1.4){const t=sm(p.r*.75,p.r*1.4,dd);h=h*t+(p.lvl-.9)*(1-t)}}
   return h}
@@ -24,9 +30,12 @@ const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
 async function buildSafari(c,progress){
   const E=ENV[c.hab],r=rng(hash(c.id));
   const scene=new T.Scene();safariScene=scene;
-  world={c,E,scene,ponds:[],cols:new Map(),animals:[],net:null,respawn:[],waters:[]};
+  world={c,E,scene,ponds:[],cols:new Map(),animals:[],net:null,respawn:[],waters:[],sea:!!c.sea,maxAn:c.sea?70:40};
   world.sky=NATURE.setupSky(R,scene,E);
-  const np=c.hab==='polar'?7:c.hab==='outback'?3:5;
+  if(c.sea){world.islands=[{x:0,z:0,r:72,hill:4}];
+    for(let t=0;t<400&&world.islands.length<8;t++){const I={x:(r()-.5)*(WS-150),z:(r()-.5)*(WS-150),r:32+r()*45,hill:r()*9};
+      if(world.islands.every(J=>Math.hypot(I.x-J.x,I.z-J.z)>(I.r+J.r)*1.55+20))world.islands.push(I)}}
+  const np=c.sea?0:c.hab==='polar'?7:c.hab==='outback'?3:5;
   for(let i=0;i<np;i++){const x=(r()-.5)*(WS-160),z=(r()-.5)*(WS-160);if(Math.hypot(x,z)<60){i--;continue}const rr=14+r()*22;world.ponds.push({x,z,r:rr,lvl:baseH(x,z)-.35})}
   progress('Shaping the land…');await nextFrame();
   // terrain
@@ -34,7 +43,8 @@ async function buildSafari(c,progress){
   const pos=geo.attributes.position,cols=new Float32Array(pos.count*3),cg=new T.Color(E.ground),cp=new T.Color(E.patch),cr=new T.Color(E.rock),cs=new T.Color('#f4f7fa'),wet=new T.Color(E.patch).multiplyScalar(.55),tmp=new T.Color();
   for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i),h=H(x,z);pos.setY(i,h);
     const n=MESHER.fbm(x*.02,0,z*.02);tmp.copy(cg).lerp(cp,clamp((n-.35)*2.2,0,1));
-    if(h>8)tmp.lerp(cr,sm(8,26,h));if(h>50&&c.hab!=='outback')tmp.lerp(cs,sm(50,85,h));
+    if(c.sea){if(h>2.4)tmp.lerp(new T.Color('#6a9a40'),sm(2.4,4.5,h)*.85);if(h<0)tmp.lerp(new T.Color('#1f7f8c'),sm(0,-6,h)*.85)}
+    else{if(h>8)tmp.lerp(cr,sm(8,26,h));if(h>50&&c.hab!=='outback')tmp.lerp(cs,sm(50,85,h))}
     for(const p of world.ponds){const dd=Math.hypot(x-p.x,z-p.z);if(dd<p.r*1.35)tmp.lerp(c.hab==='polar'?cr:wet,(1-sm(p.r*.9,p.r*1.35,dd))*.8)}
     const j=.92+MESHER.noise3(x*.3,1,z*.3)*.16;cols.set([tmp.r*j*1.18,tmp.g*j*1.18,tmp.b*j*1.18],i*3)}
   geo.setAttribute('color',new T.BufferAttribute(cols,3));geo.computeVertexNormals();
@@ -43,11 +53,13 @@ async function buildSafari(c,progress){
   ground.receiveShadow=true;scene.add(ground);
   for(const p of world.ponds){const w=NATURE.waterMesh(p.r*1.1,E.water);w.position.set(p.x,p.lvl,p.z);scene.add(w);world.waters.push(w)}
   if(c.hab==='dino')addVolcano(scene);
+  if(c.sea){const w=NATURE.waterMesh(WS*1.2,E.water);w.material.opacity=.72;w.position.y=0;scene.add(w);world.waters.push(w)}
   progress('Growing trees…');await nextFrame();
   const types=NATURE.treeTypes(c.hab);
   const place=rr=>{const x=(rr()-.5)*(WS+380),z=(rr()-.5)*(WS+380);if(Math.hypot(x,z)<28||inPond(x,z))return null;
+    if(c.sea)return H(x,z)>1.3?V(x,H(x,z),z):null;
     if(Math.max(Math.abs(x),Math.abs(z))>HALF+40&&rr()<.55)return null;return V(x,H(x,z),z)};
-  const count={rainforest:2600,jungle:2000,woodland:2000,savanna:1500,outback:1300,polar:800}[c.hab];
+  const count={rainforest:2600,jungle:2000,woodland:2000,savanna:1500,outback:1300,polar:800,ocean:3000}[c.hab];
   NATURE.scatter(scene,types,Math.round(count*QUALITY.trees),place,r).forEach(addCol);
   world.grass=NATURE.makeGrass(E,world.ponds,{half:HALF});if(world.grass)scene.add(world.grass);
   buildCar(scene);buildFootRig();scene.add(cam);
@@ -60,7 +72,7 @@ async function buildSafari(c,progress){
   refreshCages();
   // one group of every kind of animal first, then extra ones
   c.animals.forEach((x,i)=>spawnAnimal(true,SP[c.id+':'+i]));
-  while(world.animals.length<40)spawnAnimal(true);
+  while(world.animals.length<world.maxAn)spawnAnimal(true);
 }
 
 /* ---------- flying reptiles that circle in the sky ---------- */
@@ -231,19 +243,22 @@ function spawnAnimal(initial,force){
   const c=world.c,list=c.animals.map((a,i)=>SP[c.id+':'+i]);
   const w=list.map(s=>[0,7,3,1.2][s.r]),tot=w.reduce((a,b)=>a+b);
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
+  const okAt=(x,z)=>livesAt(sp,x,z);
   let x,z,tries=0;do{x=(Math.random()-.5)*2*(LIMIT-15);z=(Math.random()-.5)*2*(LIMIT-15);tries++}
-  while(tries<50&&(inPond(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
-  if(initial&&world.animals.length<4){const a=Math.random()*6.28,d=45+Math.random()*30;x=Math.sin(a)*d;z=-Math.cos(a)*d}
+  while(tries<(world.sea?300:50)&&(!okAt(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
+  if(initial&&world.animals.length<4&&!world.sea){const a=Math.random()*6.28,d=45+Math.random()*30;x=Math.sin(a)*d;z=-Math.cos(a)*d}
   // animals that live together come as a herd, pride or pack
   const hd=sp.def.herd,n=hd?hd[0]+Math.floor(Math.random()*(hd[1]-hd[0]+1)):1;
   const grp=n>1?{id:grpId++,members:[],fleeT:0}:null;
   for(let i=0;i<n;i++){
     const m=ANIMALS.make(sp);world.scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
-    const sp2=Math.max(2.5,m.rad*2.6),ox=i?(Math.random()-.5)*sp2*2.4:0,oz=i?(Math.random()-.5)*sp2*2.4:0;
+    const sp2=Math.max(2.5,m.rad*2.6);let ox=i?(Math.random()-.5)*sp2*2.4:0,oz=i?(Math.random()-.5)*sp2*2.4:0;if(!okAt(x+ox,z+oz))ox=oz=0;
     const a={sp,x:x+ox,z:z+oz,ox,oz,vx:0,vz:0,yaw:Math.random()*6.3,t:0,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp};
     if(grp)grp.members.push(a);world.animals.push(a);
   }
 }
+// fish stay in the deep water, land animals stay on the islands; turtles and the Sparkle Zebraffe go anywhere
+function livesAt(sp,x,z){if(!world.sea)return!inPond(x,z);const h=H(x,z),d=sp.def;return d.swim?h<-2.2:d.amph?true:h>.8}
 function removeAnimal(a){world.scene.remove(a.m.g);world.animals.splice(world.animals.indexOf(a),1);
   if(a.grp){a.grp.members=a.grp.members.filter(m=>m!==a)}world.respawn.push(10)}
 // hunters chase their prey; if they catch it, it falls over and is gone
@@ -294,12 +309,26 @@ function updateAnimals(dt,time){
           const tx=lead.x+a.ox,tz=lead.z+a.oz,ex=tx-a.x,ez=tz-a.z,ed=Math.hypot(ex,ez);
           if(ed>1.2){const s=Math.min(a.sp.s*1.5,ed*.7);a.vx=ex/ed*s;a.vz=ez/ed*s;a.graze=0}else{a.vx*=.9;a.vz*=.9;a.graze=lead.graze}}
         else{a.t-=dt;if(a.t<=0){a.t=2+Math.random()*4;
-          if(Math.random()<.4){a.vx=a.vz=0;a.graze=a.m.A.graze?1:0}else{a.graze=0;const ang=Math.random()*6.283,s=a.sp.s*(.35+Math.random()*.5);a.vx=Math.sin(ang)*s;a.vz=Math.cos(ang)*s}}}}}
+          if(Math.random()<.4){a.vx=a.vz=0;a.soar=0;a.graze=a.m.A.graze?1:0}else{a.graze=0;const ang=Math.random()*6.283,s=a.sp.s*(.35+Math.random()*.5);a.vx=Math.sin(ang)*s;a.vz=Math.cos(ang)*s;
+            // the Sparkle Zebraffe sometimes flies about
+            a.soar=a.sp.def.soar&&Math.random()<.4;if(a.soar){a.vx*=2.5;a.vz*=2.5}}}}}}
     if(Math.abs(a.x)>LIMIT-5)a.vx=-Math.sign(a.x)*Math.abs(a.vx||1);
     if(Math.abs(a.z)>LIMIT-5)a.vz=-Math.sign(a.z)*Math.abs(a.vz||1);
-    a.x+=a.vx*dt;a.z+=a.vz*dt;const spd=Math.hypot(a.vx,a.vz);
+    a.x+=a.vx*dt;a.z+=a.vz*dt;
+    if(world.sea&&a.state!=='netted'&&!(a.sp.def.fly&&a.alt>1.5)){const d=a.sp.def,h=H(a.x,a.z);
+      if(d.swim?h>-1.3:!d.amph&&h<-.3){a.x-=a.vx*dt;a.z-=a.vz*dt;a.vx=-a.vx;a.vz=-a.vz;a.t=Math.min(a.t,.6)}}
+    const spd=Math.hypot(a.vx,a.vz);
     if(spd>.15){const ty=Math.atan2(a.vx,a.vz);let dy=ty-a.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));a.yaw+=dy*Math.min(1,dt*5)}
-    a.alt=lerp(a.alt,a.m.A.fly&&(a.state==='flee'||a.state==='chased')?7:0,Math.min(1,dt*1.5));
+    if(a.state!=='wander')a.soar=0;
+    a.alt=lerp(a.alt,a.m.A.fly&&(a.state==='flee'||a.state==='chased'||a.soar)?7:0,Math.min(1,dt*1.5));
+    let pitch=0;
+    if(world.sea){const h=H(a.x,a.z),d=a.sp.def;
+      if(d.swim){let y=-(d.dorsalS&&a.m.h>1?a.m.h*.7:a.m.h+.15);
+        // dolphins leap out of the water
+        if(d.jump&&a.state!=='netted'){a.jt=(a.jt||0)-dt;if(a.jt<-8&&spd>.4&&Math.random()<dt*.15)a.jt=1.3;if(a.jt>0){const q=(1.3-a.jt)/1.3;y+=Math.sin(q*Math.PI)*3.4;pitch=-Math.cos(q*Math.PI)*.7}}
+        a.alt=Math.max(h,y)-h}
+      else if(h<-a.m.h*.45&&a.alt<1)a.alt=Math.max(a.alt,-a.m.h*.45-h)}
+    a.m.inner.rotation.x=pitch;
     // far animals: simpler model, very far: hidden
     const vis=d<260;a.m.g.visible=vis;if(!vis)continue;
     const far=d>50;if(far!==a.far){a.far=far;ANIMALS.setLOD(a.m,far)}
@@ -308,7 +337,7 @@ function updateAnimals(dt,time){
     const ic=a.icon;if(a.state==='flee'||a.state==='chased'){ic.visible=true;ic.material.map=ICON.run}else if(a.state==='tired'){ic.visible=true;ic.material.map=ICON.tired}else ic.visible=false;
     if(a.net){a.net.position.set(a.x,g.position.y+a.m.h*.45,a.z);const s=Math.max(a.m.rad,a.m.h*.6)*1.15;a.net.scale.set(s,s,s)}
   }
-  world.respawn=world.respawn.map(t=>t-dt).filter(t=>t>0||(world.animals.length<38&&spawnAnimal(false),false));
+  world.respawn=world.respawn.map(t=>t-dt).filter(t=>t>0||(world.animals.length<world.maxAn-2&&spawnAnimal(false),false));
 }
 
 /* ---------- catching ---------- */
@@ -335,7 +364,7 @@ function updateNet(dt){
   n.mesh.position.lerpVectors(n.start,n.end,p);n.mesh.position.y+=Math.sin(p*Math.PI)*2;n.mesh.rotation.x+=dt*8;n.mesh.scale.setScalar(.4+p*.8);
   if(p<1)return;
   world.scene.remove(n.mesh);world.net=null;netRig.visible=true;
-  const a=n.a,ok=world.animals.includes(a)&&Math.hypot(a.x-n.end.x,a.z-n.end.z)<Math.max(1.6,a.m.rad*1.3)&&a.alt<2.5;
+  const a=n.a,ok=world.animals.includes(a)&&Math.hypot(a.x-n.end.x,a.z-n.end.z)<Math.max(1.6,a.m.rad*1.3)&&(a.alt<2.5||a.sp.def.swim||world.sea&&a.alt<6&&!a.soar&&a.state!=='flee');
   if(ok){const netOne=b=>{b.state='netted';b.vx=b.vz=0;b.alt=0;b.icon.visible=false;me.pack.push(b);
       const net=new T.Mesh(new T.SphereGeometry(1,16,12),new T.MeshBasicMaterial({color:'#efe4c8',wireframe:true}));world.scene.add(net);b.net=net;
       b.rope=new T.Line(new T.BufferGeometry().setFromPoints([V(0,0,0),V(0,0,0)]),new T.LineBasicMaterial({color:'#e8d9b0'}));b.rope.frustumCulled=false;world.scene.add(b.rope)};
@@ -371,7 +400,7 @@ function pressE(){
   if(!safari.running)return;
   if(mode==='car'){
     if(Math.abs(car.v)>3){toast('Slow down to jump out!');return}
-    const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=H(me.x,me.z);me.vy=0;
+    const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=HW(me.x,me.z);me.vy=0;
     look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=true;placePets();setDriveUI();return}
   if(me.pack.length){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS){cageIt();return}}
   const tp=trailerPos();
@@ -414,8 +443,8 @@ function updateAssistant(dt,time){
   else{tx=tp.x;tz=tp.z;if(Math.hypot(a.x-tp.x,a.z-tp.z)<7.5*TS){cageIt(a);if(a.pack.length){for(const b of a.pack){world.scene.remove(b.net);b.net=null;world.scene.remove(b.rope);b.rope=null;b.state='wander'}a.pack=[]}a.state='follow'}}
   a.inst.g.visible=true;
   const dx=tx-a.x,dz=tz-a.z,d=Math.hypot(dx,dz);if(d>1.5){spd=Math.min(a.state==='carry'?7:9,d*1.5);a.x+=dx/d*spd*dt;a.z+=dz/d*spd*dt;const ty=Math.atan2(dx,dz);let dy=ty-a.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));a.yaw+=dy*Math.min(1,dt*6)}
-  ANIMALS.animate(a.inst,dt,spd,time,{});a.inst.g.position.set(a.x,H(a.x,a.z),a.z);a.inst.g.rotation.y=a.yaw;
-  if(a.pack.length)ropes(a,V(a.x,H(a.x,a.z)+1.2,a.z));
+  ANIMALS.animate(a.inst,dt,spd,time,{});a.inst.g.position.set(a.x,HW(a.x,a.z),a.z);a.inst.g.rotation.y=a.yaw;
+  if(a.pack.length)ropes(a,V(a.x,HW(a.x,a.z)+1.2,a.z));
 }
 function updatePets(dt,time){
   updateAssistant(dt,time);
@@ -429,14 +458,14 @@ function updatePets(dt,time){
       const dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);
       if(d>60){p.x=tx;p.z=tz}else if(d>1.5){spd=Math.min(p.fast?23:21,d*1.6);p.x+=dx/d*spd*dt;p.z+=dz/d*spd*dt;const ty=Math.atan2(dx,dz);let dy=ty-p.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));p.yaw+=dy*Math.min(1,dt*5)}}
     ANIMALS.animate(p.inst,dt,spd,time,{});
-    p.inst.g.position.set(p.x,H(p.x,p.z)+(p.inst.hop||0),p.z);p.inst.g.rotation.y=p.yaw;
+    p.inst.g.position.set(p.x,HW(p.x,p.z)+(p.inst.hop||0),p.z);p.inst.g.rotation.y=p.yaw;
   });
 }
 
 /* ---------- moving ---------- */
 function updateCar(dt){
   const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,up=gas>.05,dn=brk>.05,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
-  const wet=inPond(car.x,car.z)&&world.c.hab!=='polar',max=wet?7:world.zoo?34:21;
+  const deep=world.sea&&H(car.x,car.z)<-.9,wet=deep||inPond(car.x,car.z)&&world.c.hab!=='polar',max=deep?15:wet?7:world.zoo?34:21;
   if(up)car.v+=(car.v<0?16:8)*gas*dt;if(dn)car.v-=(car.v>0?16:7)*brk*dt;
   if(!up&&!dn)car.v*=Math.pow(.35,dt);
   car.v=clamp(car.v,-7,max);
@@ -446,8 +475,8 @@ function updateCar(dt){
   keepIn(car);
   if(collide(car,1.7*TS)){if(Math.abs(car.v)>6)toast('Bump!');car.v*=-.25}
   const sy=Math.sin(car.yaw),cy=Math.cos(car.yaw);
-  const hf=H(car.x-sy*1.6*TS,car.z-cy*1.6*TS),hb=H(car.x+sy*1.6*TS,car.z+cy*1.6*TS),hl=H(car.x-cy*TS,car.z+sy*TS),hr=H(car.x+cy*TS,car.z-sy*TS);
-  car.y=(hf+hb+hl+hr)/4;
+  const hf=HW(car.x-sy*1.6*TS,car.z-cy*1.6*TS),hb=HW(car.x+sy*1.6*TS,car.z+cy*1.6*TS),hl=HW(car.x-cy*TS,car.z+sy*TS),hr=HW(car.x+cy*TS,car.z-sy*TS);
+  car.y=(hf+hb+hl+hr)/4+(deep?Math.sin(performance.now()*.0016)*.08:0);
   const g=car.g;g.position.set(car.x,car.y+Math.sin(performance.now()*.03)*.006*Math.min(1,Math.abs(car.v)),car.z);g.rotation.set(Math.atan2(hf-hb,3.2*TS),car.yaw,Math.atan2(hr-hl,2*TS),'YXZ');
   for(const w of car.wheels)w.rotation.x-=car.v*dt/.47;
   for(const f of car.front)f.rotation.y=car.steer*.45;
@@ -459,10 +488,11 @@ function updateCar(dt){
 function updateFoot(dt){
   const turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;look.yaw+=turn*2.2*dt;
   const mv=((keys.up?1:0)-(keys.down?1:0))||(pad.gas-pad.brake),run=keys.run||pad.run,spd=me.mount?(me.mount.fast?(run?22:16):(run?15:11)):(run?8:5.5);
-  me.x-=Math.sin(look.yaw)*mv*spd*dt;me.z-=Math.cos(look.yaw)*mv*spd*dt;keepIn(me);collide(me,.5);
+  const swim=world.sea&&!me.mount&&H(me.x,me.z)<-1.2?.6:1;
+  me.x-=Math.sin(look.yaw)*mv*spd*swim*dt;me.z-=Math.cos(look.yaw)*mv*spd*swim*dt;keepIn(me);collide(me,.5);
   const cl=o=>{const dx=me.x-o.x,dz=me.z-o.z,d=Math.hypot(dx,dz);if(d<o.r){me.x=o.x+dx/d*o.r;me.z=o.z+dz/d*o.r}};
   cl({x:car.x,z:car.z,r:2.1*TS});for(const z of[-3.2,-1.1,1.1,3.2]){const p=car.trailer.localToWorld(V(0,0,z));cl({x:p.x,z:p.z,r:1.5*TS})}
-  const gh=H(me.x,me.z);me.vy-=18*dt;me.y+=me.vy*dt;if(me.y<=gh){me.y=gh;me.vy=0;me.ground=true}
+  const gh=HW(me.x,me.z);me.vy-=18*dt;me.y+=me.vy*dt;if(me.y<=gh){me.y=gh;me.vy=0;me.ground=true}
   if(mv&&me.ground)me.bob+=dt*spd*1.6;
   ropes(me,cam.localToWorld(V(.26,-.35,-.5)));
 }
@@ -510,7 +540,8 @@ function hud(){
   if((hudT++)%3)return;
   const c=$('#mm').getContext('2d'),W=280,k=W/2/90,cx=mode==='car'?car.x:me.x,cz=mode==='car'?car.z:me.z;
   c.save();c.clearRect(0,0,W,W);c.beginPath();c.arc(W/2,W/2,W/2,0,7);c.clip();
-  c.fillStyle=world.E.ground;c.fillRect(0,0,W,W);
+  c.fillStyle=world.sea?world.E.water:world.E.ground;c.fillRect(0,0,W,W);
+  if(world.islands){c.fillStyle=world.E.ground;for(const I of world.islands){c.beginPath();c.arc(W/2+(I.x-cx)*k,W/2+(I.z-cz)*k,I.r*.95*k,0,7);c.fill()}}
   if(world.domes)for(const d of world.domes){c.fillStyle='rgba(220,240,255,.55)';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(W/2+(d.x-cx)*k,W/2+(d.z-cz)*k,d.r*k,0,7);c.fill();c.stroke()}
   if(world.zoo)for(const o of zoo.animals){c.fillStyle='#1d2116';c.beginPath();c.arc(W/2+(o.x-cx)*k,W/2+(o.z-cz)*k,5,0,7);c.fill()}
   c.fillStyle=world.E.water;for(const p of world.ponds){c.beginPath();c.arc(W/2+(p.x-cx)*k,W/2+(p.z-cz)*k,p.r*k,0,7);c.fill()}

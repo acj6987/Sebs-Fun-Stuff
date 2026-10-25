@@ -94,13 +94,18 @@ function buildArea(area,i){
   const D=zooLayout().list[i],{x,z,R:R0,side}=D,grp=new T.Group();grp.position.set(x,0,z);grp.rotation.y=-side*Math.PI/2;zoo.scene.add(grp);
   const E=ENV[area.hab];
   const gt=NATURE.groundTextures(area.hab),map=gt.map.clone(),nm=gt.normal.clone();map.needsUpdate=nm.needsUpdate=true;map.repeat.set(R0/3.5,R0/3.5);nm.repeat.set(R0/3.5,R0/3.5);
-  const gc=new T.Color(E.ground).multiplyScalar(1.15);
-  const gm=new T.Mesh(new T.CircleGeometry(R0,96),new T.MeshStandardMaterial({color:gc,map,normalMap:nm,roughness:area.hab==='polar'?.55:1}));
+  const gc=new T.Color(E.ground).multiplyScalar(1.15),sea=area.hab==='ocean';
+  // a big pond; the Ocean Dome has a huge deep pool for its fish
+  const pr=R0*(sea?.4:.12),px=-R0*.35,pz=R0*.05;
+  let ggeo;if(sea){const sh=new T.Shape();sh.absarc(0,0,R0,0,Math.PI*2);const hole=new T.Path();hole.absarc(px,-pz,pr,0,Math.PI*2,true);sh.holes.push(hole);ggeo=new T.ShapeGeometry(sh,96);map.repeat.set(1/3.5,1/3.5);nm.repeat.set(1/3.5,1/3.5)}
+  else ggeo=new T.CircleGeometry(R0,96);
+  const gm=new T.Mesh(ggeo,new T.MeshStandardMaterial({color:gc,map,normalMap:nm,roughness:area.hab==='polar'?.55:1}));
   gm.rotation.x=-Math.PI/2;gm.position.y=.06;gm.receiveShadow=true;gm.userData.area=area.id;grp.add(gm);zoo.grounds.push(gm);
   const cols=[];
-  // a big pond
-  const pr=R0*.12,px=-R0*.35,pz=R0*.05;
   const w=NATURE.waterMesh(pr,E.water);w.position.set(px,.12,pz);grp.add(w);zoo.waters.push(w);
+  if(sea){w.material.opacity=.6;const sand=new T.MeshStandardMaterial({color:'#2f9aa8',roughness:1}),wall=new T.MeshStandardMaterial({color:'#d8c48a',roughness:.95,side:T.BackSide});
+    const side=new T.Mesh(new T.CylinderGeometry(pr,pr*.92,6,96,1,true),wall);side.position.set(px,-3,pz);grp.add(side);
+    const bot=new T.Mesh(new T.CircleGeometry(pr*.92,64),sand);bot.rotation.x=-Math.PI/2;bot.position.set(px,-6,pz);bot.receiveShadow=true;grp.add(bot)}
   const rim=new T.Mesh(new T.TorusGeometry(pr,.5,8,64),NATURE.rockMat(E.rock));rim.rotation.x=-Math.PI/2;rim.position.set(px,.1,pz);rim.scale.z=.4;rim.receiveShadow=true;grp.add(rim);
   // full-size plants and rocks from that habitat, with a clear ring to drive round
   const types=habTypes[area.hab]||(habTypes[area.hab]=NATURE.treeTypes(area.hab));
@@ -188,25 +193,28 @@ function buildDome(grp,R){
 function syncZooAnimals(){
   for(const a of zoo.animals)zoo.scene.remove(a.inst.g);zoo.animals=[];
   for(const area of S.areas){const A=zoo.areas.get(area.id);if(!A)continue;
-    for(const an of area.animals){const r=rng(an.uid*13),p=an.preg?houseSpot(A,r):randomSpot(A,r);addZooAnimal(an,A,p.x,p.z,r()*6.28)}}
+    for(const an of area.animals){const r=rng(an.uid*13),p=swims(an)?poolSpot(A,r):an.preg?houseSpot(A,r):randomSpot(A,r);addZooAnimal(an,A,p.x,p.z,r()*6.28)}}
 }
 function addZooAnimal(an,A,x,z,yaw){const inst=ANIMALS.make(SP[an.k]),o={an,A,inst,x,z,tx:x,tz:z,yaw,t:Math.random()*3};inst.g.position.set(x,0,z);zoo.scene.add(inst.g);zoo.animals.push(o);return o}
 // what an animal eats: meat for hunters, hay for everyone else
-const eats=sp=>sp.def.hunts||sp.hab==='carnivore'?'meat':'hay';
+const eats=sp=>sp.def.swim?null:sp.def.hunts||sp.hab==='carnivore'?'meat':'hay';
 // where an animal wants to go next: food, the house, or somewhere near the gate
 function nextSpot(o){
+  if(swims(o.an))return poolSpot(o.A);
   const pile=o.A.food.find(f=>f.type===eats(SP[o.an.k]));
   if(pile){const a=(o.an.uid*2.4)%6.28,d=pile.r+1+SP[o.an.k].def.L*.6||3;return{x:pile.x+Math.sin(a)*d,z:pile.z+Math.cos(a)*d,pile}}
   if(o.an.preg||Math.random()<.18)return houseSpot(o.A);
   return randomSpot(o.A);
 }
 function homeOf(A){const r=Math.min(A.R0*.3,A.R0>250?75:45),k=(A.R0-r-22)/A.R0;return{x:A.x+(A.door.x-A.x)*k,z:A.z+(A.door.z-A.z)*k,r}}
+function poolSpot(A,r=Math.random){const a=r()*6.28,d=Math.sqrt(r())*A.pond.r*.82;return{x:A.pond.x+Math.sin(a)*d,z:A.pond.z+Math.cos(a)*d}}
+const swims=an=>!!SP[an.k].def.swim;
 function randomSpot(A,r=Math.random){const h=homeOf(A);for(let i=0;i<30;i++){const a=r()*6.28,d=Math.sqrt(r())*h.r,x=h.x+Math.sin(a)*d,z=h.z+Math.cos(a)*d;if(Math.hypot(x-A.pond.x,z-A.pond.z)<A.pond.r+2)continue;return{x,z}}return{x:h.x,z:h.z}}
 function updateZooAnimals(dt,time){
   const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const o of zoo.animals){
     // move out of the way of the jeep or of you
-    if(driving&&Math.hypot(o.x-px,o.z-pz)<9){const a=Math.atan2(o.x-px,o.z-pz);const lim=o.A.R0-4;let nx=o.x+Math.sin(a)*8-o.A.x,nz=o.z+Math.cos(a)*8-o.A.z;const d=Math.hypot(nx,nz);if(d>lim){nx*=lim/d;nz*=lim/d}o.tx=o.A.x+nx;o.tz=o.A.z+nz;o.t=2}
+    if(driving&&!swims(o.an)&&Math.hypot(o.x-px,o.z-pz)<9){const a=Math.atan2(o.x-px,o.z-pz);const lim=o.A.R0-4;let nx=o.x+Math.sin(a)*8-o.A.x,nz=o.z+Math.cos(a)*8-o.A.z;const d=Math.hypot(nx,nz);if(d>lim){nx*=lim/d;nz*=lim/d}o.tx=o.A.x+nx;o.tz=o.A.z+nz;o.t=2}
     const dx=o.tx-o.x,dz=o.tz-o.z,d=Math.hypot(dx,dz);let spd=0;
     if(d>.4){spd=Math.min(SP[o.an.k].s*(driving&&o.t===2?1.4:.55),d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
       const ty=Math.atan2(dx,dz);let dy=ty-o.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.yaw+=dy*Math.min(1,dt*4)}
@@ -215,7 +223,8 @@ function updateZooAnimals(dt,time){
     if(o.pile&&o.pile.left<=0)o.pile=null;
     const far=Math.hypot(o.x-cam.position.x,o.z-cam.position.z)>110;if(far!==o.far){o.far=far;ANIMALS.setLOD(o.inst,far)}
     ANIMALS.animate(o.inst,dt,spd,time,{graze:spd<.1&&(!!o.pile||Math.sin(time*.3+o.an.uid)>.3)});
-    o.inst.g.position.set(o.x,.06+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
+    const sw=SP[o.an.k].def.swim;
+    o.inst.g.position.set(o.x,sw?.12-(SP[o.an.k].def.dorsalS&&o.inst.h>1?o.inst.h*.7:o.inst.h+.2):.06+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
     if(o.an.born){const g=Math.min(1,(Date.now()-o.an.born)/GROW);o.inst.g.scale.setScalar(.35+.65*g);if(g>=1)delete o.an.born}
   }
   breed(dt);updateFood(dt);
@@ -594,7 +603,7 @@ function foodAction(){
     f.meat=FOOD.max;f.hay=FOOD.max;save();showFood();toast('🥩🌾 Loaded '+FOOD.max+' crates of meat and '+FOOD.max+' bales of hay onto your truck! Take them to the domes and press G.');return}
   const A=domeAt(car.x,car.z);
   if(!A){toast(f.meat+f.hay?'Drive into a dome, then press G to feed the animals':'Drive to the 🥩 Food Store (right of the gate) and press G to load food');return}
-  const need=[...new Set(A.area.animals.map(an=>eats(SP[an.k])))];
+  const need=[...new Set(A.area.animals.map(an=>eats(SP[an.k])))].filter(Boolean);
   if(!need.length){toast('There are no animals in this dome to feed');return}
   const type=need.find(t=>f[t]>0&&!A.food.some(p=>p.type===t))||need.find(t=>f[t]>0);
   if(!type){toast('You have no '+need.map(t=>t==='meat'?'🥩 meat':'🌾 hay').join(' or ')+' left! Go back to the Food Store.');return}

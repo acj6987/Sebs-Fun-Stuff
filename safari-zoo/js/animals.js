@@ -93,8 +93,34 @@ function quad(p){
   else if(p.tail==='short')k.ell(ad(tb,[0,-.02,-.04]),[W*.13,W*.15,W*.12],'tail',{k:W*.1,col:tcol,pat:1,detail:1});
   else if(p.tail==='flat')k.ell(ad(tb,[0,-by+.12,-.32]),[W*.32,.05,.3],'tail',{k:.04,col:'#3a2a1e',detail:1});
   else k.extra('tail','tail',tb,{len:tl,r:p.tail==='long'?.045:.025,tuft:p.tail==='tuft'?(p.tuftCol||p.mane||'#2a1d14'):null,col:p.tail==='long'?p.col:shade(p.col,-.1),ang:p.tail==='long'?2.1:2.75,tip:p.tail==='long'?(p.col2||p.col):null});
-  k.anim={kind:'quad',stride:Math.max(.5,leg*1.5),graze:p.graze};
+  k.anim={kind:'quad',stride:Math.max(.5,leg*1.5),graze:p.graze,fly:p.fly};
+  if(p.glam)glam(k,p,{by,at,nb,nd,na,hl,hw,hh});
   return k;
+}
+/* ---------- the Sparkle Zebraffe: zebra + giraffe + jaguar, with arms, wings, make-up and a handbag ---------- */
+function glam(k,p,{by,at,nb,nd,na,hl,hw,hh}){
+  const {L,W,Hb}=p;
+  // giraffe patches on the body, zebra stripes on the legs and tail, jaguar spots on the neck and head
+  for(const pr of k.prims){if(pr.col)continue;pr.tex=pr.bone==='root'?'giraffe':/^(leg|low|tail)/.test(pr.bone)?'stripes':'rosette'}
+  // a sparkly purple top with puffy sleeves
+  k.ell([0,by+Hb*.12,L*.36],[W*.56,Hb*.56,L*.2],'root',{k:Hb*.15,col:p.top});
+  for(const s of[-1,1])k.ell(at(hl*.42,-hh*.12,s*hw*.42),[hw*.13,hh*.13,hl*.1],'head',{k:.02,col:'#ff8fc0',detail:1}); // blusher
+  // two arms with painted nails; the left hand holds her handbag
+  for(const sx of[-1,1]){const i=sx>0?0:1,sh=[sx*W*.36,by+Hb*.3,L*.5],el=[sx*W*.5,by-Hb*.18,L*.66],ha=[sx*W*.42,by-Hb*.52,L*.8];
+    k.bone('arm'+i,'root',sh);k.bone('fore'+i,'arm'+i,el);
+    k.cap(sh,el,W*.11,W*.085,'arm'+i,{k:W*.06,col:p.top});k.cap(el,ha,W*.08,W*.065,'fore'+i,{k:W*.04,col:p.col});
+    k.extra('fore'+i,'hand',ha,{s:sx,size:W*.13,nail:p.nails[i]});
+    if(i)k.extra('fore'+i,'bag',ad(ha,[0,-W*.12,0]),{size:W*.55,col:p.col2});
+    // fairy wings so she can fly
+    const wn='wing'+(sx>0?'R':'L');k.bone(wn,'root',[sx*W*.3,by+Hb*.45,L*.1]);k.extra(wn,'fwing',[sx*W*.3,by+Hb*.45,L*.1],{s:sx,size:L*.85});
+    k.extra('head','peye',at(hl*.32,hh*.16,sx*hw*.4),{r:Math.max(.018,hw*.075)*(p.eyeS||1),s:sx,iris:'#2fa8ff',shadow:'#b14ad8'})}
+  k.extra('head','lips',at(hl*.9,-hh*.27),{w:hh*.34});
+  k.extra('head','bow',at(-hl*.02,hh*.55),{size:hh*.55,col:'#ff3d9a'});
+  k.extra('neck','pearls',ad(nb,sc(nd,p.neck*.12)),{r:p.neckW*1.45,na});
+  k.extra('root','tutu',[0,by-Hb*.05,-L*.05],{rx:W*.62,ry:Hb*.62,len:L*.55,col:'#ff7ec4'});
+  k.extra('root','sparkles',[0,by,0],{size:[W*1.6,Hb*2.4,L*1.4]});
+  // her big pretty eyes replace the plain ones
+  k.extras=k.extras.filter(e=>e.kind!=='eye');
 }
 
 /* ---------- birds ---------- */
@@ -221,6 +247,7 @@ function lizard(p){
     k.bone('leg'+i,'root',a);k.bone('low'+i,'leg'+i,b);
     k.cap(a,b,s*.065,s*.05,'leg'+i,{k:s*.05,pat:1});k.cap(b,f,s*.05,s*.04,'low'+i,{k:s*.03,pat:1})});
   if(p.frill)k.extra('head','frill',[0,s*.25,s*.5],{s,col:p.frill});
+  if(p.shell){k.ell([0,s*.27,-s*.02],[s*.4,s*.2,s*.55],'root',{k:s*.08,col:p.shell,rough:.015,rf:9});k.ell([0,s*.15,0],[s*.36,s*.06,s*.5],'root',{k:s*.04,col:p.belly||'#d8c890'})}
   k.anim={kind:'lizard',stride:s*.45};
   return k;
 }
@@ -315,7 +342,29 @@ function person(p){
   k.anim={kind:'person',stride:.45*s};
   return k;
 }
-const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person,theropod};
+/* ---------- fish, dolphins, sharks and rays ---------- */
+function fish(p){
+  const k=kit(),s=p.s,th=s*(p.tall||.34),w=s*(p.wide||.16),y=th*.55;
+  k.bone('root',null,[0,y,0]);k.bone('tail','root',[0,y,-s*.22]);
+  if(p.ray){
+    k.ell([0,y,0],[s*.75,th*.2,s*.42],'root',{k:s*.12,pat:1});k.ell([0,y+th*.1,s*.08],[s*.28,th*.35,s*.34],'root',{k:s*.1,pat:1});
+    for(const sx of[-1,1]){k.extra('root','eye',[sx*s*.2,y+th*.25,s*.36],{r:s*.025});k.cap([sx*s*.12,y,s*.4],[sx*s*.14,y-th*.1,s*.55],s*.04,s*.025,'root',{k:s*.02,pat:1,detail:1})}
+    k.extra('tail','tail',[0,y,-s*.38],{len:s*.9,r:s*.018,col:p.col,ang:1.62});
+    k.anim={kind:'fish',stride:s*.5,ray:1};return k}
+  k.ell([0,y,s*.06],[w,th*.5,s*.42],'root',{k:th*.3,pat:1});
+  k.ell([0,y+th*.02,s*.3],[w*.92,th*.42,s*.22],'root',{k:th*.25,pat:1});
+  k.cap([0,y,-s*.1],[0,y,-s*.44],th*.3,th*.07,'tail',{k:th*.15,pat:1});
+  if(p.beak)k.cap([0,y-th*.06,s*.44],[0,y-th*.12,s*.62],th*.15,th*.08,'root',{k:th*.08,pat:1});
+  for(const sx of[-1,1]){k.extra('root','eye',[sx*w*.8,y+th*.12,s*(p.beak?.4:.36)],{r:Math.max(.012,th*.09)});
+    k.extra('root','pfin',[sx*w*.85,y-th*.18,s*.16],{s:sx,size:th*.75,col:p.fin||p.col})}
+  k.extra('tail',p.flukes?'flukes':'tfin',[0,y,-s*.43],{size:th*(p.flukes?1:1.15),col:p.fin||p.col});
+  if(p.dorsalS!==0)k.extra('root','dfin',[0,y+th*.45,-s*.02],{size:s*(p.dorsalS||.34),tall:p.fin2||.8,col:p.fin||p.col});
+  if(p.belly2)k.extra('root','dfin',[0,y-th*.45,-s*.06],{size:s*.3,tall:-(p.fin2||.8)*.8,col:p.fin||p.col});
+  if(p.spikes)k.extra('root','spikes',[0,y,s*.06],{r:Math.min(w,th*.5),len:th*.18,col:p.col2});
+  k.anim={kind:'fish',stride:s*.5,flukes:p.flukes};
+  return k;
+}
+const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person,theropod,fish};
 
 /* ---------- coat colours ---------- */
 const colCache={};
@@ -326,7 +375,7 @@ function painter(p){
   const base=C(p.col||p.body||'#888'),c2=C(p.col2||'#111'),belly=C(p.belly||shade(p.col||p.body||'#888',.16));
   return(pr,x,y,z,nx,ny,nz)=>{
     let c=pr.col?C(pr.col):base;
-    const pat=pr.pat==='rings'?'rings':(pr.pat&&!pr.col?p.tex:null);
+    const pat=pr.pat==='rings'?'rings':(pr.pat&&!pr.col?(pr.tex||p.tex):null);
     if(!pr.col&&ny<-.2&&!p.noBelly)c=mixc(c,belly,Math.min(1,(-ny-.2)*1.8));
     if(pr.front&&nz>.15)c=mixc(c,C(pr.front),Math.min(1,(nz-.15)*4));
     if(pat){
@@ -335,7 +384,7 @@ function painter(p){
       else{const m=pr.m;t=x*m[6]+y*m[7]+z*m[8]}
       if(pat==='stripes'){const w=Math.sin(t*(p.freq||17)+(fbm(x*2.2,y*2.2,z*2.2)-.5)*4);
         const tiger=p.belly&&ny<-.45;if(w>(p.thin||0)&&!tiger)c=mixc(c,c2,Math.min(1,(w-(p.thin||0))*14))}
-      if(pat==='giraffe'){const[f1,f2]=voronoi(x*4.2,y*4.2,z*4.2);c=f2-f1<.13?C('#f1e4c4'):mixc(c2,C(shade(p.col2,-.06)),fbm(x*6,y*6,z*6))}
+      if(pat==='giraffe'){const[f1,f2]=voronoi(x*4.2,y*4.2,z*4.2);c=f2-f1<.13?C(p.lineCol||'#f1e4c4'):mixc(c2,C(shade(p.col2,-.06)),fbm(x*6,y*6,z*6))}
       if(pat==='dots'){const[f1]=voronoi(x*10,y*10,z*10);if(f1<.24)c=c2}
       if(pat==='rosette'){const[f1]=voronoi(x*6,y*6,z*6);if(f1>.2&&f1<.34)c=c2;else if(f1<=.2)c=mixc(c,c2,.18)}
       if(pat==='spots'){if(fbm(x*5,y*5,z*5)>.6)c=c2}
@@ -381,8 +430,25 @@ function mats(){
   };
   return MATS;
 }
+// glitter: tiny twinkling sparkles stuck to the surface, plus a rainbow shimmer
+const GLT={value:0};
+function addSparkle(m,dens=55,amt=2.2){
+  m.onBeforeCompile=sh=>{sh.uniforms.uGlT=GLT;sh.uniforms.uGlD={value:dens};sh.uniforms.uGlA={value:amt};
+    sh.vertexShader='varying vec3 vGlP;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvGlP=position;');
+    sh.fragmentShader='uniform float uGlT,uGlD,uGlA;varying vec3 vGlP;\n'+sh.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+      vec3 gq=vGlP*uGlD,gc=floor(gq);float gh=fract(sin(dot(gc,vec3(12.9898,78.233,45.164)))*43758.5453);
+      float gd=length(fract(gq)-.5),gtw=.5+.5*sin(uGlT*3.+gh*60.);
+      totalEmissiveRadiance+=vec3(1.,.92,1.)*step(.8,gh)*smoothstep(.4,.05,gd)*pow(gtw,5.)*uGlA;`)};
+  m.customProgramCacheKey=()=>'glitter';return m}
+const glitM={};
+function glitterMat(col,o={}){const k=col+JSON.stringify(o);return glitM[k]||(glitM[k]=addSparkle(new T.MeshPhysicalMaterial(Object.assign({color:col,roughness:.35,metalness:.25,clearcoat:.8,clearcoatRoughness:.1,iridescence:1,iridescenceIOR:1.5,sheen:.6,sheenColor:new T.Color('#ffd0ff')},o)),o.dens||60))}
+const glossM={};
+function gloss(col){return glossM[col]||(glossM[col]=new T.MeshPhysicalMaterial({color:col,roughness:.06,clearcoat:1,clearcoatRoughness:.02,sheen:.5,sheenColor:new T.Color('#ffffff')}))}
 function rngA(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
+let glamBody=null;
 function matFor(p){const plan=p.plan||'quad',m=mats();
+  if(p.glam)return glamBody||(glamBody=addSparkle(new T.MeshPhysicalMaterial({vertexColors:true,roughness:.45,clearcoat:.6,clearcoatRoughness:.2,iridescence:.6,iridescenceIOR:1.4,sheen:.8,sheenColor:new T.Color('#ffb0e0'),normalMap:m.fur.normalMap,normalScale:new T.Vector2(.3,.3)}),50,2.6));
+  if(plan==='fish')return m.wet;
   if(plan==='person')return m.cloth;
   if(plan==='theropod'||p.scaly)return m.scale;
   if(plan==='bird')return m.feather;if(plan==='lizard'||plan==='snake')return m.scale;if(plan==='frog'||plan==='seal')return m.wet;return m.fur}
@@ -423,9 +489,64 @@ function extraMesh(e,p){
     case'crestTube':{const geo=new T.CylinderGeometry(e.r*.7,e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,smat(e.col,{roughness:.6}),null,[-1.9+e.tilt,0,0]);break}
     case'club':{const o=add(new T.SphereGeometry(e.r,16,12),smat('#5a4a38',{roughness:.7}));o.scale.set(1.4,.8,1.1);break}
     case'frill':{const f=add(new T.CircleGeometry(e.s*.3,24),smat(e.col,{side:T.DoubleSide}));break}
+    // fish fins
+    case'tfin':{const a=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.quadraticCurveTo(a*.5,a*.3,a,a*.8);sh.lineTo(a*.72,0);sh.lineTo(a,-a*.8);sh.quadraticCurveTo(a*.5,-a*.3,0,0);
+      const geo=new T.ShapeGeometry(sh,8);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.45,transparent:true,opacity:.9}));break}
+    case'flukes':{const a=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.quadraticCurveTo(a*.5,a*.2,a*.9,a*.9);sh.quadraticCurveTo(a*.3,a*.55,0,a*.6);sh.quadraticCurveTo(-a*.3,a*.55,-a*.9,a*.9);sh.quadraticCurveTo(-a*.5,a*.2,0,0);
+      const geo=new T.ShapeGeometry(sh,8);geo.rotateX(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.4}));break}
+    case'dfin':{const a=e.size,t=e.tall,sh=new T.Shape();sh.moveTo(-a*.35,0);sh.lineTo(a*.6,0);sh.quadraticCurveTo(a*.45,a*t*.4,a*.55,a*t);sh.quadraticCurveTo(a*.05,a*t*.55,-a*.35,0);
+      const geo=new T.ShapeGeometry(sh,8);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.45}));break}
+    case'pfin':add(new T.SphereGeometry(1,12,8),smat(e.col,{roughness:.45,transparent:true,opacity:.9}),[e.s*e.size*.35,0,-e.size*.2],[.3,e.s*.6,e.s*.5],[e.size*.5,e.size*.05,e.size*.28]);break;
+    case'spikes':for(let i=0;i<46;i++){const yv=1-(i+.5)/46*2,rr=Math.sqrt(1-yv*yv),a=i*2.39996,d=V3(Math.cos(a)*rr,yv,Math.sin(a)*rr);if(d.z<-.7)continue;
+      const geo=new T.ConeGeometry(e.len*.25,e.len,5);geo.translate(0,e.len/2,0);const o=add(geo,smat(e.col,{roughness:.6}),[d.x*e.r*.95,d.y*e.r*.95,d.z*e.r*.95]);o.quaternion.setFromUnitVectors(V3(0,1,0),d)}break;
+    // the Sparkle Zebraffe's pretty face, hands, clothes and bag
+    case'peye':{const r=e.r,dir=V3(e.s*.55,.08,.83).normalize(),at=f=>[dir.x*r*f,dir.y*r*f,dir.z*r*f];
+      add(new T.SphereGeometry(r,18,14),smat('#ffffff',{roughness:.15}));
+      add(new T.SphereGeometry(r*.6,16,12),gloss(e.iris),at(.5));add(new T.SphereGeometry(r*.32,12,10),m.eye,at(.75));
+      add(new T.SphereGeometry(r*.12,8,6),new T.MeshBasicMaterial({color:'#ffffff'}),[dir.x*r*.85,r*.3,dir.z*r*.85]);
+      const lid=add(new T.SphereGeometry(r*1.1,18,10,0,Math.PI*2,0,Math.PI*.4),glitterMat(e.shadow));lid.rotation.set(dir.z*.35,0,-dir.x*.35);
+      const lm=smat('#120a10',{roughness:.5}),el=.75,az0=Math.atan2(dir.x,dir.z);
+      for(let i=0;i<9;i++){const az=az0+(i-4)/4*.95,bp=V3(Math.sin(az)*Math.cos(el)*r*1.08,Math.sin(el)*r*1.08,Math.cos(az)*Math.cos(el)*r*1.08),n=bp.clone().normalize(),L=r*(1.5+.5*Math.cos((i-4)/4*1.4));
+        const c=new T.QuadraticBezierCurve3(bp,bp.clone().addScaledVector(n,L*.6),bp.clone().addScaledVector(n,L*.75).add(V3(0,L*.55,0)));add(new T.TubeGeometry(c,6,r*.035,4),lm)}break}
+    case'lips':{const w=e.w,lm=gloss('#ff3d8e');add(new T.SphereGeometry(1,20,14),lm,[0,w*.16,0],null,[w,w*.32,w*.42]);add(new T.SphereGeometry(1,20,14),lm,[0,-w*.18,-w*.02],null,[w*.9,w*.36,w*.44]);
+      for(const sx of[-1,1])add(new T.SphereGeometry(1,12,10),lm,[sx*w*.35,w*.26,w*.05],null,[w*.38,w*.22,w*.3]);
+      add(new T.SphereGeometry(w*.16,10,8),new T.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.75}),[w*.3,w*.3,w*.32],null,[1,.4,.4]);break}
+    case'hand':{const z=e.size,skin=smat(p.col,{roughness:.6}),nail=gloss(e.nail);add(new T.SphereGeometry(z,14,10),skin,null,null,[1,.75,1.1]);
+      for(let f=0;f<5;f++){const thumb=f===4,a=thumb?-e.s*1.1:(f-1.5)*.32,len=z*(thumb?1:1.35),geo=new T.CylinderGeometry(z*.2,z*.24,len,8);geo.translate(0,-len/2,0);
+        const fg=new T.Group();fg.position.set(Math.sin(a)*z*.7,-z*.4,Math.cos(a)*z*.5+(thumb?z*.3:0));fg.rotation.set(.5,0,thumb?e.s*.9:-a*.4);g.add(fg);
+        const fm=new T.Mesh(geo,skin);fm.castShadow=true;fg.add(fm);const nl=new T.Mesh(new T.SphereGeometry(z*.24,10,8),nail);nl.scale.set(1,1.5,.6);nl.position.set(0,-len,z*.1);fg.add(nl)}break}
+    case'bag':{const z=e.size,bm=glitterMat(e.col,{metalness:.4}),gold=new T.MeshStandardMaterial({color:'#f2c14e',metalness:1,roughness:.25});
+      const hd=add(new T.TorusGeometry(z*.28,z*.03,8,20,Math.PI),gold,[0,-z*.08,0]);hd.rotation.y=Math.PI/2;
+      const bx=new T.Group();bx.position.y=-z*.45;g.add(bx);const B=(geo,mat,pp,sc2)=>{const o=new T.Mesh(geo,mat);o.position.set(...pp);if(sc2)o.scale.set(...sc2);o.castShadow=true;bx.add(o);return o};
+      B(new T.BoxGeometry(z*.4,z*.05,z*.62),bm,[0,-z*.25,0]);for(const sx of[-1,1])B(new T.BoxGeometry(z*.04,z*.5,z*.62),bm,[sx*z*.18,0,0]);for(const sz of[-1,1])B(new T.BoxGeometry(z*.4,z*.5,z*.04),bm,[0,0,sz*z*.3]);
+      B(new T.SphereGeometry(z*.05,10,8),gold,[z*.21,z*.1,0]);B(new T.BoxGeometry(z*.03,z*.3,z*.62),bm,[-z*.3,z*.36,0]).rotation.z=.9;
+      // inside: nail polish, lip balm, lipstick, a mirror and a make-up brush
+      const pol=['#ff2d8a','#a23cff','#2fd1ff','#ffd400'];pol.forEach((c,i)=>{B(new T.CylinderGeometry(z*.055,z*.06,z*.16,10),new T.MeshPhysicalMaterial({color:c,roughness:.05,clearcoat:1,transmission:.2}),[-z*.08+(i%2)*z*.13,z*.22,-z*.2+Math.floor(i/2)*z*.14]);B(new T.CylinderGeometry(z*.02,z*.025,z*.1,8),smat('#151515'),[-z*.08+(i%2)*z*.13,z*.35,-z*.2+Math.floor(i/2)*z*.14])});
+      B(new T.CylinderGeometry(z*.035,z*.035,z*.16,10),gold,[z*.06,z*.24,z*.12]);B(new T.CylinderGeometry(z*.03,z*.03,z*.08,10),gloss('#e0163c'),[z*.06,z*.36,z*.12]);
+      B(new T.CylinderGeometry(z*.03,z*.03,z*.2,10),gloss('#ffb3d1'),[-z*.08,z*.28,z*.15]).rotation.z=.25;
+      const mir=B(new T.CylinderGeometry(z*.11,z*.11,z*.02,20),gold,[0,z*.32,z*.2]);mir.rotation.x=1.2;B(new T.CircleGeometry(z*.095,20),new T.MeshStandardMaterial({color:'#e8f4ff',metalness:1,roughness:0}),[0,z*.33,z*.21]).rotation.x=1.2-Math.PI/2;
+      B(new T.CylinderGeometry(z*.015,z*.02,z*.3,6),smat('#2a1a10'),[z*.12,z*.3,-z*.05]).rotation.z=-.3;B(new T.SphereGeometry(z*.05,10,8),smat('#e8b8a0',{roughness:1}),[z*.17,z*.45,-z*.05],[1,1.6,1]);break}
+    case'bow':{const z=e.size,bm=glitterMat(e.col);for(const sx of[-1,1]){const l=add(new T.ConeGeometry(z*.35,z*.6,12),bm,[sx*z*.3,0,0],[0,0,sx*Math.PI/2]);l.scale.set(1,1,.45)}add(new T.SphereGeometry(z*.14,10,8),bm);break}
+    case'pearls':{const pm=new T.MeshPhysicalMaterial({color:'#fff4f8',roughness:.15,clearcoat:1,iridescence:1,sheen:1,sheenColor:new T.Color('#ffd0e8')}),up=V3(0,Math.sin(e.na),-Math.cos(e.na));
+      for(let i=0;i<20;i++){const a=i/20*Math.PI*2;add(new T.SphereGeometry(e.r*.13,10,8),pm,[Math.cos(a)*e.r,up.y*Math.sin(a)*e.r,up.z*Math.sin(a)*e.r])}break}
+    case'tutu':{const geo=new T.CylinderGeometry(1,1.35,1,60,4,true),pp=geo.attributes.position;for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i),a=Math.atan2(z,x),k2=1+Math.sin(a*22)*.05*(pp.getY(i)+.5);pp.setX(i,x*k2);pp.setZ(i,z*k2)}
+      geo.computeVertexNormals();geo.rotateX(Math.PI/2);const o=add(geo,glitterMat(e.col,{side:T.DoubleSide,transparent:true,opacity:.85}),null,null,[e.rx,e.ry,e.len]);o.castShadow=false;break}
+    case'fwing':{const z=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.bezierCurveTo(z*.5,-z*.25,z*1.05,-z*.05,z*.9,z*.35);sh.bezierCurveTo(z*.75,z*.6,z*.3,z*.35,z*.15,z*.3);sh.bezierCurveTo(z*.5,z*.6,z*.55,z*1,z*.25,z*.95);sh.bezierCurveTo(z*.05,z*.85,0,z*.4,0,0);
+      const geo=new T.ShapeGeometry(sh,16);if(e.s<0)geo.scale(-1,1,1);geo.rotateX(Math.PI/2);
+      const wm=new T.MeshPhysicalMaterial({color:'#ffb8e8',emissive:'#ff7ad8',emissiveIntensity:.25,roughness:.15,iridescence:1,iridescenceIOR:1.6,transparent:true,opacity:.6,side:T.DoubleSide,depthWrite:false});
+      const o=add(geo,addSparkle(wm,30,3),null,[.35,0,e.s*.25]);o.castShadow=false;break}
+    case'sparkles':{const n=90,pos=new Float32Array(n*3),[sx,sy,sz]=e.size;for(let i=0;i<n;i++){const u=Math.random()*6.28,v=Math.acos(2*Math.random()-1),r=.6+Math.random()*.5;pos.set([Math.sin(v)*Math.cos(u)*sx*r,Math.cos(v)*sy*r*.5,Math.sin(v)*Math.sin(u)*sz*r],i*3)}
+      const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3));
+      const pm=new T.PointsMaterial({size:.12,map:starTex(),color:'#fff2ff',transparent:true,depthWrite:false,blending:T.AdditiveBlending});const pts=new T.Points(geo,pm);pts.userData.spark=1;g.add(pts);break}
   }
   return g;
 }
+const V3=(x,y,z)=>new T.Vector3(x,y,z);
+let starT=null;
+function starTex(){if(starT)return starT;const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,30);
+  gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.25,'rgba(255,200,240,.8)');gr.addColorStop(1,'rgba(255,150,220,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);
+  g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=2;g.beginPath();g.moveTo(32,2);g.lineTo(32,62);g.moveTo(2,32);g.lineTo(62,32);g.stroke();
+  starT=new T.CanvasTexture(c);starT.encoding=T.sRGBEncoding;return starT}
 let fanTex=null;
 function fanTexture(){if(fanTex)return fanTex;const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');
   g.translate(256,256);
@@ -457,18 +578,21 @@ function make(sp){
   const mesh=new T.SkinnedMesh(S.geo,S.mat);mesh.castShadow=true;mesh.receiveShadow=true;mesh.frustumCulled=false;
   mesh.add(bones[0]);inner.add(mesh);inner.updateMatrixWorld(true);mesh.bind(new T.Skeleton(bones));
   const low=new T.SkinnedMesh(S.geoLow,S.mat);low.castShadow=true;low.frustumCulled=false;inner.add(low);low.bind(mesh.skeleton,mesh.bindMatrix);low.visible=false;
-  const B={};bones.forEach(b=>B[b.name]=b);if(!B.root)B.root=bones[0];
+  const B={};bones.forEach(b=>B[b.name]=b);if(!B.root)B.root=bones[0];let spark=null;
   for(const e of k.extras){const b=B[e.bone],bp=k.bones.find(x=>x.name===e.bone).pos;const m=extraMesh(e,p);
     // bone world position at rest = sum of chain; extras are placed relative to their bone
-    m.position.set(e.pos[0]-bp[0],e.pos[1]-bp[1],e.pos[2]-bp[2]);b.add(m)}
-  return{g,inner,mesh,low,B,A:k.anim,h:S.h,rad:S.rad,len:S.len,ph:Math.random()*6,seed:Math.random()*10,rest:B.root.position.y};
+    m.position.set(e.pos[0]-bp[0],e.pos[1]-bp[1],e.pos[2]-bp[2]);b.add(m);if(e.kind==='sparkles')spark=m}
+  return{g,inner,mesh,low,B,A:k.anim,h:S.h,rad:S.rad,len:S.len,ph:Math.random()*6,seed:Math.random()*10,rest:B.root.position.y,spark};
 }
 function setLOD(a,far){a.mesh.visible=!far;a.low.visible=far;a.B.root.traverse(o=>{if(o.isMesh)o.visible=!far})}
 function animate(a,dt,spd,time,o={}){
   const B=a.B,A=a.A;a.ph+=dt*spd/A.stride*Math.PI;
   const ph=a.ph,amp=Math.min(.6,spd*.28),sd=a.seed;
   const breath=1+Math.sin(time*2.2+sd)*.01;B.root.scale.set(breath,breath,1);
-  a.hop=0;
+  a.hop=0;GLT.value=time;
+  if(a.spark){a.spark.rotation.y=time*.35;a.spark.children[0].material.opacity=.65+.35*Math.sin(time*4+sd)}
+  if(B.wingR){const f=o.alt>.4?Math.sin(time*12)*.75:.3+Math.sin(time*1.6+sd)*.08;B.wingR.rotation.z=f;B.wingL.rotation.z=-f}
+  if(B.arm0){B.arm0.rotation.x=Math.sin(time*1.2+sd)*.15-Math.sin(ph)*amp*.3;B.fore0.rotation.x=-.2+Math.sin(time*1.7+sd)*.15;B.arm1.rotation.x=-.25;B.fore1.rotation.x=.25}
   if(A.kind==='quad'){
     const off=[0,Math.PI,Math.PI*1.08,Math.PI*.08];
     for(let i=0;i<4;i++){const u=B['leg'+i],l=B['low'+i],q=ph+off[i],front=i<2;
@@ -511,6 +635,10 @@ function animate(a,dt,spd,time,o={}){
     for(let i=0;i<2;i++){const q=ph+i*Math.PI;B['leg'+i].rotation.x=Math.sin(q)*amp;B['low'+i].rotation.x=Math.max(0,-Math.cos(q))*amp*1.2;
       B['arm'+i].rotation.x=-Math.sin(q)*amp*.7;B['fore'+i].rotation.x=-.15-Math.max(0,Math.sin(q))*amp*.4}
     B.root.position.y=a.rest+Math.abs(Math.cos(ph))*amp*.03;B.head.rotation.y=o.look||Math.sin(time*.5+sd)*.3*(spd<.2?1:.3);
+  }else if(A.kind==='fish'){
+    const w=Math.sin(time*(5+spd*4)+sd)*(.25+Math.min(.35,spd*.15));
+    if(A.ray){a.inner.rotation.z=Math.sin(time*1.6+sd)*.12;B.root.position.y=a.rest+Math.sin(time*1.6+sd)*.05;B.root.scale.x=1+Math.sin(time*2+sd)*.06}
+    else if(A.flukes){B.tail.rotation.x=w*.8;B.root.rotation.x=-w*.08}else{B.tail.rotation.y=w*1.3;B.root.rotation.y=-w*.25}
   }else if(A.kind==='seal'){
     B.root.position.y=a.rest+Math.abs(Math.sin(ph))*.05*Math.min(1,spd);B.tail.rotation.x=Math.sin(ph*2)*.2*Math.min(1,spd)+Math.sin(time+sd)*.05;
     B.head.rotation.x=-.15+Math.sin(time*.7+sd)*.1;

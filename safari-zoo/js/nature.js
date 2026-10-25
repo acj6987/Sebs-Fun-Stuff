@@ -239,6 +239,7 @@ function treeTypes(hab){
   if(hab==='jungle'){T2(5,bamboo(),{s:[.8,1.2],col:.9});T2(3,broad(8,5),{s:[.8,1.2],col:.5});T2(1.2,broad(6,4.5,'blossom'),{s:[.8,1.2],col:.4});T2(3,bush('bamboo',1),{s:[.8,1.4]});T2(1.5,rock(E.rock),{s:[.6,1.8],col:1})}
   if(hab==='woodland'){T2(5,pine(),{s:[.8,1.5],col:.5});T2(3,broad(9,6.5),{s:[.8,1.3],col:.6});T2(1,broad(8,4,'broad',pale),{s:[.8,1.2],col:.35});T2(3,bush('bush',1.1),{s:[.8,1.4]});T2(2,rock(E.rock),{s:[.6,1.8],col:1});T2(2,fern(),{s:[.6,1]})}
   if(hab==='outback'){T2(2.5,broad(7,4,'euca',pale),{s:[.8,1.3],col:.4});T2(5,bush('dry',.8),{s:[.6,1.3]});T2(3,rock(E.rock,0,.6),{s:[.6,2.5],col:1.2});T2(.5,rock(E.rock,0,.5),{s:[5,9],col:5});T2(1,dead(),{s:[.8,1.2],col:.3})}
+  if(hab==='ocean'){T2(7,palm(),{s:[.8,1.4],col:.4});T2(1.5,broad(7,5,'blossom'),{s:[.7,1.1],col:.4});T2(3,bush('broad',1.1),{s:[.7,1.3]});T2(2,rock(E.rock),{s:[.6,2],col:1});T2(.4,rock(E.rock,0,.6),{s:[3,6],col:4})}
   if(hab==='dino'){T2(4,giant(),{s:[.9,1.3],col:1.1});T2(5,palm(),{s:[.6,1.3],col:.4});T2(8,fern(),{s:[1,2.2]});T2(3,bush('broad',1.5),{s:[.8,1.6]});T2(2,rock('#4a4440'),{s:[.8,2.5],col:1.2});T2(.4,rock('#3a3430',0,.6),{s:[4,8],col:5})}
   if(hab==='polar'){const ice=new T.MeshPhysicalMaterial({color:'#cfe9f7',roughness:.08,clearcoat:1,transparent:true,opacity:.92});
     const block=()=>{const g=rockGeo(r()*10,.9);return[[g,ice]]};
