@@ -79,7 +79,8 @@ function pollPad(dt){
   }
   // buttons: A / cross = jump out or get in, X / square = net, B / circle = jump, Y = back to zoo, LB = food (zoo), RB = ride (safari)
   const edge=i=>pressed(i)&&!pad.prev[i];
-  if(curView==='drive'&&safari.running){if(edge(0))pressE();if(edge(2))throwNet();if(edge(1))jump();if(edge(3)&&world&&world.zoo)$('#toZoo2').click();if(g.mapping==='standard'&&edge(4)&&world&&world.zoo)foodAction();if(g.mapping==='standard'&&edge(5)&&!(world&&world.zoo))rideToggle()}
+  if(curView==='drive'&&safari.running){if(edge(0))pressE();if(edge(2))throwNet();if(edge(1))jump();if(edge(3)&&world&&world.zoo)$('#toZoo2').click();if(g.mapping==='standard'&&edge(4)&&world&&world.zoo)foodAction();if(g.mapping==='standard'&&edge(5)&&!(world&&world.zoo))rideToggle();if(edge(3)&&world&&world.sea)toggleSub()}
+  pad.rise=pressed(12);pad.dive=pressed(13);
   pad.prev=bt.map((b,i)=>pressed(i));
 }
 // a clicked button keeps the keyboard focus, so Space would press it again: give the focus back to the game
@@ -110,7 +111,7 @@ $('#startDrive').addEventListener('click',startDriving);
 addEventListener('gamepadconnected',()=>$('#startDrive').hidden=true);
 addEventListener('gamepadconnected',e=>toast('🎮 Controller connected: '+(e.gamepad.id.split('(')[0].trim()||'game controller')+'. Steer and press the pedals or triggers to drive!'));
 addEventListener('gamepaddisconnected',()=>toast('🎮 Controller disconnected'));
-const KM={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ShiftLeft:'run',ShiftRight:'run'};
+const KM={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ShiftLeft:'run',ShiftRight:'run',Space:'rise',KeyQ:'rise',KeyC:'dive',KeyZ:'dive'};
 addEventListener('keydown',e=>{
   if(curView!=='drive'||!safari.running)return;
   $('#startDrive').hidden=true;
@@ -120,6 +121,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyF'){throwNet();e.preventDefault()}
   if(e.code==='KeyR'){rideToggle();e.preventDefault()}
   if(e.code==='KeyG'){foodAction();e.preventDefault()}
+  if(e.code==='KeyB'){toggleSub();e.preventDefault()}
   if(e.code==='Space'){e.preventDefault();jump()}
   if(e.code==='Escape')goMap()});
 addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=false});
@@ -150,6 +152,7 @@ $('#netBtn').addEventListener('click',throwNet);
 $('#rideBtn').addEventListener('click',rideToggle);
 $('#eBtn').addEventListener('click',pressE);
 $('#foodBtn').addEventListener('click',foodAction);
+$('#subBtn').addEventListener('click',toggleSub);
 $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.pack.length)releaseLeash();show('map')}
 $('#back').onclick=goMap;

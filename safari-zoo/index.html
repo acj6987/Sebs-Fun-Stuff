@@ -55,6 +55,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 #cv:active{cursor:grabbing}
 #drive,#zoo{padding:0;overflow:hidden;background:transparent;pointer-events:none}
 #drive>*,#zoo>*{pointer-events:auto}
+#under{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% -10%,rgba(150,230,255,.28),rgba(0,50,100,.35) 70%)}
 #drive>#tag,#drive>.cross,#drive>#prompt,#drive>#mm,#zoo>.hint{pointer-events:none}
 .hud{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
   padding-top:calc(10px + env(safe-area-inset-top,0px));padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));pointer-events:none!important}
@@ -165,6 +166,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 </section>
 
 <section id="drive" class="screen" hidden>
+  <div id="under" hidden></div>
   <div class="cross" id="cross" hidden></div>
   <div id="tag" hidden></div>
   <div class="hud">
@@ -189,6 +191,9 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <button class="act green" id="eBtn">JUMP OUT<small>E</small></button>
     <button class="act blue" id="rideBtn" hidden>RIDE DINO<small>R</small></button>
     <button class="act" id="foodBtn" hidden>FOOD<small>G</small></button>
+    <button class="act blue" id="subBtn" hidden>SUBMARINE<small>B</small></button>
+    <button class="act green" id="upBtn" data-k="rise" hidden>⬆ UP<small>Space</small></button>
+    <button class="act" id="downBtn" data-k="dive" hidden>⬇ DIVE<small>Shift</small></button>
     <button class="act" id="netBtn" hidden>THROW NET<small>F</small></button>
   </div>
 </section>
