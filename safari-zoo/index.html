@@ -241,6 +241,10 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 <div id="loading" hidden><div class="spinner"></div><span id="loadTxt">Loading…</span><small>Building the 3D world takes a few seconds</small></div>
 <div id="toast" hidden></div>
 
+<script>
+// if part of the game fails to load, say so instead of showing an empty page; the save game is untouched
+addEventListener('error',()=>{const t=document.getElementById('toast');if(t){t.textContent='Oops, part of the game did not load. Your animals and coins are still saved. Please reload the page.';t.hidden=false}});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
 <script src="js/core.js"></script>
 <script src="js/mesher.js"></script>

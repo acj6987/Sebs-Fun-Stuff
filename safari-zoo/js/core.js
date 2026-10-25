@@ -73,8 +73,8 @@ const CONT=[
    ['Skunk','🦨',1,1.1,{L:.55,W:.32,Hb:.3,leg:.18,legW:.05,neck:.08,neckW:.13,neckAng:1.25,headL:.24,headW:.22,headH:.2,col:'#161616',stripe:1,ears:'round',tail:'bushy',tl:.55,tailCol:'#161616',tip:'#f4f4f4',sz:1.6,paws:1,noBelly:1}],
    ['Beaver','🦫',2,1,{L:.85,W:.48,Hb:.45,leg:.16,legW:.07,neck:.06,neckW:.2,neckAng:1.3,headL:.3,headW:.3,headH:.26,col:'#6b4528',ears:'round',tail:'flat',sz:1.4,paws:1}],
    ['Grizzly Bear','🐻',2,1.6,{hunts:['Deer'],L:2,W:1.1,Hb:1.1,leg:.7,legW:.19,neck:.3,neckW:.5,neckAng:1.2,headL:.55,headW:.5,headH:.48,col:'#6b4a2b',hump:1,ears:'round',tail:'short',paws:1}],
-   ['Grey Wolf','🐺',2,2.2,{hunts:['Deer', 'Bison', 'Wild Boar'],herd:[4,6],L:1.35,W:.42,Hb:.52,leg:.72,legW:.065,neck:.35,neckW:.17,neckAng:.9,headL:.42,headW:.26,headH:.25,col:'#6f6e6a',belly:'#d0cec8',snout:'#d0cec8',ears:'pointy',tail:'bushy',tl:.55,tip:'#2a2a28',paws:1}],
    ['Bald Eagle','🦅',3,1.4,{plan:'bird',s:.85,body:'#4a2e1a',wing:'#3b2414',head:'#f6f4ee',beak:'#f2c230',leg:.25,neck:.12,fly:1,tailCol:'#f6f4ee',legCol:'#f2c230'}],
+   ['Grey Wolf','🐺',2,2.2,{hunts:['Deer', 'Bison', 'Wild Boar'],herd:[4,6],L:1.35,W:.42,Hb:.52,leg:.72,legW:.065,neck:.35,neckW:.17,neckAng:.9,headL:.42,headW:.26,headH:.25,col:'#6f6e6a',belly:'#d0cec8',snout:'#d0cec8',ears:'pointy',tail:'bushy',tl:.55,tip:'#2a2a28',paws:1}],
   ]},
  {id:'europe',name:'Europe',place:'Old woods and meadows',hab:'woodland',deco:['🌳','🦊','🍄'],
   animals:[

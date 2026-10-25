@@ -74,7 +74,6 @@ function addVolcano(scene){
   const cone=new T.Mesh(geo,new T.MeshStandardMaterial({color:'#3a3330',roughness:.95,map:NATURE.rockMat('#3a3330').map,emissive:'#ff5a14',emissiveMap:lava,emissiveIntensity:1.4}));cone.position.set(vx,base+hgt/2,vz);cone.receiveShadow=true;scene.add(cone);
   const lavaM=new T.MeshBasicMaterial({color:'#ff5a14',fog:false});
   const crater=new T.Mesh(new T.CircleGeometry(19,32),lavaM);crater.rotation.x=-Math.PI/2;crater.position.set(vx,base+hgt-3,vz);scene.add(crater);
-    const r0=22,r1=145,mid=(r0+r1)/2;st.position.set(vx+Math.sin(a)*mid,base+hgt/2,vz+Math.cos(a)*mid);st.rotation.order='YXZ';st.rotation.y=a;st.rotation.x=-Math.atan2(hgt,r1-r0)+Math.PI/2;st.translateZ(1.2);scene.add(st)}
   const glow=new T.PointLight('#ff7a30',2.2,700,1.5);glow.position.set(vx,base+hgt+15,vz);scene.add(glow);
   const [c,g]=NATURE.canvas(128);const gr=g.createRadialGradient(64,64,0,64,64,62);gr.addColorStop(0,'rgba(90,85,80,.75)');gr.addColorStop(1,'rgba(90,85,80,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
   const sm=new T.SpriteMaterial({map:NATURE.toTex(c,true),transparent:true,depthWrite:false,fog:false});
