@@ -51,6 +51,11 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 #drive>*,#zoo>*{pointer-events:auto}
 #snorkel{position:absolute;inset:0;pointer-events:none}
 #snorkel::after{content:'';position:absolute;right:7%;top:-3%;width:26px;height:50%;background:linear-gradient(90deg,#ff8a2a,#ffb35a);border:3px solid #1a1a1a;border-radius:14px}
+#dnaPanel{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(10,30,20,.55)}
+#dnaPanel .dnaBox{background:var(--paper,#fdf3dc);color:var(--ink,#222);border-radius:22px;padding:18px 20px;width:min(560px,92vw);max-height:86vh;overflow:auto;text-align:center}
+#dnaList{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:10px 0}
+#dnaList button{border:3px solid #1a9a5a;background:#fff;border-radius:14px;padding:6px 10px;font-weight:800;font-size:15px}
+#dnaList button.on{background:#3af08a}#dnaPick{font-weight:900;margin:8px 0}#dnaMade{margin-top:10px;font-size:14px}
 #prize{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(40,10,60,.55);overflow:hidden}
 #prize .pz{text-align:center;color:#fff;font-family:var(--display);padding:28px 34px;border-radius:28px;background:linear-gradient(160deg,#ff5fae,#7a4aff);box-shadow:0 10px 0 #3a1a6a,0 0 60px #ffd23a;animation:pzIn .6s cubic-bezier(.2,1.6,.4,1)}
 #prize .big{font-size:clamp(44px,11vw,96px);color:#ffe14a;text-shadow:0 4px 0 #a86a00,0 0 30px #fff3a0}
@@ -201,6 +206,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <button class="act green" id="upBtn" data-k="rise" hidden>⬆ UP<small>Space</small></button>
     <button class="act" id="downBtn" data-k="dive" hidden>⬇ DIVE<small>Shift</small></button>
     <button class="act" id="netBtn" hidden>THROW NET<small>F</small></button>
+    <button class="act" id="dnaBtn" hidden style="background:#1a9a5a;box-shadow:0 5px 0 #0e5a34">TAKE DNA<small>X</small></button>
   </div>
 </section>
 
@@ -217,6 +223,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <button class="act green" id="driveZoo">🚙 Drive around the zoo</button>
     <button class="act" id="goEnc">Go into an enclosure</button>
     <button class="act blue" id="dinoTour">🚙 Give a tour · 600 each</button>
+    <button class="act" id="dnaOpen" style="background:#1a9a5a;box-shadow:0 5px 0 #0e5a34">🧬 DNA Lab</button>
   </div>
   <div id="encPick" hidden>
     <div class="panel encBox">
@@ -255,6 +262,8 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 
 <div id="loading" hidden><div class="spinner"></div><span id="loadTxt">Loading…</span><small>Building the 3D world takes a few seconds</small></div>
 <div id="toast" hidden></div>
+<div id="dnaPanel" hidden><div class="dnaBox"><h2>🧬 DNA Lab</h2><p>Pick two kinds of DNA, then mix them to make a brand-new animal!</p>
+  <div id="dnaList"></div><div id="dnaPick"></div><button class="act" id="dnaMix" style="background:#1a9a5a;box-shadow:0 5px 0 #0e5a34">🧬 Mix the DNA!</button> <button class="act blue" id="dnaClose">Close</button><div id="dnaMade"></div></div></div>
 <div id="prize" hidden onclick="this.hidden=true"><div class="pz"><div class="em">💖💙</div><div class="big">£2,000,000!</div><div class="sm">You caught both Mummy Dreams!<br>+ 60 free domes · the Mummy Dream Dome · 6 million visitors</div><div class="tap">Tap to close</div></div>
   <i>🎉</i><i>✨</i><i>💖</i><i>🪙</i><i>💙</i><i>🎉</i><i>✨</i><i>🪙</i><i>💖</i><i>💙</i></div>
 

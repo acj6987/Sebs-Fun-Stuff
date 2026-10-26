@@ -54,7 +54,7 @@ function buildZoo(){
   zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
     return(Math.abs(x)<ROAD+10+MEGA*2+40||x>0&&x<ULTRA.x+ULTRA.R+40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*900,z=60+rr()*300;return Math.abs(x)<110&&z<190?null:V(x,0,z)},r);
-  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();
+  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();buildLab();
   // planes flying high over the zoo
   zoo.skyPlanes=[0,1,2].map(i=>{const g=planeModel();g.scale.setScalar(1.6);scene.add(g);return{g,a:i*2.1,r:350+i*120,h:110+i*35,spd:(i%2?-1:1)*(30+i*6),cx:0,cz:-500}});
   // entrance gate
@@ -263,6 +263,7 @@ function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
+  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;
   for(const p of zoo.skyPlanes||[]){p.a+=p.spd/p.r*dt;const x=p.cx+Math.cos(p.a)*p.r,z=p.cz+Math.sin(p.a)*p.r,d=Math.sign(p.spd);p.g.position.set(x,p.h,z);p.g.rotation.set(0,Math.atan2(-Math.sin(p.a)*d,Math.cos(p.a)*d),-d*.25,'YXZ');p.g.userData.prop.rotation.z+=dt*40}
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
@@ -549,6 +550,7 @@ function pickEgg(){
   toast('🥚 You picked up the '+SP[n.e.k].n+' egg and put it in your truck! Take it to the Egg Nursery to hatch it.');return true}
 function eggHint(){const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';
   if(mode==='car'&&nearPens()&&S.cages.length)return'Press <b>G</b> to put the animals in your truck into a Family Pen';
+  if(mode==='car'&&nearLab())return'Press <b>G</b> to open the DNA Lab and make new animals';
   if(mode==='car'&&nearDoctor())return'Press <b>G</b> for the doctor to check the animals in your truck';return''}
 function showTruckEggs(){
   if(!car.g||!car.trailer)return;if(car.eggRack)car.eggRack.parent&&car.eggRack.parent.remove(car.eggRack);const g=new T.Group();car.eggRack=g;car.trailer.add(g);
@@ -709,7 +711,7 @@ function domeAt(x,z){return[...zoo.areas.values()].find(a=>Math.hypot(x-a.x,z-a.
 // G: load food at the store, or drop food in the dome you are in
 function foodAction(){
   if(world&&world.sea){callDreams();return}
-  if(!(world&&world.zoo))return;if(nearNursery()&&dropEggs())return;if(nearPens()&&dropFamily())return;if(nearDoctor()&&visitDoctor())return;const f=truckFood();
+  if(!(world&&world.zoo))return;if(nearNursery()&&dropEggs())return;if(nearPens()&&dropFamily())return;if(nearDoctor()&&visitDoctor())return;if(nearLab()){openLab();return}const f=truckFood();
   if(nearStore()){if(f.meat>=FOOD.max&&f.hay>=FOOD.max){toast('Your truck is full of food! Drive it to a dome and press G to feed the animals.');return}
     f.meat=FOOD.max;f.hay=FOOD.max;save();showFood();toast('🥩🌾 Loaded '+FOOD.max+' crates of meat and '+FOOD.max+' bales of hay onto your truck! Take them to the domes and press G.');return}
   const A=domeAt(car.x,car.z);
@@ -824,3 +826,45 @@ function visitDoctor(){
     S.holding.push(c)}
   S.coins+=names.length*20;autoHome();save();coins();refreshCages();syncZooAnimals();if(curView==='zoo')renderZooUI();
   toast('🩺 The doctor checked your '+names.join(', ')+'. All healthy and happy! ❤️'+(babies?' And the doctor helped '+babies+' baby'+(babies>1?' babies':'')+' be born! 🍼':'')+' They went home to their domes. +'+names.length*20+' coins',8000);return true}
+
+/* ---------- 🧬 the DNA Lab: take DNA from animals and mix two to make a new animal ---------- */
+const LAB={x:125,z:12,D:24,W:20};
+function buildLab(){
+  const g=new T.Group();g.position.set(LAB.x,0,LAB.z);zoo.scene.add(g);const {D,W}=LAB,Ht=8;
+  const wall=new T.MeshPhysicalMaterial({color:'#e6fff2',roughness:.3,clearcoat:.6}),roof=new T.MeshStandardMaterial({color:'#1a9a5a',roughness:.5}),glow=new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.3});
+  const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o);return o};
+  box(wall,0,.05,0,D,.1,W);box(wall,0,Ht/2,-W/2,D,Ht,.5);for(const sd of[-1,1])box(wall,sd*D/2,Ht/2,0,.5,Ht,W);
+  for(const sd of[-1,1])box(wall,sd*(D/2-4),Ht/2,W/2,8,Ht,.5);box(wall,0,Ht-1,W/2,D,2,.5);box(roof,0,Ht+.2,0,D+1.5,.4,W+1.5);
+  for(let i=0;i<4;i++){const t=new T.Mesh(new T.CylinderGeometry(.8,.8,4,16),glow);t.position.set(-D/2+4+i*5.3,2.2,-W/2+3);g.add(t)}
+  const helix=new T.Group();helix.position.set(0,Ht+4,0);g.add(helix);for(let i=0;i<24;i++){const a=i*.5;for(const s2 of[1,-1]){const b=new T.Mesh(new T.SphereGeometry(.35,10,8),i%2?glow:roof);b.position.set(Math.cos(a)*1.4*s2,i*.3-3.5,Math.sin(a)*1.4*s2);helix.add(b)}}
+  zoo.helix=helix;
+  const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['DNA LAB','Make new animals - press G'],'#1a9a5a'),roughness:.7}));st.position.set(0,Ht-1.2,W/2+.3);g.add(st);
+  for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:LAB.x+x,z:LAB.z-W/2,r:1});
+  for(const sd of[-1,1]){for(let z=-W/2;z<=W/2;z+=1.8)zoo.cols.push({x:LAB.x+sd*D/2,z:LAB.z+z,r:1});for(let x=0;x<=8;x+=1.8)zoo.cols.push({x:LAB.x+sd*(D/2-x),z:LAB.z+W/2,r:1})}
+}
+function nearLab(){return Math.abs(car.x-LAB.x)<LAB.D/2+4&&Math.abs(car.z-LAB.z)<LAB.W/2+12}
+// look at an animal in the zoo and take some of its DNA
+function takeDNA(){
+  if(!(world&&world.zoo)||mode!=='foot')return;const f=V(0,0,-1).applyQuaternion(cam.quaternion);let best=null,bs=1e9;
+  for(const o of zoo.animals){const p=V(o.x,o.inst.g.position.y+o.inst.h*.5,o.z),d=p.clone().sub(cam.position),dist=d.length();if(dist>16)continue;const ang=f.angleTo(d.normalize());if(ang<.4&&ang*30+dist<bs){bs=ang*30+dist;best=o}}
+  if(!best){toast('Walk up to an animal and look right at it to take some DNA');return}
+  S.dna[best.an.k]=(S.dna[best.an.k]||0)+1;save();toast('🧬 You took some '+SP[best.an.k].n+' DNA! It is in the DNA box on your truck. Take it to the DNA Lab.',5000);
+}
+let dnaSel=[];
+function openLab(){dnaSel=[];renderLab();$('#dnaPanel').hidden=false}
+function renderLab(){
+  const ks=Object.keys(S.dna).filter(k=>S.dna[k]>0&&SP[k]);
+  $('#dnaList').innerHTML=ks.length?ks.map(k=>`<button data-k="${k}" class="${dnaSel.includes(k)?'on':''}">${SP[k].e} ${SP[k].n} DNA ×${S.dna[k]}</button>`).join(''):'<i>No DNA yet! Pick up 🧬 DNA tubes on safari, or walk up to a zoo animal and press X.</i>';
+  $('#dnaPick').textContent=dnaSel.length===2?SP[dnaSel[0]].n+' + '+SP[dnaSel[1]].n+' = the '+mixName(SP[dnaSel[0]],SP[dnaSel[1]])+'!':'Pick '+(2-dnaSel.length)+' more';
+  $('#dnaMix').disabled=dnaSel.length<2;
+  $('#dnaMade').innerHTML=S.mixes.length?'Animals you made: '+S.mixes.map(m=>'🧬 '+m.n).join(', '):'';
+}
+function mixDNA(){
+  if(dnaSel.length<2)return;const[a,b]=dnaSel,n=mixName(SP[a],SP[b]);
+  S.dna[a]--;S.dna[b]--;const i=S.mixes.length;S.mixes.push({a,b,n});addMix(S.mixes[i],i);const k='mix:'+i;S.dex[k]=1;
+  S.holding.push({uid:S.uid++,k});const made=autoHome();save();
+  if(zoo.built){S.areas.forEach((ar,j)=>{if(!zoo.areas.has(ar.id)){buildArea(ar,j)}});if(made.length)rebuildPaths();syncVisitors();syncZooAnimals();if(curView==='zoo')renderZooUI()}
+  dnaSel=[];renderLab();toast('🧬✨ You made a brand-new animal: the '+n+'! It went to its '+HAB[SP[k].hab].name+' dome.',7000);
+}
+$('#dnaList').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(!b)return;const k=b.dataset.k,i=dnaSel.indexOf(k);if(i>=0)dnaSel.splice(i,1);else if(dnaSel.length<2)dnaSel.push(k);renderLab()});
+$('#dnaMix').onclick=mixDNA;$('#dnaClose').onclick=()=>$('#dnaPanel').hidden=true;$('#dnaOpen').onclick=openLab;

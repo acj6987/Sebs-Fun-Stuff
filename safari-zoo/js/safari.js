@@ -68,7 +68,8 @@ async function buildSafari(c,progress){
   const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]));
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
   // pterodactyls circling high in the sky over Dino Zone
-  if(c.hab==='dino'){const fl=makeFlyers(scene,SP['dino:3'],10,{x:0,z:0},[60,240],[35,80],1.6),smoke=world.tick;
+  buildDNA(scene,c);
+  if(c.hab==='dino'){const fl=makeFlyers(scene,SP['dino:3'],10,{x:0,z:0},[60,240],[35,80],1.6),smoke=world.tick;world.flyers=fl;
     world.tick=(dt,time)=>{if(smoke)smoke(dt,time);updateFlyers(fl,dt,time,H)}}
   refreshCages();
   // one group of every kind of animal first, then extra ones
@@ -87,7 +88,8 @@ function makeFlyers(scene,sp,n,center,rr,alt,scale=1){
 function updateFlyers(list,dt,time,ground){
   for(const f of list){f.a+=f.spd/f.r*dt;const x=f.cx+Math.cos(f.a)*f.r,z=f.cz+Math.sin(f.a)*f.r;
     const vx=-Math.sin(f.a)*Math.sign(f.spd),vz=Math.cos(f.a)*Math.sign(f.spd);
-    f.inst.g.position.set(x,ground(x,z)+f.alt+Math.sin(time*.4+f.r)*4,z);f.inst.g.rotation.set(0,Math.atan2(vx,vz),-Math.sign(f.spd)*.25);
+    const low=Math.sin(time*.06+f.r*.37)>.7;f.cur=lerp(f.cur??f.alt,low?1.2:f.alt,Math.min(1,dt*.4));if(low&&f.cur<3){f.a-=f.spd/f.r*dt*.9}
+    f.inst.g.position.set(x,ground(x,z)+f.cur+(low?0:Math.sin(time*.4+f.r)*4),z);f.inst.g.rotation.set(0,Math.atan2(vx,vz),-Math.sign(f.spd)*.25);
     // flap for a bit, then glide
     const flap=Math.sin(time*.5+f.r)>.2;ANIMALS.animate(f.inst,dt,0,time,{alt:flap?5:0});if(!flap)for(const w of['L','R'])f.inst.B['wing'+w].rotation.z=(w==='R'?1:-1)*-.15}
 }
@@ -365,7 +367,7 @@ function aimTarget(){
     const ang=f.angleTo(d.normalize());if(ang<.32){const sc=ang*30+dist;if(sc<bs){bs=sc;best={a,dist}}}}
   return best}
 function throwNet(){
-  if(!safari.running)return;if(mode==='plane'){toast('Land the plane first! Press P.');return}
+  if(!safari.running)return;if(mode==='plane'){planeCatch();return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){zooCatch();return}
   if(world.net)return;
@@ -436,7 +438,7 @@ function pressE(){
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
-function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car'||mode==='plane';$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
+function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#dnaBtn').hidden=!(world&&world.zoo&&mode==='foot');$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
   const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&(mode==='car'||mode==='sub'));sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
   $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||mode==='plane'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub'||mode==='plane';
   const pb=$('#planeBtn');pb.hidden=!(world&&!world.zoo&&(mode==='car'||mode==='plane'));pb.firstChild.textContent=mode==='plane'?'LAND':'PLANE';$('#eBtn').hidden=mode==='plane';
@@ -550,7 +552,7 @@ const safari={running:false,
     else if(mode==='plane'){for(let i=0;i<n;i++)updatePlane(h)}
     else if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
-    updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);
+    updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
     if(world.tick)world.tick(dt,time);
     if(world.grass)world.grass.userData.update(cam.position,time,world.scene.fog,world.sky.sunDir);
@@ -571,7 +573,7 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;
-  if(mode==='plane')msg='✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>P</b> land';
+  if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
   else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
   else if(world.zoo)msg=foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
@@ -723,4 +725,33 @@ function updatePlane(dt){
   me.x=car.x=plane.x;me.z=car.z=plane.z;me.y=plane.y-1;
   const g=plane.g,bank=-turn*.5;g.position.set(plane.x,plane.y+Math.sin(performance.now()*.002)*.15,plane.z);g.rotation.set(-vy*.2,plane.yaw+Math.PI,0,'YXZ');g.rotation.z=bank;
   g.userData.prop.rotation.z+=dt*(20+plane.v);
+}
+
+// catch flying animals (like pterodactyls) from your plane
+function planeTarget(){let best=null,bd=45;
+  for(const f of world.flyers||[]){const p=f.inst.g.position,d=Math.hypot(p.x-plane.x,p.y-plane.y,p.z-plane.z);if(d<bd){bd=d;best={f,n:SP['dino:3'].n}}}
+  for(const a of world.animals){if(a.state==='netted'||a.state==='caught')continue;const d=Math.hypot(a.x-plane.x,a.m.g.position.y-plane.y,a.z-plane.z);if(d<Math.min(bd,30)){bd=d;best={a,n:a.sp.n}}}
+  return best}
+function planeCatch(){
+  const t=planeTarget();if(!t){toast('Fly close to a flying animal (or swoop down low) and press F to catch it!');return}
+  if(t.f){if(smallUsed()>=CAGES){toast('Your truck cages are full!');return}
+    world.scene.remove(t.f.inst.g);world.flyers.splice(world.flyers.indexOf(t.f),1);const k='dino:3',fresh=!S.dex[k];S.dex[k]=(S.dex[k]||0)+1;S.cages.push({uid:S.uid++,k});S.coins+=VALUE[SP[k].r];save();refreshCages();
+    toast((fresh?'NEW ANIMAL! ':'')+'✈️ You caught a '+SP[k].n+' from your plane! It is in your truck.');return}
+  me.pack=[t.a];t.a.state='netted';cageIt();
+}
+/* ---------- 🧬 DNA tubes to find on safari ---------- */
+function buildDNA(scene,c){
+  world.dnaVials=[];const ks=c.animals.map((a,i)=>c.id+':'+i).filter(k=>!SP[k].def.bornOnly&&!SP[k].def.mate);
+  const glass=new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transmission:.5,transparent:true,opacity:.5}),cap=new T.MeshStandardMaterial({color:'#d8d8dc',metalness:.9,roughness:.2});
+  for(let i=0,t=0;i<8&&t<400;t++){const x=(Math.random()-.5)*2*(LIMIT-20),z=(Math.random()-.5)*2*(LIMIT-20),h=H(x,z);if(world.sea?h<.8:inPond(x,z))continue;
+    const k=ks[i%ks.length],g=new T.Group();g.position.set(x,h+1.2,z);scene.add(g);
+    const liq=new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.2});
+    g.add(new T.Mesh(new T.CylinderGeometry(.28,.28,1.3,14),glass));const l=new T.Mesh(new T.CylinderGeometry(.22,.22,1,14),liq);l.position.y=-.1;g.add(l);const cp=new T.Mesh(new T.CylinderGeometry(.32,.32,.2,14),cap);cp.position.y=.75;g.add(cp);
+    const lb=labelSprite('🧬 '+SP[k].n+' DNA','#1a7a4a');lb.position.y=1.9;g.add(lb);world.dnaVials.push({g,k,x,z,y:h+1.2});i++}
+}
+function updateDNA(time){
+  const p=mode==='plane'?V(plane.x,plane.y,plane.z):mode==='sub'?V(sub.x,sub.y,sub.z):mode==='car'?V(car.x,car.y+1,car.z):V(me.x,me.y+1,me.z),reach=mode==='foot'?2.5:6;
+  for(const v of world.dnaVials.slice()){v.g.rotation.y=time;v.g.position.y=v.y+Math.sin(time*2+v.x)*.2;
+    if(Math.hypot(p.x-v.x,p.y-v.g.position.y,p.z-v.z)<reach){world.scene.remove(v.g);world.dnaVials.splice(world.dnaVials.indexOf(v),1);S.dna[v.k]=(S.dna[v.k]||0)+1;save();
+      toast('🧬 You picked up '+SP[v.k].n+' DNA! It is in the DNA box on your truck. Mix it in the DNA Lab at your zoo!',5000)}}
 }

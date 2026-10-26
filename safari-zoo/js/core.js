@@ -171,6 +171,22 @@ function load(){try{const t=localStorage.getItem('safariZoo1');return t?JSON.par
 function save(){try{localStorage.setItem('safariZoo1',JSON.stringify(S))}catch(e){}}
 let S=load()||fresh();
 S.cages=S.cages||[];
+// 🧬 animals you make in the DNA Lab by mixing two animals' DNA
+function mixDef(da,db){
+  const d=Object.assign({},da),same=(da.plan||'quad')===(db.plan||'quad');
+  for(const k of['herd','hunts','chase','home','mate','female','male','bornOnly'])delete d[k];
+  if(same)for(const k of['L','W','Hb','leg','legW','neck','neckW','headL','headW','headH','s','hip','arm','tl','sz'])if(typeof da[k]==='number'&&typeof db[k]==='number')d[k]=(da[k]+db[k])/2;
+  // the second animal gives its colours and patterns
+  const c=db.col||db.body;if(c){d.col=c;if(d.body)d.body=c}for(const k of['col2','tex','belly','freq','thin','mane','tuftCol'])if(db[k]!=null)d[k]=db[k];else if(k!=='mane'&&k!=='tuftCol')delete d[k];
+  if((da.plan||'quad')==='bird'){d.wing=db.col2||db.wing||c;d.head=c}
+  if(same)for(const k of['horn','horns','tusks','trunk','lionMane','ossicones','plates','tri','sail','armor','club','crestTube','spikes','raptor','dcrest','shark','shell'])if(db[k]&&!d[k])d[k]=db[k];
+  if(db.fly||db.soar||db.fairy){d.fly=1;d.soar=1;d.fairy=1}if(db.sparkle||db.glam)d.sparkle=1;if(db.jiggle)d.jiggle=1;
+  if(da.swim!==db.swim){delete d.swim;d.amph=1}
+  return d;
+}
+function mixName(a,b){const x=a.n.replace(/\s*\(.*\)/,'').split(' ').pop(),y=b.n.replace(/\s*\(.*\)/,'').split(' ').pop();return x.slice(0,Math.ceil(x.length/2))+y.slice(Math.floor(y.length/2)).toLowerCase()}
+function addMix(m,i){const a=SP[m.a],b=SP[m.b];if(!a||!b)return;const k='mix:'+i;SP[k]={k,n:m.n,e:'🧬',r:3,s:(a.s+b.s)/2,def:mixDef(a.def,b.def),cont:'mix',hab:a.hab}}
+S.mixes=S.mixes||[];S.mixes.forEach(addMix);S.dna=S.dna||{};
 {const ok=x=>SP[x.k];S.holding=S.holding.filter(ok);S.cages=S.cages.filter(ok);S.areas.forEach(a=>a.animals=a.animals.filter(ok));
  for(const k in S.dex)if(!SP[k])delete S.dex[k]}
 S.areas.forEach(a=>a.type='dome'); // every area is a big glass dome now

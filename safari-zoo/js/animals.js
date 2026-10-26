@@ -94,7 +94,7 @@ function quad(p){
   else if(p.tail==='flat')k.ell(ad(tb,[0,-by+.12,-.32]),[W*.32,.05,.3],'tail',{k:.04,col:'#3a2a1e',detail:1});
   else k.extra('tail','tail',tb,{len:tl,r:p.tail==='long'?.045:.025,tuft:p.tail==='tuft'?(p.tuftCol||p.mane||'#2a1d14'):null,col:p.tail==='long'?p.col:shade(p.col,-.1),ang:p.tail==='long'?2.1:2.75,tip:p.tail==='long'?(p.col2||p.col):null});
   k.anim={kind:'quad',stride:Math.max(.5,leg*1.5),graze:p.graze,fly:p.fly,jiggle:p.jiggle};
-  if(p.glam)glam(k,p,{by,at,nb,nd,na,hl,hw,hh});
+  if(p.glam)glam(k,p,{by,at,nb,nd,na,hl,hw,hh});else if(p.fairy)fairyWings(k,[0,by+Hb*.45,L*.1],L*.8);
   return k;
 }
 /* ---------- the Sparkle Zebraffe: zebra + giraffe + jaguar, with arms, wings, make-up and a handbag ---------- */
@@ -323,7 +323,8 @@ function theropod(p){
   if(p.sail)k.extra('root','sail',[0,hip+Hb*.35,L*.02],{len:L*.95,ht:Hb*1.4,col:p.col2});
   if(p.dcrest)for(const sx of[-1,1])k.extra('head','dcrest',at(hl*.45,hh*.42,sx*hw*.12),{len:hl*.75,ht:hh*.7,col:p.col2});
   if(p.raptor)for(let i=0;i<6;i++)k.extra('neck','quill',ad(nb,[0,Hb*.3+i*p.neck*s*.09,i*p.neck*s*.1-.05]),{size:.15*s,col:p.col2});
-  k.anim={kind:'biped',stride:hip*1.1};
+  if(p.fairy)fairyWings(k,[0,hip+Hb*.4,0],L*.9);
+  k.anim={kind:'biped',stride:hip*1.1,fly:p.fly};
   return k;
 }
 /* ---------- zoo visitors ---------- */
