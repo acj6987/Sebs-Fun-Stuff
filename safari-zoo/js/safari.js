@@ -370,6 +370,7 @@ function throwNet(){
   if(!safari.running)return;if(mode==='plane'){planeCatch();return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){zooCatch();return}
+  if(grabDNA(8))return;
   if(mode==='foot'){const lf=landedFlyer();if(lf&&!aimTarget()){catchFlyer(lf.f,'with your net');return}}
   if(world.net)return;
   if(me.pack.length>=PACK){toast('You are already leading '+PACK+' animals! Take them to the cages first.');return}
@@ -592,6 +593,7 @@ function hud(){
   if(world.zoo)for(const o of zoo.animals){c.fillStyle='#1d2116';c.beginPath();c.arc(W/2+(o.x-cx)*k,W/2+(o.z-cz)*k,5,0,7);c.fill()}
   c.fillStyle=world.E.water;for(const p of world.ponds){c.beginPath();c.arc(W/2+(p.x-cx)*k,W/2+(p.z-cz)*k,p.r*k,0,7);c.fill()}
   for(const a of world.animals){if(a.sp.def.mate&&a.state!=='follow')continue;c.fillStyle=a.sp.def.mate?'#ff4fa3':a.sp.r===3?'#ffc93c':a.sp.r===2?'#d4602f':'#1d2116';c.beginPath();c.arc(W/2+(a.x-cx)*k,W/2+(a.z-cz)*k,a.sp.r===3?9:7,0,7);c.fill();if(a.sp.r===3){c.strokeStyle='#fff';c.lineWidth=2;c.stroke()}}
+  if(world.dnaVials){c.fillStyle='#2ad06a';c.strokeStyle='#fff';c.lineWidth=2;for(const v of world.dnaVials){c.beginPath();c.arc(W/2+(v.x-cx)*k,W/2+(v.z-cz)*k,6,0,7);c.fill();c.stroke()}}
   const arrow=(x,z,yaw,col)=>{c.save();c.translate(W/2+(x-cx)*k,W/2+(z-cz)*k);c.rotate(-yaw);c.fillStyle=col;c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-14);c.lineTo(10,10);c.lineTo(0,5);c.lineTo(-10,10);c.closePath();c.fill();c.stroke();c.restore()};
   if(!sub.on&&mode!=='plane')arrow(car.x,car.z,car.yaw,'#d38a2c');if(mode==='foot')arrow(me.x,me.z,look.yaw,'#2f6fa8');if(mode==='plane')arrow(plane.x,plane.z,plane.yaw,'#e02a2a');if(mode==='sub')arrow(sub.x,sub.z,sub.yaw,'#ffcf1f');
   c.restore();
@@ -747,18 +749,20 @@ function planeCatch(){
   if(t.f){catchFlyer(t.f,'from your plane');return}
   me.pack=[t.a];t.a.state='netted';cageIt();
 }
+function grabDNA(r){const v=(world.dnaVials||[]).find(v=>Math.hypot(v.x-me.x,v.z-me.z)<r);if(!v)return false;v.y=me.y-1;v.x=me.x;v.z=me.z;updateDNA(0);return true}
 /* ---------- 🧬 DNA tubes to find on safari ---------- */
 function buildDNA(scene,c){
   world.dnaVials=[];const ks=c.animals.map((a,i)=>c.id+':'+i).filter(k=>!SP[k].def.bornOnly&&!SP[k].def.mate);
   const glass=new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transmission:.5,transparent:true,opacity:.5}),cap=new T.MeshStandardMaterial({color:'#d8d8dc',metalness:.9,roughness:.2});
   for(let i=0,t=0;i<8&&t<400;t++){const x=(Math.random()-.5)*2*(LIMIT-20),z=(Math.random()-.5)*2*(LIMIT-20),h=H(x,z);if(world.sea?h<.8:inPond(x,z))continue;
+    const blocked=[...world.cols.values()].some(L=>L.some(c=>Math.hypot(c.x-x,c.z-z)<c.r+4));if(blocked)continue;
     const k=ks[i%ks.length],g=new T.Group();g.position.set(x,h+1.2,z);scene.add(g);
     const liq=new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.2});
     g.add(new T.Mesh(new T.CylinderGeometry(.28,.28,1.3,14),glass));const l=new T.Mesh(new T.CylinderGeometry(.22,.22,1,14),liq);l.position.y=-.1;g.add(l);const cp=new T.Mesh(new T.CylinderGeometry(.32,.32,.2,14),cap);cp.position.y=.75;g.add(cp);
     const lb=labelSprite('🧬 '+SP[k].n+' DNA','#1a7a4a');lb.position.y=1.9;g.add(lb);world.dnaVials.push({g,k,x,z,y:h+1.2});i++}
 }
 function updateDNA(time){
-  const p=mode==='plane'?V(plane.x,plane.y,plane.z):mode==='sub'?V(sub.x,sub.y,sub.z):mode==='car'?V(car.x,car.y+1,car.z):V(me.x,me.y+1,me.z),reach=mode==='foot'?2.5:6;
+  const p=mode==='plane'?V(plane.x,plane.y,plane.z):mode==='sub'?V(sub.x,sub.y,sub.z):mode==='car'?V(car.x,car.y+1,car.z):V(me.x,me.y+1,me.z),reach=mode==='foot'?5:mode==='plane'?10:9;
   for(const v of world.dnaVials.slice()){v.g.rotation.y=time;v.g.position.y=v.y+Math.sin(time*2+v.x)*.2;
     if(Math.hypot(p.x-v.x,p.y-v.g.position.y,p.z-v.z)<reach){world.scene.remove(v.g);world.dnaVials.splice(world.dnaVials.indexOf(v),1);S.dna[v.k]=(S.dna[v.k]||0)+1;save();
       toast('🧬 You picked up '+SP[v.k].n+' DNA! It is in the DNA box on your truck. Mix it in the DNA Lab at your zoo!',5000)}}
