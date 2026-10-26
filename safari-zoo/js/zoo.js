@@ -733,7 +733,7 @@ function nearStore(){return Math.abs(car.x-FOOD.x)<FOOD.D/2+12&&Math.abs(car.z-F
 function domeAt(x,z){return[...zoo.areas.values()].find(a=>Math.hypot(x-a.x,z-a.z)<a.R0-3)||null}
 // G: load food at the store, or drop food in the dome you are in
 function foodAction(){
-  if(world&&world.sea){callDreams();return}
+  if(world&&!world.zoo){callDreams();return}
   if(!(world&&world.zoo))return;
   // use where YOU are: in the truck or walking about
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;

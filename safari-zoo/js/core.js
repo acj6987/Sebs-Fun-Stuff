@@ -124,8 +124,8 @@ const CONT=[
    ['Diplodocus','🦕',2,1.1,{herd:[2,3],L:6,W:2.1,Hb:2.3,leg:2.5,legW:.4,neck:7.5,neckW:.45,neckAng:1.0,headL:.8,headW:.32,headH:.34,hp:.25,col:'#8a8a72',col2:'#6a6a58',belly:'#b8b8a0',tex:'stripes',freq:2,thin:.7,ears:'none',tail:'dino',tl:9,scaly:1,graze:1,hoof:'#5a5a50'}],
   ]},
 ];
-// the Sky Tiger: tiger body, lion face, elephant trunk and eagle wings - the only one that flies
-CONT.find(c=>c.id==='africa').animals.push(['Sky Tiger','🦅',3,2.6,{home:'dream',soar:1,fly:1,eagle:1,L:1.9,W:.62,Hb:.78,leg:.78,legW:.1,neck:.35,neckW:.26,neckAng:1.05,headL:.48,headW:.42,headH:.42,col:'#e07a2a',tex:'stripes',col2:'#151515',freq:15,thin:.15,belly:'#f6eee0',lionMane:'#7a4a1a',snout:'#e8c49a',nose:'#5a3a2a',cheeks:1,trunk:1,ears:'round',tail:'long',tl:.9,paws:1}]);
+// the Sub Ninja: tiger body, lion face, elephant trunk and eagle wings - the only one that flies
+CONT.find(c=>c.id==='africa').animals.push(['Sub Ninja','🦅',3,2.6,{home:'dream',soar:1,fly:1,eagle:1,L:1.9,W:.62,Hb:.78,leg:.78,legW:.1,neck:.35,neckW:.26,neckAng:1.05,headL:.48,headW:.42,headH:.42,col:'#e07a2a',tex:'stripes',col2:'#151515',freq:15,thin:.15,belly:'#f6eee0',lionMane:'#7a4a1a',snout:'#e8c49a',nose:'#5a3a2a',cheeks:1,trunk:1,ears:'round',tail:'long',tl:.9,paws:1}]);
 // the sea: islands, loads of fish, and the one and only Sparkle Zebraffe
 const FISHES=['Clownfish','Blue Tang','Yellow Tang','Angelfish','Pufferfish'];
 CONT.push({id:'ocean',name:'🌊 Deep Blue Sea',place:'Deep blue sea with islands',hab:'ocean',sea:1,deco:['🏝️','🐠','✨'],

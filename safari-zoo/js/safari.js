@@ -448,7 +448,7 @@ function pressE(){
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
-function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car'||!!me.noNet;$('#netBtn').firstChild.textContent=world&&world.zoo?'CATCH':'THROW NET';const nt=$('#netToggle');nt.hidden=mode!=='foot';nt.firstChild.textContent=me.noNet?'🎣 GET NET':'🎣 PUT NET AWAY';$('#dnaBtn').hidden=!(world&&world.zoo&&mode==='foot');$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
+function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car'||!!me.noNet;$('#netBtn').firstChild.textContent=world&&world.zoo?'CATCH':'THROW NET';const nt=$('#netToggle');nt.hidden=mode!=='foot';nt.firstChild.textContent=me.noNet?'🎣 GET NET':'🎣 PUT NET AWAY';$('#dnaBtn').hidden=!(world&&world.zoo&&mode==='foot');$('#foodBtn').hidden=!(world&&(world.zoo||mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
   const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&(mode==='car'||mode==='sub'));sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
   $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||mode==='plane'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub'||mode==='plane';
   const pb=$('#planeBtn');pb.hidden=!(world&&!world.zoo&&(mode==='car'||mode==='plane'));pb.firstChild.textContent=mode==='plane'?'LAND':'PLANE';$('#eBtn').hidden=mode==='plane';
@@ -656,11 +656,12 @@ function callDreams(){
   if(mode!=='foot'){toast('Jump out first, then press G to hold out food!');return}
   const f=truckFood(),said=[];
   // the Mummy Dreams love plants; if they are not here, they fly in straight away
-  if(!DREAM.every(owns)){if(!world.animals.some(a=>a.sp.def.mate))spawnAnimal(true,SP[DREAM[0]]);
+  if(world.sea&&!DREAM.every(owns)){if(!world.animals.some(a=>a.sp.def.mate))spawnAnimal(true,SP[DREAM[0]]);
     const d=world.animals.filter(a=>a.sp.def.mate&&a.state!=='netted');if(d.length){if(f.hay>0)f.hay--;for(const a of d){a.state='follow';a.followT=90;a.vx=a.vz=0}said.push('💖💙 the Mummy Dreams')}}
-  // the Great White Seal smells meat and swims over, calm and hungry instead of hunting you
-  const gk='ocean:17';if(!world.animals.some(a=>a.sp.k===gk))spawnAnimal(true,SP[gk]);
-  const g=world.animals.filter(a=>a.sp.k===gk&&a.state!=='netted');if(g.length){if(f.meat>0)f.meat--;for(const a of g){a.state='follow';a.followT=90;a.vx=a.vz=0;a.prey=null}said.push('🦭 the Great White Seal')}
+  // animals that come for food: the Great White Seal Bear at sea, the Sub Ninja in Africa
+  const lure={ocean:['ocean:17'],africa:['africa:8']}[world.c.id]||[];
+  for(const gk of lure){if(!world.animals.some(a=>a.sp.k===gk))spawnAnimal(true,SP[gk]);
+    const g=world.animals.filter(a=>a.sp.k===gk&&a.state!=='netted');if(g.length){if(f.meat>0)f.meat--;for(const a of g){a.state='follow';a.followT=90;a.vx=a.vz=0;a.prey=null;a.soar=0}said.push(SP[gk].e+' the '+SP[gk].n)}}
   save();if(!said.length){toast('Nothing came for the food this time');return}
   toast('🍖🌾 You hold out some yummy food… '+said.join(' and ')+' smelled it and '+(said.length>1?'are':'is')+' coming to you! Catch them while they follow you!',7000);
 }
