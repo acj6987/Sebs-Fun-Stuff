@@ -323,7 +323,7 @@ function updateAnimals(dt,time){
       const herdRun=G&&G.fleeT>0&&r>=2;
       if(r>=2&&(d<scareR||herdRun)&&a.stam>0){if(G&&d<scareR)G.fleeT=3;
         const chase=a.sp.def.chase&&d>4;if(chase&&a.state!=='flee'&&mode==='foot')toast('ROAR! The '+a.sp.n+' is chasing you! Run back to the truck!');
-        if(a.sp.def.mate&&a.state==='wander'&&d<scareR&&G&&G.members[0]===a)toast('✨ Something glittery just flew away! Sneak up slowly…');
+        if(a.sp.def.mate&&a.state==='wander'&&d<scareR&&G&&G.members[0]===a)toast((a.sp.def.monthly?'🦅 The '+a.sp.n+' just flew away!':'✨ Something glittery just flew away!')+' Sneak up slowly…');
         a.state='flee';const fs=a.sp.def.mate?12:Math.max(a.sp.s*2.4,r===3?9.5:7)*(a.sp.def.chase?.62:1),dir=a.sp.def.chase?-1:1;a.vx=(a.x-px)/d*fs*dir;a.vz=(a.z-pz)/d*fs*dir;if(a.sp.def.chase&&d<4){a.vx*=.1;a.vz*=.1}a.stam-=dt/(r===3?4.5:3.5);a.graze=0;
         if(a.stam<=0){a.state='tired';a.tired=a.sp.def.mate?15:6;if(d<45&&(!G||G.members[0]===a))toast('The '+a.sp.n+(G?'s are':' is')+' tired! Quick, throw your net!')}}
       else{if(a.state==='flee')a.state='wander';a.stam=Math.min(1,a.stam+dt*.15);
@@ -385,7 +385,7 @@ function throwNet(){
   const t=aimTarget();
   if(!t){toast('Look right at an animal to aim your net');return}
   if(t.dist>(mode==='sub'?26:16)){toast('Too far away! Get closer to the '+t.a.sp.n);return}
-  if(t.a.sp.def.mate&&Math.hypot(t.a.x-me.x,t.a.z-me.z)-t.a.m.rad>10){toast('💖 Creep up until you are 10 metres from the Mummy Dream, then throw!');return}
+  if(t.a.sp.def.mate&&Math.hypot(t.a.x-me.x,t.a.z-me.z)-t.a.m.rad>10){toast('💖 Creep up until you are 10 metres from the '+t.a.sp.n+', then throw!');return}
   const a=t.a,dur=.45,tx=a.x+a.vx*dur,tz=a.z+a.vz*dur;
   world.net={a,t:0,dur,start:cam.position.clone().add(V(.3,-.2,0).applyQuaternion(cam.quaternion)),end:V(tx,H(tx,tz)+a.alt+a.m.h*.5,tz),mesh:makeNetMesh()};
   netRig.visible=false;
@@ -659,7 +659,7 @@ function callDreams(){
   if(world.sea&&!DREAM.every(owns)){if(!world.animals.some(a=>a.sp.def.mate))spawnAnimal(true,SP[DREAM[0]]);
     const d=world.animals.filter(a=>a.sp.def.mate&&a.state!=='netted');if(d.length){if(f.hay>0)f.hay--;for(const a of d){a.state='follow';a.followT=90;a.vx=a.vz=0}said.push('💖💙 the Mummy Dreams')}}
   // animals that come for food: the Great White Seal Bear at sea, the Sub Ninja in Africa
-  const lure={ocean:['ocean:17'],africa:['africa:8']}[world.c.id]||[];
+  const lure={ocean:['ocean:17'],africa:['africa:9','africa:8']}[world.c.id]||[];
   for(const gk of lure){if(!world.animals.some(a=>a.sp.k===gk))spawnAnimal(true,SP[gk]);
     const g=world.animals.filter(a=>a.sp.k===gk&&a.state!=='netted');if(g.length){if(f.meat>0)f.meat--;for(const a of g){a.state='follow';a.followT=90;a.vx=a.vz=0;a.prey=null;a.soar=0}said.push(SP[gk].e+' the '+SP[gk].n)}}
   save();if(!said.length){toast('Nothing came for the food this time');return}

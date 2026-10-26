@@ -207,7 +207,8 @@ function syncZooAnimals(){
   for(const a of zoo.animals)zoo.scene.remove(a.inst.g);zoo.animals=[];
   for(const area of S.areas){const A=zoo.areas.get(area.id);if(!A)continue;
     for(const an of area.animals){const r=rng(an.uid*13),p=swims(an)?poolSpot(A,r):an.preg?houseSpot(A,r):randomSpot(A,r);addZooAnimal(an,A,p.x,p.z,r()*6.28)}}
-  for(const P of zoo.penAreas||[])for(const an of P.area.animals){const o=addZooAnimal(an,P,P.x+(Math.random()-.5)*8,P.z+(Math.random()-.5)*8,Math.random()*6.28);const k=Math.min(1,5/o.inst.h,9/Math.max(o.inst.len,1));if(k<1)o.inst.inner.scale.multiplyScalar(k)}
+  if(zoo.vetArea)zoo.vetArea.area=vetWard();
+  for(const P of[...(zoo.penAreas||[]),zoo.vetArea].filter(Boolean))for(const an of P.area.animals){const o=addZooAnimal(an,P,P.x+(Math.random()-.5)*8,P.z+(Math.random()-.5)*8,Math.random()*6.28);const k=Math.min(1,5/o.inst.h,9/Math.max(o.inst.len,1));if(k<1)o.inst.inner.scale.multiplyScalar(k)}
   syncMumTags();
 }
 function addZooAnimal(an,A,x,z,yaw){const inst=ANIMALS.make(SP[an.k]),o={an,A,inst,x,z,tx:x,tz:z,yaw,t:Math.random()*3};inst.g.position.set(x,0,z);zoo.scene.add(inst.g);zoo.animals.push(o);return o}
@@ -534,7 +535,7 @@ function eggMesh(e,A){
   const em=new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.5});
   const n=1+Math.floor(r()*3);for(let i=0;i<n;i++){const egg=new T.Mesh(new T.SphereGeometry(.22*big,14,10),em);egg.scale.set(1,1.3,1);egg.position.set((i-(n-1)/2)*.32*big,.32*big,(r()-.5)*.2);egg.castShadow=true;g.add(egg)}
   const lb=labelSprite('🥚 Laid by the '+sp.n);lb.position.y=1.4*big;g.add(lb);
-  const p=houseSpot(A,r);g.position.set(p.x,0,p.z);zoo.scene.add(g);return g;
+  const p=A.house?houseSpot(A,r):{x:A.x+3,z:A.z+2};g.position.set(p.x,0,p.z);zoo.scene.add(g);return g;
 }
 // a little floating sign
 function labelSprite(text,col='#2f5a32'){const c=document.createElement('canvas');c.width=512;c.height=96;const g=c.getContext('2d');g.font='800 40px Nunito,sans-serif';
@@ -543,12 +544,12 @@ function labelSprite(text,col='#2f5a32'){const c=document.createElement('canvas'
 // mums wear a sign while their eggs or babies are around
 function syncMumTags(){
   for(const o of zoo.animals){if(o.tag){o.inst.g.remove(o.tag);o.tag=null}
-    const eggs=S.areas.some(a=>a.eggs.some(e=>e.mum===o.an.uid))||(S.truckEggs||[]).some(e=>e.mum===o.an.uid)||(S.nursery||[]).some(e=>e.mum===o.an.uid);
+    const eggs=[...S.areas,vetWard()].some(a=>a.eggs.some(e=>e.mum===o.an.uid))||(me.holdEggs||[]).some(e=>e.mum===o.an.uid)||(S.truckEggs||[]).some(e=>e.mum===o.an.uid)||(S.nursery||[]).some(e=>e.mum===o.an.uid);
     const baby=S.areas.some(a=>a.animals.some(b=>b.born&&b.mum===o.an.uid))||(S.fam||[]).some(p=>p.some(b=>b.born&&b.mum===o.an.uid));
     if(eggs||baby){o.tag=labelSprite(eggs?'🥚 I laid these eggs':'🍼 I had this baby','#8a2a6a');o.tag.position.y=o.inst.h+1.2;o.inst.g.add(o.tag)}}
 }
 // pick up an egg on foot and put it in your truck
-function nearEgg(){let best=null,bd=3.5;for(const a of S.areas)for(const e of a.eggs){const m=eggMeshes.get(e.uid);if(!m)continue;const d=Math.hypot(m.position.x-me.x,m.position.z-me.z);if(d<bd){bd=d;best={a,e,m}}}return best}
+function nearEgg(){let best=null,bd=3.5;for(const a of[...S.areas,vetWard()])for(const e of a.eggs){const m=eggMeshes.get(e.uid);if(!m)continue;const d=Math.hypot(m.position.x-me.x,m.position.z-me.z);if(d<bd){bd=d;best={a,e,m}}}return best}
 // pick up an egg and carry it: its mum and dad follow you wherever you go
 function pickEgg(){
   if(mode!=='foot')return false;const n=nearEgg();if(!n)return false;
@@ -557,12 +558,14 @@ function pickEgg(){
   const fam=[mum,dad].filter(Boolean);fam.forEach((o,i)=>{o.follow=i+1;o.pile=null});
   toast('🥚 You are holding the '+SP[k].n+' egg!'+(fam.length?' '+(fam.length>1?'Its mum and dad are':'Its mum is')+' following you.':'')+' Take it to the Egg Nursery, the Doctor or the DNA Lab, or back to your truck.',7000);return true}
 function followers(){return zoo.animals.filter(o=>o.follow)}
-function sendHome(){for(const o of followers()){o.follow=0;o.t=0}}
+function sendHome(){for(const o of followers()){o.follow=0;o.t=0}releaseVet()}
 // things you can do on foot while carrying eggs
 function eggAction(){
   const eggs=me.holdEggs||[];if(!eggs.length||mode!=='foot')return false;
-  if(nearNursery(me.x,me.z)){S.nursery=S.nursery||[];for(const e of eggs.splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}save();syncNurseryEggs();sendHome();
-    toast('🥚 You put the egg in a warm incubator. It hatches in 30 seconds! Mum and dad are going home.',6000);return true}
+  if(nearNursery(me.x,me.z)){S.nursery=S.nursery||[];for(const e of eggs.splice(0)){if(!e.long)e.hatch=Date.now()+30000;S.nursery.push(e)}save();syncNurseryEggs();sendHome();
+    toast('🥚 You put the egg in a warm incubator. It hatches in '+(S.nursery.at(-1).long?'6 hours':'30 seconds')+'! Mum and dad are going home.',6000);return true}
+  if(nearDoctor(me.x,me.z)&&eggs.some(e=>e.long)){for(const e of eggs.filter(e=>e.long)){eggs.splice(eggs.indexOf(e),1);vetWard().eggs.push(e);eggMeshes.set(e.uid,eggMesh(e,zoo.vetArea))}
+    for(const o of followers())o.follow=0;save();syncMumTags();toast('🩺 You put the Sub Ninja egg back in the Animal Doctor\'s, with its mum and dad.',6000);return true}
   if(nearDoctor(me.x,me.z)){const f=followers();S.coins+=20*(eggs.length+f.length);save();coins();
     toast('🩺 The doctor checked the egg'+(f.length?' and '+f.map(o=>'the '+SP[o.an.k].n+' '+(o.follow===1?'mum':'dad')).join(' and '):'')+'. Everyone is healthy! ❤️ +'+20*(eggs.length+f.length)+' coins',6000);return true}
   return false}
@@ -570,7 +573,7 @@ function eggsIntoTruck(){
   const eggs=me.holdEggs||[];if(!eggs.length)return;(S.truckEggs=S.truckEggs||[]).push(...eggs.splice(0));
   for(const o of followers()){if(smallUsed()>=CAGES)break;const area=o.A.area;area.animals.splice(area.animals.indexOf(o.an),1);zoo.scene.remove(o.inst.g);zoo.animals.splice(zoo.animals.indexOf(o),1);S.cages.push(Object.assign({},o.an))}
   sendHome();save();showTruckEggs();refreshCages();syncMumTags();toast('🚚 The egg went into your truck, and the family hopped in too!',5000)}
-function eggHint(){if(mode==='foot'&&(me.holdEggs||[]).length){const k=SP[me.holdEggs[0].k].n;return nearNursery(me.x,me.z)?'Press <b>E</b> to put the '+k+' egg in an incubator':nearDoctor(me.x,me.z)?'Press <b>E</b> for the doctor to check the egg and the family':'🥚 Holding the '+k+' egg · Egg Nursery, Doctor, DNA Lab or your truck <b>E</b>'}
+function eggHint(){if(mode==='foot'&&(me.holdEggs||[]).length){const k=SP[me.holdEggs[0].k].n;return nearNursery(me.x,me.z)?'Press <b>E</b> to put the '+k+' egg in an incubator':nearDoctor(me.x,me.z)&&me.holdEggs.some(e=>e.long)?'Press <b>E</b> to put the '+k+' egg back in the Vet Ward':nearDoctor(me.x,me.z)?'Press <b>E</b> for the doctor to check the egg and the family':'🥚 Holding the '+k+' egg · Egg Nursery, Doctor, DNA Lab or your truck <b>E</b>'}
   const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';
   if(mode==='car'&&nearPens()&&S.cages.length)return'Press <b>G</b> to put the animals in your truck into a Family Pen';
   if(mode==='car'?nearLab():nearLab(me.x,me.z))return'Press <b>G</b> to open the DNA Lab and make new animals';
@@ -610,7 +613,7 @@ function zooCatch(){
 function nearNursery(x=car.x,z=car.z){return Math.abs(x-NURSE.x)<NURSE.D/2+10&&Math.abs(z-NURSE.z)<NURSE.W/2+3}
 function dropEggs(){
   const n=(S.truckEggs||[]).length,mums=S.cages.filter(c=>c.preg);if(!n&&!mums.length)return false;S.nursery=S.nursery||[];
-  for(const e of (S.truckEggs||[]).splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}
+  for(const e of (S.truckEggs||[]).splice(0)){if(!e.long)e.hatch=Date.now()+30000;S.nursery.push(e)}
   for(const c of mums){S.cages.splice(S.cages.indexOf(c),1);delete c.pen;S.nursery.push({uid:c.uid,k:c.k,hatch:Date.now()+30000,mumAn:c})}
   save();showTruckEggs();refreshCages();syncNurseryEggs();
   toast((n?'🥚 You put '+n+' egg'+(n>1?'s':'')+' in the warm incubators. ':'')+(mums.length?'🤰 The '+mums.map(c=>SP[c.k].n).join(' and ')+' mum'+(mums.length>1?'s are':' is')+' in a cosy nursery pen. ':'')+'Babies come in 30 seconds!',7000);return true}
@@ -632,12 +635,17 @@ function updateNursery(){
 function syncEggs(){
   for(const m of eggMeshes.values())zoo.scene.remove(m);eggMeshes.clear();
   for(const a of S.areas){const A=zoo.areas.get(a.id);if(A)for(const e of a.eggs)eggMeshes.set(e.uid,eggMesh(e,A))}
+  if(zoo.vetArea)for(const e of vetWard().eggs)eggMeshes.set(e.uid,eggMesh(e,zoo.vetArea));
 }
 function breed(dt){
   const now=Date.now();let changed=false;
   // eggs hatch
   for(const a of S.areas)for(const e of a.eggs.slice())if(now>=e.hatch){a.eggs.splice(a.eggs.indexOf(e),1);a.animals.push({uid:S.uid++,k:e.k,born:now});changed=true;
     const m=eggMeshes.get(e.uid);if(m){zoo.scene.remove(m);eggMeshes.delete(e.uid)}toast('🐣 A baby '+SP[e.k].n+' hatched!')}
+  // the Sub Ninja egg at the vets hatches after 6 hours, then the family goes home
+  for(const e of vetWard().eggs.slice())if(now>=e.hatch){S.vet.eggs.splice(S.vet.eggs.indexOf(e),1);const m=eggMeshes.get(e.uid);if(m){zoo.scene.remove(m);eggMeshes.delete(e.uid)}
+    S.vet.animals.push({uid:S.uid++,k:e.k,born:now,mum:e.mum});toast('🐣 The baby '+SP[e.k].n+' hatched at the Animal Doctor\'s!',8000);releaseVet(true)}
+  ninjaEgg(now);
   // mums go into the animal house and have their babies there
   // (mums in a Family Pen have their babies right there in the pen)
   const homes=[...S.areas.map(a=>[a,zoo.areas.get(a.id)]),...(zoo.penAreas||[]).map(P=>[P.area,P])];
@@ -655,7 +663,7 @@ function breed(dt){
         if(mum){mum.preg=now+60000;mum.pregK='ocean:18';save();const o=zoo.animals.find(o=>o.an===mum);if(o){const p=houseSpot(A);o.tx=p.x;o.tz=p.z;o.t=99}
           toast('🤰 The '+SP[mum.k].n+' is going to have a Sparkle Seal Bear baby with the '+(mum.k==='ocean:17'?'Mummy Dream':'Great White Seal Bear')+'!',6000);break}}
       // the Mummy Dream girl and boy are a pair, so they can have babies together
-      const ks=Object.keys(grown).filter(k=>(grown[k]>=2||SP[k].def.female&&grown[SP[k].def.mate]>=1)&&total[k]<10);if(!ks.length||Math.random()>.3)continue;
+      const ks=Object.keys(grown).filter(k=>(grown[k]>=2||SP[k].def.female&&grown[SP[k].def.mate]>=1)&&total[k]<10&&!SP[k].def.monthly);if(!ks.length||Math.random()>.3)continue;
       const k=ks[Math.floor(Math.random()*ks.length)],sp=SP[k];
       if(laysEggs(sp)){const mum=a.animals.find(x=>x.k===k&&!x.born),e={uid:S.uid++,k,hatch:now+90000,mum:mum&&mum.uid};a.eggs.push(e);eggMeshes.set(e.uid,eggMesh(e,A));syncMumTags();toast('🥚 The '+sp.n+'s laid an egg in the '+HAB[a.hab].name+' dome! It will hatch soon.')}
       else{const mum=a.animals.find(x=>x.k===k&&!x.born&&!x.preg);if(!mum||a.animals.some(x=>x.k===k&&x.preg))continue;mum.preg=now+60000;save();
@@ -665,6 +673,28 @@ function breed(dt){
   if(changed){save();syncZooAnimals();if(curView==='zoo')renderZooUI()}
   else if(zoo.breedT===75)save();
 }
+
+// the two Sub Ninjas have one egg every month; it takes 6 hours to hatch
+const MONTH=30*24*3600e3,NINJA_EGG=6*3600e3;
+function vetWard(){return S.vet=S.vet||{animals:[],eggs:[],hab:'pen'}}
+function ninjaEgg(now){
+  const W=vetWard();if(W.eggs.length||(me.holdEggs||[]).some(e=>e.long)||(S.nursery||[]).some(e=>e.long)||(S.truckEggs||[]).some(e=>e.long))return;
+  let girl,boy,home;for(const a of S.areas){const g=a.animals.find(x=>x.k==='africa:9'&&!x.born),b=a.animals.find(x=>x.k==='africa:8'&&!x.born);if(g&&b){girl=g;boy=b;home=a;break}}
+  if(!girl)return;
+  // the first egg comes a couple of minutes after they are together, then one every month
+  if(!S.ninjaNext){S.ninjaNext=now+120000;save()}
+  if(now<S.ninjaNext)return;S.ninjaNext=now+MONTH;
+  const e={uid:S.uid++,k:Math.random()<.5?'africa:9':'africa:8',hatch:now+NINJA_EGG,mum:girl.uid,long:1};
+  // straight to the vets: the mum, the dad and their egg
+  for(const an of[girl,boy]){home.animals.splice(home.animals.indexOf(an),1);W.animals.push(an)}W.eggs.push(e);
+  save();syncZooAnimals();eggMeshes.set(e.uid,eggMesh(e,zoo.vetArea));syncMumTags();if(curView==='zoo')renderZooUI();
+  bigAlert('🥚🦅','Sub Ninja egg!','The Sub Ninjas laid an egg! The mum, the dad and the egg went straight to the <b>Animal Doctor</b>.<br>It hatches in 6 hours. You can pick up the egg and move it.',15000);
+  toast('🚑 The Sub Ninjas laid an egg! They have gone to the Animal Doctor\'s with it. Go and see them!',10000)}
+// when the egg has gone or hatched, the Sub Ninjas leave the vets and go home
+function releaseVet(force){
+  const W=vetWard();if(!W.animals.length)return;if(!force&&(W.eggs.length||(me.holdEggs||[]).some(e=>e.long)))return;
+  for(const an of W.animals.splice(0)){const d=S.areas.find(a=>a.hab===SP[an.k].hab);if(d)d.animals.push(an);else S.holding.push(an)}
+  if(S.holding.length)autoHome();save();syncZooAnimals();if(curView==='zoo')renderZooUI();toast('🦅 The Sub Ninja family left the Animal Doctor\'s and went home to their dome.',6000)}
 
 /* ---------- Triceratops Rides: visitors pay 1000 coins each to ride round the track ---------- */
 const RIDE={x:-95,z:7,rx:55,rz:14,fee:1000};
@@ -841,6 +871,9 @@ function buildDoctor(){
   box(red,-D/2-.4,Ht+1.6,0,.3,2.4,.8);box(red,-D/2-.4,Ht+1.6,0,.3,.8,2.4);
   const bed=new T.MeshStandardMaterial({color:'#9ad0f0',roughness:.6});for(let i=0;i<3;i++)box(bed,D/2-4,.5,-W/2+4+i*7,3,1,5);
   const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['ANIMAL DOCTOR','Bring animals in your truck - press G'],'#2a7ac8'),roughness:.7}));st.position.set(-D/2-.3,Ht-1.2,0);st.rotation.y=-Math.PI/2;g.add(st);
+  // the vet ward: the Sub Ninjas and their egg stay here
+  const vs=new T.Mesh(new T.PlaneGeometry(5,1.3),new T.MeshStandardMaterial({map:signTexture(['VET WARD','Sub Ninja family'],'#2a7ac8'),side:T.DoubleSide}));vs.position.set(-1,5,-W/2+.4);g.add(vs);
+  zoo.vetArea={pen:'vet',x:DOC.x-1,z:DOC.z,R0:6,area:vetWard(),food:[],pond:{x:DOC.x,z:DOC.z,r:0}};
   for(let z=-W/2;z<=W/2;z+=1.8)zoo.cols.push({x:DOC.x+D/2,z:DOC.z+z,r:1});
   for(const sd of[-1,1]){for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:DOC.x+x,z:DOC.z+sd*W/2,r:1});for(let z=0;z<=7;z+=1.8)zoo.cols.push({x:DOC.x-D/2,z:DOC.z+sd*(W/2-z),r:1})}
 }
