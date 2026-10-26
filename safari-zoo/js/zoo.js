@@ -54,7 +54,7 @@ function buildZoo(){
   zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
     return(Math.abs(x)<ROAD+10+MEGA*2+40||x>0&&x<ULTRA.x+ULTRA.R+40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*900,z=60+rr()*300;return Math.abs(x)<110&&z<190?null:V(x,0,z)},r);
-  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();buildLab();
+  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();buildLab();buildStaffArea();
   // planes flying high over the zoo
   zoo.skyPlanes=[0,1,2].map(i=>{const g=planeModel();g.scale.setScalar(1.6);scene.add(g);return{g,a:i*2.1,r:350+i*120,h:110+i*35,spd:(i%2?-1:1)*(30+i*6),cx:0,cz:-500}});
   // entrance gate
@@ -90,6 +90,7 @@ function drawMask(){
   const {g,tex}=zoo.mask,W=1024,k=W/MASK.size,X=x=>(x-MASK.x0)*k,Z=z=>(z-MASK.z0)*k,L=zooLayout();
   g.fillStyle='#fff';g.fillRect(0,0,W,W);g.fillStyle='#000';
   g.fillRect(X(-ROAD-1),Z(L.end),(ROAD*2+2)*k,(42-L.end)*k);g.beginPath();g.ellipse(X(RIDE.x),Z(RIDE.z),(RIDE.rx+3)*k,(RIDE.rz+3)*k,0,0,7);g.fill();g.fillRect(X(RIDE.x+RIDE.rx),Z(RIDE.z-2.5),(-ROAD-RIDE.x-RIDE.rx)*k,5*k);g.fillRect(X(-75),Z(30),150*k,135*k);g.fillRect(X(ROAD),Z(FOOD.z-FOOD.W/2-2),(FOOD.x+FOOD.D/2+2-ROAD)*k,(FOOD.W+4)*k);g.fillRect(X(ROAD),Z(NURSE.z-NURSE.W/2-2),(NURSE.x+NURSE.D/2+2-ROAD)*k,(NURSE.W+4)*k);
+  for(const c of[STAFF_AREA,LUNCH])g.fillRect(X(c.x-c.w/2-1),Z(c.z-c.d/2-1),(c.w+2)*k,(c.d+8)*k);
   if(zoo.tunnel){const t=zoo.tunnel;g.strokeStyle='#000';g.lineWidth=20*k;g.beginPath();g.moveTo(X(t.p0.x),Z(t.p0.z));g.lineTo(X(t.p1.x),Z(t.p1.z));g.stroke()}
   for(const d of L.list){if(d.ultra)g.fillRect(X(ROAD),Z(d.z-10),(d.x-d.R-ROAD+3)*k,20*k);else g.fillRect(X(d.side>0?ROAD:-ROAD-12),Z(d.z-7),12*k,14*k);g.beginPath();g.arc(X(d.x),Z(d.z),(d.R+1.5)*k,0,7);g.fill()}
   tex.needsUpdate=true;
@@ -298,7 +299,7 @@ async function enterZoo(progress){
   for(let i=0;i<LOOKS.length;i++)if(!ANIMALS.isBuilt(personSp(i))){progress('Opening the gates for visitors… '+(i+1)+'/'+LOOKS.length);await nextFrame();ANIMALS.species(personSp(i))}
   for(const k of['staff','security'])if(!ANIMALS.isBuilt(personSp(k))){progress('Zoo workers and security are getting ready…');await nextFrame();ANIMALS.species(personSp(k))}
   buildEntrancePeople();
-  syncVisitors();syncTours();
+  syncVisitors();syncTours();syncLunch();
   const dd=S.areas.find(a=>a.hab==='dream');if(dd&&dd.animals.length&&!S.dreamShown){S.dreamShown=1;save();focusArea(dd.id);setTimeout(()=>toast('💖💙 Here is your Mummy Dream Dome, right at the front of the zoo!',6000),800)}
 }
 function zooPick(cx,cy){
@@ -371,6 +372,9 @@ function syncVisitors(){
     const g=zoo.graph,parks=g.nodes.filter(q=>q.park),from=i<n*.7?g.nodes[Math.floor(Math.random()*g.nodes.length)]:parks[i%parks.length];
     const v={inst,from,to:from.nb[Math.floor(Math.random()*from.nb.length)],off:(Math.random()-.5)*4.5,spd:1.1+Math.random()*.6,wait:Math.random()*3,x:from.x,z:from.z,yaw:0};
     zoo.people.push(v)}
+  // zoo workers you bought in the shop walk around too
+  for(let i=0;i<(S.shop.workers||0);i++){const inst=ANIMALS.make(personSp('staff'));zoo.scene.add(inst.g);const g=zoo.graph,from=g.nodes[Math.floor(Math.random()*g.nodes.length)];
+    zoo.people.push({inst,from,to:from.nb[Math.floor(Math.random()*from.nb.length)],off:(Math.random()-.5)*4.5,spd:1.2+Math.random()*.5,wait:Math.random()*3,x:from.x,z:from.z,yaw:0})}
   for(const g of zoo.guards||[])zoo.scene.remove(g.g);zoo.guards=[];
   S.areas.forEach(a=>{const A=zoo.areas.get(a.id);if(!A)return;const ox=A.door.x-A.x,oz=A.door.z-A.z,l=Math.hypot(ox,oz),nx=ox/l,nz=oz/l;
     for(const sd of[-1,1]){const g=ANIMALS.make(personSp('staff'));const x=A.door.x+nx*3-nz*sd*11,z=A.door.z+nz*3+nx*sd*11;g.g.position.set(x,.04,z);g.g.rotation.y=Math.atan2(nx,nz);zoo.scene.add(g.g);zoo.guards.push(g)}});
@@ -425,7 +429,7 @@ function tourRoute(){
 }
 function syncTours(){
   for(const t of zoo.tours||[])zoo.scene.remove(t.g);zoo.tours=[];
-  const n=S.dreamBonus?6:2,L=zooLayout(),route=[{x:-3,z:120},{x:-3,z:60},{x:-3,z:20},{x:-3,z:L.end+40},{x:3,z:L.end+40},{x:3,z:20},{x:3,z:60},{x:3,z:120},{x:30,z:140},{x:-30,z:140}];
+  const n=(S.dreamBonus?6:2)+(S.shop.shuttles||0),L=zooLayout(),route=[{x:-3,z:120},{x:-3,z:60},{x:-3,z:20},{x:-3,z:L.end+40},{x:3,z:L.end+40},{x:3,z:20},{x:3,z:60},{x:3,z:120},{x:30,z:140},{x:-30,z:140}];
   for(let i=0;i<n;i++){const g=tourCarModel();zoo.scene.add(g);
     const driver=ANIMALS.make(personSp('staff'));seat(driver);driver.g.position.set(-.45,.23,-1.2);g.add(driver.g);
     const riders=[];[[-.5,-.1],[.5,-.1],[-.5,1.1],[.5,1.1]].forEach(([x,z],j)=>{const r=ANIMALS.make(personSp((i*4+j)%LOOKS.length));seat(r);r.g.position.set(x,.23,z);g.add(r.g);riders.push(r)});
@@ -941,7 +945,7 @@ function showHeldDNA(){
     g.add(new T.Mesh(new T.CylinderGeometry(.04,.04,.22,10),new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transparent:true,opacity:.5})));
     const l=new T.Mesh(new T.CylinderGeometry(.033,.033,.17,10),new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.2}));l.position.y=-.015;g.add(l);footRig.add(g);footRig.userData.tube=g}
   if(!footRig.userData.egg){const e=new T.Mesh(new T.SphereGeometry(.09,14,10),new T.MeshStandardMaterial({color:'#f4efe4',roughness:.5}));e.scale.y=1.3;e.position.set(-.18,-.25,-.45);footRig.add(e);footRig.userData.egg=e}
-  const lab=inLab(),egg=(me.holdEggs||[]).length>0;footRig.userData.tube.visible=lab&&!!me.holdDNA;footRig.userData.egg.visible=egg;netRig.visible=!lab;
+  const lab=inLab(),egg=(me.holdEggs||[]).length>0;footRig.userData.tube.visible=lab&&!!me.holdDNA;footRig.userData.egg.visible=egg;netRig.visible=!lab&&!me.noNet;
 }
 function updateLab(dt){
   if(!zoo.mixer)return;const near=curView==='drive'&&world&&world.zoo&&Math.hypot((mode==='car'?car.x:me.x)-LAB.x,(mode==='car'?car.z:me.z)-(LAB.z+LAB.W/2))<9;
@@ -951,3 +955,47 @@ function updateLab(dt){
   if(curView==='drive'&&world&&world.zoo){showHeldDNA();
     if(inLab())for(const e of me.holdEggs||[])if(!e.dnaTaken){e.dnaTaken=1;S.dna[e.k]=(S.dna[e.k]||0)+1;save();syncLabShelves();toast('🧬 The DNA Lab took some DNA from your '+SP[e.k].n+' egg! It is on the shelf now.',5000)}}
 }
+
+/* ---------- Staff Only area and the staff lunch room, next to the Triceratops Rides ---------- */
+const STAFF_AREA={x:-188,z:5,w:30,d:22},LUNCH={x:-226,z:5,w:26,d:22};
+function buildStaffArea(){
+  const g=new T.Group();zoo.scene.add(g);const wood=NATURE.barkMat(false);
+  const room=(c,col,roofCol,sign,signCol)=>{const wall=new T.MeshStandardMaterial({color:col,roughness:.7}),roof=new T.MeshStandardMaterial({color:roofCol,roughness:.5});
+    const box=(m,x,y,z,a,b,cc)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,cc),m);o.position.set(c.x+x,y,c.z+z);o.castShadow=o.receiveShadow=true;g.add(o);return o};
+    box(wall,0,.05,0,c.w,.1,c.d);box(wall,0,3,-c.d/2,c.w,6,.4);for(const sd of[-1,1])box(wall,sd*c.w/2,3,0,.4,6,c.d);
+    for(const sd of[-1,1])box(wall,sd*(c.w/4+2),3,c.d/2,c.w/2-4,6,.4);box(roof,0,6.2,0,c.w+1,.4,c.d+1);
+    const st=new T.Mesh(new T.PlaneGeometry(8,2.2),new T.MeshStandardMaterial({map:signTexture(sign,signCol),side:T.DoubleSide}));st.position.set(c.x,7.6,c.z+c.d/2);g.add(st);
+    for(let x=-c.w/2;x<=c.w/2;x+=1.8)zoo.cols.push({x:c.x+x,z:c.z-c.d/2,r:1});for(const sd of[-1,1]){for(let z=-c.d/2;z<=c.d/2;z+=1.8)zoo.cols.push({x:c.x+sd*c.w/2,z:c.z+z,r:1});for(let x=4;x<=c.w/2;x+=1.8)zoo.cols.push({x:c.x+sd*x,z:c.z+c.d/2,r:1})}
+    return box};
+  const b1=room(STAFF_AREA,'#d8d0c0','#8a2a14',['STAFF ONLY','Zoo workers'],'#8a2a14');
+  const desk=new T.MeshStandardMaterial({color:'#6a4a2a',roughness:.8}),locker=new T.MeshStandardMaterial({color:'#4a6a8a',metalness:.4,roughness:.5});
+  for(let i=0;i<6;i++)b1(locker,-STAFF_AREA.w/2+3+i*2,1.4,-STAFF_AREA.d/2+1,1.6,2.8,.8);b1(desk,4,.8,2,5,.1,2.5);
+  const b2=room(LUNCH,'#f2e6c8','#2f6a32',['STAFF LUNCH ROOM','Yummy!'],'#2f6a32');
+  const tableM=new T.MeshStandardMaterial({color:'#c8a070',roughness:.7}),plate=new T.MeshStandardMaterial({color:'#ffffff',roughness:.4}),food=new T.MeshStandardMaterial({color:'#e07a3a',roughness:.6});
+  zoo.lunchSeats=[];for(let i=0;i<3;i++){const z=-6+i*5;b2(tableM,0,.9,z,10,.15,2.2);for(const sx of[-3,0,3]){b2(plate,sx,1,z+.6,.7,.05,.7);b2(food,sx,1.08,z+.6,.35,.12,.35);b2(plate,sx,1,z-.6,.7,.05,.7);b2(food,sx,1.08,z-.6,.35,.12,.35);zoo.lunchSeats.push({x:LUNCH.x+sx,z:LUNCH.z+z+1.5,face:Math.PI},{x:LUNCH.x+sx,z:LUNCH.z+z-1.5,face:0})}
+    for(const sd of[-1,1])b2(desk,0,.45,z+sd*1.5,10,.1,.6)}
+  // a path from the ride track to the staff area
+  const pv=zoo.pave||(zoo.pave=pavingTexture()),m=pv.map.clone();m.needsUpdate=true;m.repeat.set(20,2);
+  const path=new T.Mesh(new T.PlaneGeometry(LUNCH.x-STAFF_AREA.x>0?1:Math.abs(RIDE.x-RIDE.rx-LUNCH.x),5),new T.MeshStandardMaterial({map:m,roughness:.9}));path.rotation.x=-Math.PI/2;path.position.set((RIDE.x-RIDE.rx+LUNCH.x)/2,.04,STAFF_AREA.z+STAFF_AREA.d/2+4);path.receiveShadow=true;g.add(path);
+}
+// workers sit down to eat in the lunch room
+function syncLunch(){
+  for(const p of zoo.lunchers||[])zoo.scene.remove(p.g);zoo.lunchers=[];if(!zoo.lunchSeats)return;
+  const n=Math.min(zoo.lunchSeats.length,4+(S.shop.workers||0));
+  for(let i=0;i<n;i++){const p=ANIMALS.make(personSp('staff'));seat(p);const s=zoo.lunchSeats[i];p.g.position.set(s.x,.5-.95*STAFF.s,s.z);p.g.rotation.y=s.face;zoo.scene.add(p.g);zoo.lunchers.push(p)}
+}
+
+/* ---------- 🛒 the Zoo Shop ---------- */
+const SHOP=[
+  {id:'shuttle',e:'🚐',n:'Safari car for visitors',cost:500,buy(){S.shop.shuttles++;if(zoo.built)syncTours();return'A new safari car is driving visitors around!'}},
+  {id:'worker',e:'👷',n:'Zoo worker',cost:200,buy(){S.shop.workers++;if(zoo.built){syncVisitors();syncLunch()}return'A new zoo worker started today!'}},
+  {id:'food',e:'🍖',n:'Food crates for your truck',cost:50,buy(){const f=truckFood();f.meat+=3;f.hay+=3;if(car.g)showFood();return'3 crates of meat and 3 bales of hay are on your truck!'}},
+  ...[['#c4843a','Sandy'],['#d8251f','Red'],['#2a5bd7','Blue'],['#ff5fae','Pink'],['#2f9a4a','Green'],['#1d1d22','Black'],['#ffd23a','Yellow']].map(([c,n])=>({id:'paint'+c,e:'🎨',n:n+' truck paint',cost:300,col:c,buy(){S.shop.paint=c;return'Your truck is painted '+n.toLowerCase()+'! You will see it next time you drive.'}}))];
+function openShop(){renderShop();$('#shopPanel').hidden=false}
+function renderShop(){
+  $('#shopCoins').textContent='🪙 '+S.coins.toLocaleString()+' coins · '+(S.shop.workers||0)+' workers · '+((S.dreamBonus?6:2)+(S.shop.shuttles||0))+' safari cars';
+  $('#shopList').innerHTML=SHOP.map(it=>`<button data-buy="${it.id}" ${S.coins<it.cost?'disabled':''}>${it.col?`<i style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${it.col}"></i> `:it.e+' '}${it.n}<small>🪙 ${it.cost}</small></button>`).join('');
+}
+$('#shopList').addEventListener('click',e=>{const b=e.target.closest('[data-buy]');if(!b)return;const it=SHOP.find(x=>x.id===b.dataset.buy);if(!it||S.coins<it.cost)return;
+  S.coins-=it.cost;const msg=it.buy();save();coins();renderShop();toast('🛒 '+msg,5000)});
+$('#shopClose').onclick=()=>$('#shopPanel').hidden=true;$('#shopOpen').onclick=openShop;

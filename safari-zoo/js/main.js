@@ -124,6 +124,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyB'){toggleSub();e.preventDefault()}
   if(e.code==='KeyP'){togglePlane();e.preventDefault()}
   if(e.code==='KeyX'){takeDNA();e.preventDefault()}
+  if(e.code==='KeyN'){toggleNet();e.preventDefault()}
   if(e.code==='Space'){e.preventDefault();jump()}
   if(e.code==='Escape')goMap()});
 addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=false});
@@ -158,6 +159,7 @@ $('#subBtn').addEventListener('click',toggleSub);
 $('#planeBtn').addEventListener('click',togglePlane);
 $('#dnaBtn').addEventListener('click',takeDNA);
 $('#dnaLabBtn').addEventListener('click',openLab);
+$('#netToggle').addEventListener('click',toggleNet);
 $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.pack.length)releaseLeash();show('map')}
 $('#back').onclick=goMap;

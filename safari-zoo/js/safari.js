@@ -118,7 +118,7 @@ function addVolcano(scene){
 const TS=1.7;
 function buildCar(scene,opts={}){
   const g=new T.Group();scene.add(g);car.g=g;
-  const paint=new T.MeshPhysicalMaterial({color:'#c4843a',roughness:.38,metalness:.25,clearcoat:.7,clearcoatRoughness:.2});
+  const paint=new T.MeshPhysicalMaterial({color:S.shop.paint||'#c4843a',roughness:.38,metalness:.25,clearcoat:.7,clearcoatRoughness:.2});
   const dark=new T.MeshStandardMaterial({color:'#1f1d1b',roughness:.85}),trim=new T.MeshStandardMaterial({color:'#2e2924',roughness:.7});
   const seat=new T.MeshPhysicalMaterial({color:'#6e3f1f',roughness:.55,sheen:.4,sheenColor:new T.Color('#3a2010')});
   const chrome=new T.MeshStandardMaterial({color:'#e2e2e2',metalness:1,roughness:.18});
@@ -366,8 +366,9 @@ function aimTarget(){
     const p=V(a.x,a.m.g.position.y+a.m.h*.5,a.z),d=p.clone().sub(cam.position),dist=d.length();if(dist>40)continue;
     const ang=f.angleTo(d.normalize());if(ang<.32){const sc=ang*30+dist;if(sc<bs){bs=sc;best={a,dist}}}}
   return best}
+function toggleNet(){me.noNet=!me.noNet;if(netRig)netRig.visible=!me.noNet&&mode==='foot';setDriveUI();toast(me.noNet?'🎣 You put your net away. Press N to get it out again.':'🎣 You got your net out!')}
 function throwNet(){
-  if(!safari.running)return;if(mode==='plane'){planeCatch();return}
+  if(!safari.running)return;if(me.noNet&&mode==='foot'&&!(world.zoo&&inLab())){toast('Your net is put away! Press N (or the NET button) to get it out.');return}if(mode==='plane'){planeCatch();return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){if(!labAction())zooCatch();return}
   if(grabDNA(8))return;
@@ -386,7 +387,7 @@ function updateNet(dt){
   const n=world.net;if(!n)return;n.t+=dt;const p=Math.min(1,n.t/n.dur);
   n.mesh.position.lerpVectors(n.start,n.end,p);n.mesh.position.y+=Math.sin(p*Math.PI)*2;n.mesh.rotation.x+=dt*8;n.mesh.scale.setScalar(.4+p*.8);
   if(p<1)return;
-  world.scene.remove(n.mesh);world.net=null;netRig.visible=true;
+  world.scene.remove(n.mesh);world.net=null;netRig.visible=!me.noNet;
   const a=n.a,ok=world.animals.includes(a)&&Math.hypot(a.x-n.end.x,a.z-n.end.z)<Math.max(1.6,a.m.rad*1.3)&&(a.alt<2.5||a.sp.def.swim||world.sea&&a.alt<6&&!a.soar&&a.state!=='flee');
   if(ok){const netOne=b=>{b.state='netted';b.vx=b.vz=0;b.alt=0;b.icon.visible=false;me.pack.push(b);
       const net=new T.Mesh(new T.SphereGeometry(1,16,12),new T.MeshBasicMaterial({color:'#efe4c8',wireframe:true}));world.scene.add(net);b.net=net;
@@ -424,14 +425,14 @@ function releaseLeash(){if(!me.pack.length)return;for(const a of me.pack){world.
 function pressE(){
   if(!safari.running)return;if(mode==='plane'){toast('Land the plane first! Press P.');return}
   if(mode==='sub'){const q=V(sub.x+Math.cos(sub.yaw)*3.5,0,sub.z-Math.sin(sub.yaw)*3.5);me.x=q.x;me.z=q.z;me.y=Math.max(H(me.x,me.z)+.3,sub.y-1);me.vy=0;
-    look.yaw=sub.yaw+look.yaw;look.pitch=0;mode='foot';footRig.visible=true;netRig.visible=true;setDriveUI();toast('🤿 You jumped out in your snorkel, mask and flippers! Space to swim up, Shift to dive, E by the submarine to get back in.',6000);return}
+    look.yaw=sub.yaw+look.yaw;look.pitch=0;mode='foot';footRig.visible=true;netRig.visible=!me.noNet;setDriveUI();toast('🤿 You jumped out in your snorkel, mask and flippers! Space to swim up, Shift to dive, E by the submarine to get back in.',6000);return}
   if(mode==='foot'&&sub.on){
     if(Math.hypot(me.x-sub.x,me.z-sub.z)<9){if(me.pack.length)cageIt();mode='sub';footRig.visible=false;look.yaw=0;look.pitch=0;setDriveUI()}
     else toast('Swim back to your submarine to get in');return}
   if(mode==='car'){
     if(Math.abs(car.v)>3){toast('Slow down to jump out!');return}
     const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=HW(me.x,me.z);me.vy=0;
-    look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=true;placePets();setDriveUI();return}
+    look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=!me.noNet;placePets();setDriveUI();return}
   if(me.pack.length){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS){cageIt();return}}
   if(world.zoo&&(labAction()||eggAction()||pickEgg()))return;
   const tp=trailerPos();
@@ -440,7 +441,7 @@ function pressE(){
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
-function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#dnaBtn').hidden=!(world&&world.zoo&&mode==='foot');$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
+function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car'||!!me.noNet;const nt=$('#netToggle');nt.hidden=mode!=='foot';nt.firstChild.textContent=me.noNet?'🎣 GET NET':'🎣 PUT NET AWAY';$('#dnaBtn').hidden=!(world&&world.zoo&&mode==='foot');$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
   const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&(mode==='car'||mode==='sub'));sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
   $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||mode==='plane'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub'||mode==='plane';
   const pb=$('#planeBtn');pb.hidden=!(world&&!world.zoo&&(mode==='car'||mode==='plane'));pb.firstChild.textContent=mode==='plane'?'LAND':'PLANE';$('#eBtn').hidden=mode==='plane';
