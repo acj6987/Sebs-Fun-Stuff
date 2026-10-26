@@ -227,6 +227,7 @@ $('#buildD').onclick=()=>build('dome');
 /* ---------- driving in the zoo ---------- */
 function renderEncPick(){
   $('#encGrid').innerHTML='<button class="enc gate" data-enc="gate"><b>🚪</b><span>Zoo gate</span><small>Drive around</small></button>'+
+    '<button class="enc" data-enc="lab"><b>🧬</b><span>DNA Lab</span><small>Make new animals</small></button>'+
     S.areas.map((a,i)=>`<button class="enc" data-enc="${a.id}"><b>${i+1}</b><span>${HAB[a.hab].i} ${HAB[a.hab].name}</span><small>${a.animals.map(x=>SP[x.k].e).join('')||'empty'}</small></button>`).join('');
 }
 async function startZooDrive(id,opts={}){
@@ -248,7 +249,10 @@ $('#driveZoo').onclick=()=>{endDinoTour();startZooDrive(null)};
 $('#dinoTour').onclick=async()=>{endDinoTour();await startZooDrive(null,{tour:true});startDinoTour()};
 $('#goEnc').onclick=()=>{renderEncPick();$('#encPick').hidden=false};
 $('#encClose').onclick=()=>$('#encPick').hidden=true;
-$('#encGrid').addEventListener('click',e=>{const b=e.target.closest('[data-enc]');if(!b)return;endDinoTour();startZooDrive(b.dataset.enc==='gate'?null:+b.dataset.enc)});
+$('#encGrid').addEventListener('click',e=>{const b=e.target.closest('[data-enc]');if(!b)return;endDinoTour();
+  // the DNA Lab: park at its door and walk straight in
+  if(b.dataset.enc==='lab'){startZooDrive(null).then(()=>{car.x=LAB.x;car.z=LAB.z+LAB.W/2+9;car.yaw=0;car.v=0;updateCar(0);pressE();me.x=LAB.x;me.z=LAB.z+LAB.W/2-3;look.yaw=0;look.pitch=-.1;toast('🧬 Welcome to the DNA Lab! Pick up a DNA tube from the shelves with E and pour it into the mixer.',6000)});return}
+  startZooDrive(b.dataset.enc==='gate'?null:+b.dataset.enc)});
 
 // visitors pay for happy animals
 setInterval(()=>{let h=0;for(const a of S.areas)for(const an of a.animals)if(happy(an,a))h++;if(h){S.coins+=h;save();coins()}},5000);

@@ -263,7 +263,7 @@ function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
-  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;
+  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);
   for(const p of zoo.skyPlanes||[]){p.a+=p.spd/p.r*dt;const x=p.cx+Math.cos(p.a)*p.r,z=p.cz+Math.sin(p.a)*p.r,d=Math.sign(p.spd);p.g.position.set(x,p.h,z);p.g.rotation.set(0,Math.atan2(-Math.sin(p.a)*d,Math.cos(p.a)*d),-d*.25,'YXZ');p.g.userData.prop.rotation.z+=dt*40}
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
@@ -288,7 +288,7 @@ async function enterZoo(progress){
   rebuildPaths();
   const need=[...new Set(S.areas.flatMap(a=>a.animals.map(x=>x.k)))].filter(k=>!ANIMALS.isBuilt(SP[k]));
   for(let i=0;i<need.length;i++){progress('Getting the animals ready… '+(i+1)+'/'+need.length);await nextFrame();ANIMALS.species(SP[need[i]])}
-  syncZooAnimals();syncEggs();syncNurseryEggs();
+  syncZooAnimals();syncEggs();syncNurseryEggs();syncLabShelves();
   if(!ANIMALS.isBuilt(SP['dino:1'])){progress('Saddling up the Triceratops…');await nextFrame();ANIMALS.species(SP['dino:1'])}
   syncRides();
   // pterodactyls flying inside the Ultra Dino Dome
@@ -835,7 +835,22 @@ function buildLab(){
   const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o);return o};
   box(wall,0,.05,0,D,.1,W);box(wall,0,Ht/2,-W/2,D,Ht,.5);for(const sd of[-1,1])box(wall,sd*D/2,Ht/2,0,.5,Ht,W);
   for(const sd of[-1,1])box(wall,sd*(D/2-4),Ht/2,W/2,8,Ht,.5);box(wall,0,Ht-1,W/2,D,2,.5);box(roof,0,Ht+.2,0,D+1.5,.4,W+1.5);
-  for(let i=0;i<4;i++){const t=new T.Mesh(new T.CylinderGeometry(.8,.8,4,16),glow);t.position.set(-D/2+4+i*5.3,2.2,-W/2+3);g.add(t)}
+  // shelves along the back wall for your DNA tubes
+  const shelfM=new T.MeshStandardMaterial({color:'#c8b088',roughness:.7});
+  for(const y of[1,2.2,3.4])box(shelfM,0,y,-W/2+1,D-4,.12,1.4);for(const sx of[-1,0,1])box(shelfM,sx*(D/2-2),2.2,-W/2+1,.15,4.6,1.4);
+  zoo.labSlots=[];for(const y of[1,2.2,3.4])for(let i=0;i<5;i++)zoo.labSlots.push(V(LAB.x-D/2+4+i*(D-8)/4,y+.5,LAB.z-W/2+1));
+  // the DNA Mixer machine in the middle
+  const tank=new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transmission:.5,transparent:true,opacity:.35,side:T.DoubleSide});
+  const mx=new T.Group();mx.position.set(0,0,1.5);g.add(mx);
+  const base=new T.Mesh(new T.CylinderGeometry(2.2,2.5,1,24),new T.MeshStandardMaterial({color:'#5a6a74',metalness:.7,roughness:.3}));base.position.y=.5;mx.add(base);
+  mx.add(Object.assign(new T.Mesh(new T.CylinderGeometry(1.7,1.7,3.4,28,1,true),tank),{position:V(0,2.7,0)}));
+  const liq=new T.Mesh(new T.CylinderGeometry(1.55,1.55,1,28),new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:.9,transparent:true,opacity:.85}));liq.position.y=1.05;liq.scale.y=.05;mx.add(liq);
+  const fun=new T.Mesh(new T.ConeGeometry(1.2,1.2,20,1,true),new T.MeshStandardMaterial({color:'#9aa8b0',metalness:.8,roughness:.3,side:T.DoubleSide}));fun.rotation.x=Math.PI;fun.position.y=5;mx.add(fun);
+  const ms=new T.Mesh(new T.PlaneGeometry(4,1),new T.MeshStandardMaterial({map:signTexture(['DNA MIXER'],'#1a9a5a'),side:T.DoubleSide}));ms.position.set(0,6.2,0);mx.add(ms);
+  zoo.mixer={g:mx,liq,pour:[],x:LAB.x,z:LAB.z+1.5};zoo.cols.push({x:LAB.x,z:LAB.z+1.5,r:2.4});
+  // glass sliding doors at the front
+  const doorM=new T.MeshPhysicalMaterial({color:'#bff2ff',roughness:.05,transparent:true,opacity:.45,clearcoat:1});zoo.labDoors=[];
+  for(const sd of[-1,1]){const d=new T.Mesh(new T.BoxGeometry(4,6,.2),doorM);d.position.set(sd*2,3,W/2);d.userData.sd=sd;g.add(d);zoo.labDoors.push(d)}
   const helix=new T.Group();helix.position.set(0,Ht+4,0);g.add(helix);for(let i=0;i<24;i++){const a=i*.5;for(const s2 of[1,-1]){const b=new T.Mesh(new T.SphereGeometry(.35,10,8),i%2?glow:roof);b.position.set(Math.cos(a)*1.4*s2,i*.3-3.5,Math.sin(a)*1.4*s2);helix.add(b)}}
   zoo.helix=helix;
   const st=new T.Mesh(new T.PlaneGeometry(9,2.6),new T.MeshStandardMaterial({map:signTexture(['DNA LAB','Make new animals - press G'],'#1a9a5a'),roughness:.7}));st.position.set(0,Ht-1.2,W/2+.3);g.add(st);
@@ -848,7 +863,7 @@ function takeDNA(){
   if(!(world&&world.zoo)||mode!=='foot')return;const f=V(0,0,-1).applyQuaternion(cam.quaternion);let best=null,bs=1e9;
   for(const o of zoo.animals){const p=V(o.x,o.inst.g.position.y+o.inst.h*.5,o.z),d=p.clone().sub(cam.position),dist=d.length();if(dist>16)continue;const ang=f.angleTo(d.normalize());if(ang<.4&&ang*30+dist<bs){bs=ang*30+dist;best=o}}
   if(!best){toast('Walk up to an animal and look right at it to take some DNA');return}
-  S.dna[best.an.k]=(S.dna[best.an.k]||0)+1;save();toast('🧬 You took some '+SP[best.an.k].n+' DNA! It is in the DNA box on your truck. Take it to the DNA Lab.',5000);
+  S.dna[best.an.k]=(S.dna[best.an.k]||0)+1;save();syncLabShelves();toast('🧬 You took some '+SP[best.an.k].n+' DNA! It is in the DNA box on your truck. Take it to the DNA Lab.',5000);
 }
 let dnaSel=[];
 function openLab(){dnaSel=[];renderLab();$('#dnaPanel').hidden=false}
@@ -864,7 +879,50 @@ function mixDNA(){
   S.dna[a]--;S.dna[b]--;const i=S.mixes.length;S.mixes.push({a,b,n});addMix(S.mixes[i],i);const k='mix:'+i;S.dex[k]=1;
   S.holding.push({uid:S.uid++,k});const made=autoHome();save();
   if(zoo.built){S.areas.forEach((ar,j)=>{if(!zoo.areas.has(ar.id)){buildArea(ar,j)}});if(made.length)rebuildPaths();syncVisitors();syncZooAnimals();if(curView==='zoo')renderZooUI()}
-  dnaSel=[];renderLab();toast('🧬✨ You made a brand-new animal: the '+n+'! It went to its '+HAB[SP[k].hab].name+' dome.',7000);
+  dnaSel=[];renderLab();syncLabShelves();toast('🧬✨ You made a brand-new animal: the '+n+'! It went to its '+HAB[SP[k].hab].name+' dome.',7000);
 }
 $('#dnaList').addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(!b)return;const k=b.dataset.k,i=dnaSel.indexOf(k);if(i>=0)dnaSel.splice(i,1);else if(dnaSel.length<2)dnaSel.push(k);renderLab()});
 $('#dnaMix').onclick=mixDNA;$('#dnaClose').onclick=()=>$('#dnaPanel').hidden=true;$('#dnaOpen').onclick=openLab;
+
+/* ---------- inside the DNA Lab: hold a DNA tube and pour it into the mixer ---------- */
+function inLab(){return world&&world.zoo&&mode==='foot'&&Math.abs(me.x-LAB.x)<LAB.D/2&&Math.abs(me.z-LAB.z)<LAB.W/2+.5}
+function syncLabShelves(){
+  if(!zoo.labSlots)return;for(const t of zoo.labTubes||[])zoo.scene.remove(t.g);zoo.labTubes=[];
+  const glass=new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transparent:true,opacity:.5}),liq=new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.2});
+  const left=k=>(S.dna[k]||0)-zoo.mixer.pour.filter(x=>x===k).length-(me.holdDNA===k?1:0);
+  Object.keys(S.dna).filter(k=>SP[k]&&left(k)>0).slice(0,zoo.labSlots.length).forEach((k,i)=>{const p=zoo.labSlots[i],g=new T.Group();g.position.copy(p);
+    g.add(new T.Mesh(new T.CylinderGeometry(.2,.2,.9,12),glass));const l=new T.Mesh(new T.CylinderGeometry(.16,.16,.7,12),liq);l.position.y=-.05;g.add(l);
+    const lb=labelSprite(SP[k].e+' '+SP[k].n+' ×'+left(k),'#1a7a4a');lb.scale.set(2.6,.5,1);lb.position.y=.85;g.add(lb);zoo.scene.add(g);zoo.labTubes.push({k,g})});
+}
+function lookAtLab(list,r){const f=V(0,0,-1).applyQuaternion(cam.quaternion);let best=null,bs=1e9;
+  for(const t of list){const d=t.g.position.clone().sub(cam.position),dist=d.length();if(dist>r)continue;const a=f.angleTo(d.normalize());if(a<.5&&a*10+dist<bs){bs=a*10+dist;best=t}}return best}
+function labHint(){
+  if(!inLab())return'';
+  if(!Object.keys(S.dna).some(k=>S.dna[k]>0))return'🧬 Your DNA shelves are empty! Collect DNA tubes on safari, or press <b>X</b> next to a zoo animal';
+  if(me.holdDNA)return Math.hypot(me.x-zoo.mixer.x,me.z-zoo.mixer.z)<5?'Press <b>E</b> to pour the '+SP[me.holdDNA].n+' DNA into the mixer ('+(zoo.mixer.pour.length+1)+'/2)':'You are holding '+SP[me.holdDNA].n+' DNA. Walk to the <b>DNA MIXER</b> and press <b>E</b>';
+  const t=lookAtLab(zoo.labTubes||[],4);return t?'Press <b>E</b> to pick up the '+SP[t.k].n+' DNA':'Look at a DNA tube on the shelves and press <b>E</b> to pick it up';
+}
+function labAction(){
+  if(!inLab())return false;
+  if(me.holdDNA){if(Math.hypot(me.x-zoo.mixer.x,me.z-zoo.mixer.z)>5){toast('Walk to the DNA MIXER in the middle to pour it in');return true}
+    const k=me.holdDNA;if(zoo.mixer.pour[0]===k){toast('Pour in a different kind of DNA to make a new animal!');return true}
+    me.holdDNA=null;zoo.mixer.pour.push(k);showHeldDNA();toast('💧 You poured in the '+SP[k].n+' DNA! ('+zoo.mixer.pour.length+'/2)');
+    if(zoo.mixer.pour.length===2){dnaSel=zoo.mixer.pour.slice();zoo.mixer.pour=[];zoo.mixer.bubble=3;mixDNA()}
+    syncLabShelves();return true}
+  const t=lookAtLab(zoo.labTubes||[],4);if(!t){toast(labHint().replace(/<[^>]+>/g,''));return true}
+  me.holdDNA=t.k;showHeldDNA();syncLabShelves();toast('✋ You are holding the '+SP[t.k].n+' DNA. Pour it into the DNA MIXER!');return true
+}
+// a DNA tube in your hand instead of the net
+function showHeldDNA(){
+  if(!footRig)return;if(!footRig.userData.tube){const g=new T.Group();g.position.set(.26,-.2,-.5);g.rotation.set(-.3,0,-.2);
+    g.add(new T.Mesh(new T.CylinderGeometry(.04,.04,.22,10),new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transparent:true,opacity:.5})));
+    const l=new T.Mesh(new T.CylinderGeometry(.033,.033,.17,10),new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.2}));l.position.y=-.015;g.add(l);footRig.add(g);footRig.userData.tube=g}
+  const lab=inLab();footRig.userData.tube.visible=lab&&!!me.holdDNA;netRig.visible=!lab;
+}
+function updateLab(dt){
+  if(!zoo.mixer)return;const near=curView==='drive'&&world&&world.zoo&&Math.hypot((mode==='car'?car.x:me.x)-LAB.x,(mode==='car'?car.z:me.z)-(LAB.z+LAB.W/2))<9;
+  zoo.labOpen=lerp(zoo.labOpen||0,near?1:0,Math.min(1,dt*3));for(const d of zoo.labDoors)d.position.x=d.userData.sd*(2+zoo.labOpen*3.8);
+  const m=zoo.mixer,target=m.bubble>0?1:m.pour.length*.45+.05;m.liq.scale.y=lerp(m.liq.scale.y,target*3.2,Math.min(1,dt*2));m.liq.position.y=1+m.liq.scale.y/2;
+  if(m.bubble>0){m.bubble-=dt;m.liq.material.emissiveIntensity=1+Math.sin(performance.now()*.02)*.8}else m.liq.material.emissiveIntensity=.9;
+  if(curView==='drive'&&world&&world.zoo)showHeldDNA();
+}
