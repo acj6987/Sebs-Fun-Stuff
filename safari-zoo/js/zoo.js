@@ -232,10 +232,11 @@ function randomSpot(A,r=Math.random){const h=homeOf(A);for(let i=0;i<30;i++){con
 function updateZooAnimals(dt,time){
   const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const o of zoo.animals){
+    if(o.follow&&driving&&mode==='foot'){const b=V(Math.sin(look.yaw),0,Math.cos(look.yaw)),side=o.follow===1?-1:1;o.tx=me.x+b.x*4+b.z*side*2.5;o.tz=me.z+b.z*4-b.x*side*2.5;o.t=1}
     // move out of the way of the jeep or of you
-    if(driving&&!swims(o.an)&&Math.hypot(o.x-px,o.z-pz)<9){const a=Math.atan2(o.x-px,o.z-pz);const lim=o.A.R0-4;let nx=o.x+Math.sin(a)*8-o.A.x,nz=o.z+Math.cos(a)*8-o.A.z;const d=Math.hypot(nx,nz);if(d>lim){nx*=lim/d;nz*=lim/d}o.tx=o.A.x+nx;o.tz=o.A.z+nz;o.t=2}
+    if(driving&&!o.follow&&!swims(o.an)&&Math.hypot(o.x-px,o.z-pz)<9){const a=Math.atan2(o.x-px,o.z-pz);const lim=o.A.R0-4;let nx=o.x+Math.sin(a)*8-o.A.x,nz=o.z+Math.cos(a)*8-o.A.z;const d=Math.hypot(nx,nz);if(d>lim){nx*=lim/d;nz*=lim/d}o.tx=o.A.x+nx;o.tz=o.A.z+nz;o.t=2}
     const dx=o.tx-o.x,dz=o.tz-o.z,d=Math.hypot(dx,dz);let spd=0;
-    if(d>.4){spd=Math.min(SP[o.an.k].s*(driving&&o.t===2?1.4:.55),d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
+    if(d>.4){spd=Math.min(SP[o.an.k].s*(o.follow?2.2:driving&&o.t===2?1.4:.55),o.follow?d*2:d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
       const ty=Math.atan2(dx,dz);let dy=ty-o.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.yaw+=dy*Math.min(1,dt*4)}
     else{o.t-=dt;if(o.pile&&o.pile.left>0){o.pile.left-=dt;o.t=Math.max(o.t,.5)}
       if(o.t<=0){o.t=3+Math.random()*6;const p=nextSpot(o);o.tx=p.x;o.tz=p.z;o.pile=p.pile||null}}
@@ -544,11 +545,29 @@ function syncMumTags(){
 }
 // pick up an egg on foot and put it in your truck
 function nearEgg(){let best=null,bd=3.5;for(const a of S.areas)for(const e of a.eggs){const m=eggMeshes.get(e.uid);if(!m)continue;const d=Math.hypot(m.position.x-me.x,m.position.z-me.z);if(d<bd){bd=d;best={a,e,m}}}return best}
+// pick up an egg and carry it: its mum and dad follow you wherever you go
 function pickEgg(){
   if(mode!=='foot')return false;const n=nearEgg();if(!n)return false;
-  n.a.eggs.splice(n.a.eggs.indexOf(n.e),1);zoo.scene.remove(n.m);eggMeshes.delete(n.e.uid);(S.truckEggs=S.truckEggs||[]).push(n.e);save();showTruckEggs();
-  toast('🥚 You picked up the '+SP[n.e.k].n+' egg and put it in your truck! Take it to the Egg Nursery to hatch it.');return true}
-function eggHint(){const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';
+  n.a.eggs.splice(n.a.eggs.indexOf(n.e),1);zoo.scene.remove(n.m);eggMeshes.delete(n.e.uid);(me.holdEggs=me.holdEggs||[]).push(n.e);save();
+  const k=n.e.k,mate=SP[k].def.mate,mum=zoo.animals.find(o=>o.an.uid===n.e.mum),dad=zoo.animals.find(o=>o!==mum&&!o.an.born&&(o.an.k===k||o.an.k===mate)&&o.A.area===n.a);
+  const fam=[mum,dad].filter(Boolean);fam.forEach((o,i)=>{o.follow=i+1;o.pile=null});
+  toast('🥚 You are holding the '+SP[k].n+' egg!'+(fam.length?' '+(fam.length>1?'Its mum and dad are':'Its mum is')+' following you.':'')+' Take it to the Egg Nursery, the Doctor or the DNA Lab, or back to your truck.',7000);return true}
+function followers(){return zoo.animals.filter(o=>o.follow)}
+function sendHome(){for(const o of followers()){o.follow=0;o.t=0}}
+// things you can do on foot while carrying eggs
+function eggAction(){
+  const eggs=me.holdEggs||[];if(!eggs.length||mode!=='foot')return false;
+  if(nearNursery(me.x,me.z)){S.nursery=S.nursery||[];for(const e of eggs.splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}save();syncNurseryEggs();sendHome();
+    toast('🥚 You put the egg in a warm incubator. It hatches in 30 seconds! Mum and dad are going home.',6000);return true}
+  if(nearDoctor(me.x,me.z)){const f=followers();S.coins+=20*(eggs.length+f.length);save();coins();
+    toast('🩺 The doctor checked the egg'+(f.length?' and '+f.map(o=>'the '+SP[o.an.k].n+' '+(o.follow===1?'mum':'dad')).join(' and '):'')+'. Everyone is healthy! ❤️ +'+20*(eggs.length+f.length)+' coins',6000);return true}
+  return false}
+function eggsIntoTruck(){
+  const eggs=me.holdEggs||[];if(!eggs.length)return;(S.truckEggs=S.truckEggs||[]).push(...eggs.splice(0));
+  for(const o of followers()){if(smallUsed()>=CAGES)break;const area=o.A.area;area.animals.splice(area.animals.indexOf(o.an),1);zoo.scene.remove(o.inst.g);zoo.animals.splice(zoo.animals.indexOf(o),1);S.cages.push(Object.assign({},o.an))}
+  sendHome();save();showTruckEggs();refreshCages();syncMumTags();toast('🚚 The egg went into your truck, and the family hopped in too!',5000)}
+function eggHint(){if(mode==='foot'&&(me.holdEggs||[]).length){const k=SP[me.holdEggs[0].k].n;return nearNursery(me.x,me.z)?'Press <b>E</b> to put the '+k+' egg in an incubator':nearDoctor(me.x,me.z)?'Press <b>E</b> for the doctor to check the egg and the family':'🥚 Holding the '+k+' egg · Egg Nursery, Doctor, DNA Lab or your truck <b>E</b>'}
+  const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';
   if(mode==='car'&&nearPens()&&S.cages.length)return'Press <b>G</b> to put the animals in your truck into a Family Pen';
   if(mode==='car'&&nearLab())return'Press <b>G</b> to open the DNA Lab and make new animals';
   if(mode==='car'&&nearDoctor())return'Press <b>G</b> for the doctor to check the animals in your truck';return''}
@@ -584,7 +603,7 @@ function zooCatch(){
   S.cages.push(Object.assign({},an));save();refreshCages();syncMumTags();
   toast(an.preg?'🤰 You caught the '+SP[an.k].n+' mum! Drive her to the Egg Nursery and press G so she can have her baby safe and warm.':'You caught the '+SP[an.k].n+'! It is in your truck. Put it back with "Put them back in their domes".',6000);
 }
-function nearNursery(){return Math.abs(car.x-NURSE.x)<NURSE.D/2+10&&Math.abs(car.z-NURSE.z)<NURSE.W/2+3}
+function nearNursery(x=car.x,z=car.z){return Math.abs(x-NURSE.x)<NURSE.D/2+10&&Math.abs(z-NURSE.z)<NURSE.W/2+3}
 function dropEggs(){
   const n=(S.truckEggs||[]).length,mums=S.cages.filter(c=>c.preg);if(!n&&!mums.length)return false;S.nursery=S.nursery||[];
   for(const e of (S.truckEggs||[]).splice(0)){e.hatch=Date.now()+30000;S.nursery.push(e)}
@@ -817,7 +836,7 @@ function buildDoctor(){
   for(let z=-W/2;z<=W/2;z+=1.8)zoo.cols.push({x:DOC.x+D/2,z:DOC.z+z,r:1});
   for(const sd of[-1,1]){for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:DOC.x+x,z:DOC.z+sd*W/2,r:1});for(let z=0;z<=7;z+=1.8)zoo.cols.push({x:DOC.x-D/2,z:DOC.z+sd*(W/2-z),r:1})}
 }
-function nearDoctor(){return Math.abs(car.x-DOC.x)<DOC.D/2+12&&Math.abs(car.z-DOC.z)<DOC.W/2+4}
+function nearDoctor(x=car.x,z=car.z){return Math.abs(x-DOC.x)<DOC.D/2+12&&Math.abs(z-DOC.z)<DOC.W/2+4}
 function visitDoctor(){
   if(!S.cages.length){toast('🩺 Bring animals in your truck and the doctor will check them!');return true}
   const now=Date.now(),names=[];let babies=0;
@@ -917,12 +936,14 @@ function showHeldDNA(){
   if(!footRig)return;if(!footRig.userData.tube){const g=new T.Group();g.position.set(.26,-.2,-.5);g.rotation.set(-.3,0,-.2);
     g.add(new T.Mesh(new T.CylinderGeometry(.04,.04,.22,10),new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transparent:true,opacity:.5})));
     const l=new T.Mesh(new T.CylinderGeometry(.033,.033,.17,10),new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.2}));l.position.y=-.015;g.add(l);footRig.add(g);footRig.userData.tube=g}
-  const lab=inLab();footRig.userData.tube.visible=lab&&!!me.holdDNA;netRig.visible=!lab;
+  if(!footRig.userData.egg){const e=new T.Mesh(new T.SphereGeometry(.09,14,10),new T.MeshStandardMaterial({color:'#f4efe4',roughness:.5}));e.scale.y=1.3;e.position.set(-.18,-.25,-.45);footRig.add(e);footRig.userData.egg=e}
+  const lab=inLab(),egg=(me.holdEggs||[]).length>0;footRig.userData.tube.visible=lab&&!!me.holdDNA;footRig.userData.egg.visible=egg;netRig.visible=!lab;
 }
 function updateLab(dt){
   if(!zoo.mixer)return;const near=curView==='drive'&&world&&world.zoo&&Math.hypot((mode==='car'?car.x:me.x)-LAB.x,(mode==='car'?car.z:me.z)-(LAB.z+LAB.W/2))<9;
   zoo.labOpen=lerp(zoo.labOpen||0,near?1:0,Math.min(1,dt*3));for(const d of zoo.labDoors)d.position.x=d.userData.sd*(2+zoo.labOpen*3.8);
   const m=zoo.mixer,target=m.bubble>0?1:m.pour.length*.45+.05;m.liq.scale.y=lerp(m.liq.scale.y,target*3.2,Math.min(1,dt*2));m.liq.position.y=1+m.liq.scale.y/2;
   if(m.bubble>0){m.bubble-=dt;m.liq.material.emissiveIntensity=1+Math.sin(performance.now()*.02)*.8}else m.liq.material.emissiveIntensity=.9;
-  if(curView==='drive'&&world&&world.zoo)showHeldDNA();
+  if(curView==='drive'&&world&&world.zoo){showHeldDNA();
+    if(inLab())for(const e of me.holdEggs||[])if(!e.dnaTaken){e.dnaTaken=1;S.dna[e.k]=(S.dna[e.k]||0)+1;save();syncLabShelves();toast('🧬 The DNA Lab took some DNA from your '+SP[e.k].n+' egg! It is on the shelf now.',5000)}}
 }

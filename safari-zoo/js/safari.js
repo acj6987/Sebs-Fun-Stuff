@@ -433,10 +433,10 @@ function pressE(){
     const p=car.g.localToWorld(V(-2.1,0,-.3));me.x=p.x;me.z=p.z;collide(me,.5);me.y=HW(me.x,me.z);me.vy=0;
     look.yaw=car.yaw+look.yaw;mode='foot';car.v=0;footRig.visible=true;netRig.visible=true;placePets();setDriveUI();return}
   if(me.pack.length){const tp=trailerPos();if(Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS){cageIt();return}}
-  if(world.zoo&&(labAction()||pickEgg()))return;
+  if(world.zoo&&(labAction()||eggAction()||pickEgg()))return;
   const tp=trailerPos();
   if(Math.hypot(me.x-car.x,me.z-car.z)<5.5*TS||Math.hypot(me.x-tp.x,me.z-tp.z)<5*TS){
-    if(me.pack.length)releaseLeash();dismount(true);mode='car';look.yaw=0;look.pitch=-.12;footRig.visible=false;setDriveUI()}
+    if(me.pack.length)releaseLeash();dismount(true);if(world.zoo)eggsIntoTruck();mode='car';look.yaw=0;look.pitch=-.12;footRig.visible=false;setDriveUI()}
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
