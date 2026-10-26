@@ -569,7 +569,7 @@ function eggsIntoTruck(){
 function eggHint(){if(mode==='foot'&&(me.holdEggs||[]).length){const k=SP[me.holdEggs[0].k].n;return nearNursery(me.x,me.z)?'Press <b>E</b> to put the '+k+' egg in an incubator':nearDoctor(me.x,me.z)?'Press <b>E</b> for the doctor to check the egg and the family':'🥚 Holding the '+k+' egg · Egg Nursery, Doctor, DNA Lab or your truck <b>E</b>'}
   const n=mode==='foot'&&nearEgg();if(n)return'Press <b>E</b> to pick up the '+SP[n.e.k].n+' egg';if(mode==='car'&&nearNursery()&&((S.truckEggs||[]).length||S.cages.some(c=>c.preg)))return'Press <b>G</b> to put your eggs and mums in the Egg Nursery';
   if(mode==='car'&&nearPens()&&S.cages.length)return'Press <b>G</b> to put the animals in your truck into a Family Pen';
-  if(mode==='car'&&nearLab())return'Press <b>G</b> to open the DNA Lab and make new animals';
+  if(mode==='car'?nearLab():nearLab(me.x,me.z))return'Press <b>G</b> to open the DNA Lab and make new animals';
   if(mode==='car'&&nearDoctor())return'Press <b>G</b> for the doctor to check the animals in your truck';return''}
 function showTruckEggs(){
   if(!car.g||!car.trailer)return;if(car.eggRack)car.eggRack.parent&&car.eggRack.parent.remove(car.eggRack);const g=new T.Group();car.eggRack=g;car.trailer.add(g);
@@ -730,7 +730,11 @@ function domeAt(x,z){return[...zoo.areas.values()].find(a=>Math.hypot(x-a.x,z-a.
 // G: load food at the store, or drop food in the dome you are in
 function foodAction(){
   if(world&&world.sea){callDreams();return}
-  if(!(world&&world.zoo))return;if(nearNursery()&&dropEggs())return;if(nearPens()&&dropFamily())return;if(nearDoctor()&&visitDoctor())return;if(nearLab()){openLab();return}const f=truckFood();
+  if(!(world&&world.zoo))return;
+  // use where YOU are: in the truck or walking about
+  const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
+  if(inLab()||nearLab(px,pz)){openLab();return}
+  if(nearNursery(px,pz)&&dropEggs())return;if(nearPens(px,pz)&&dropFamily())return;if(nearDoctor(px,pz)&&visitDoctor())return;const f=truckFood();
   if(nearStore()){if(f.meat>=FOOD.max&&f.hay>=FOOD.max){toast('Your truck is full of food! Drive it to a dome and press G to feed the animals.');return}
     f.meat=FOOD.max;f.hay=FOOD.max;save();showFood();toast('🥩🌾 Loaded '+FOOD.max+' crates of meat and '+FOOD.max+' bales of hay onto your truck! Take them to the domes and press G.');return}
   const A=domeAt(car.x,car.z);
@@ -815,7 +819,7 @@ function buildFamilyPens(){
   big.position.set(FAM.x+FAM.size+FAM.gap,4,FAM.z+2*(FAM.size+FAM.gap)-2);g.add(big);
   zoo.penAreas=[...Array(6)].map((_,i)=>{const p=famPen(i);return{pen:i+1,x:p.x,z:p.z,R0:8,area:{animals:S.fam[i],hab:'pen'},food:[],pond:{x:p.x,z:p.z,r:0}}});
 }
-function nearPens(){const a=famPen(0),b=famPen(5);return car.x>a.x-FAM.size&&car.x<b.x+FAM.size&&car.z>a.z-FAM.size&&car.z<b.z+FAM.size+6}
+function nearPens(x=car.x,z=car.z){const a=famPen(0),b=famPen(5);return x>a.x-FAM.size&&x<b.x+FAM.size&&z>a.z-FAM.size&&z<b.z+FAM.size+6}
 function dropFamily(){
   const list=S.cages.filter(c=>!SP[c.k].def.mate);if(!list.length)return false;
   const i=S.fam.findIndex(p=>!p.length);if(i<0){toast('All the Family Pens are full! Catch the animals in a pen with F to take them out.');return true}
@@ -876,7 +880,7 @@ function buildLab(){
   for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:LAB.x+x,z:LAB.z-W/2,r:1});
   for(const sd of[-1,1]){for(let z=-W/2;z<=W/2;z+=1.8)zoo.cols.push({x:LAB.x+sd*D/2,z:LAB.z+z,r:1});for(let x=0;x<=8;x+=1.8)zoo.cols.push({x:LAB.x+sd*(D/2-x),z:LAB.z+W/2,r:1})}
 }
-function nearLab(){return Math.abs(car.x-LAB.x)<LAB.D/2+4&&Math.abs(car.z-LAB.z)<LAB.W/2+12}
+function nearLab(x=car.x,z=car.z){return Math.abs(x-LAB.x)<LAB.D/2+4&&Math.abs(z-LAB.z)<LAB.W/2+12}
 // look at an animal in the zoo and take some of its DNA
 function takeDNA(){
   if(!(world&&world.zoo)||mode!=='foot')return;const f=V(0,0,-1).applyQuaternion(cam.quaternion);let best=null,bs=1e9;
