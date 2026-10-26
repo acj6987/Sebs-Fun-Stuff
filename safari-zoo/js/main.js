@@ -157,6 +157,7 @@ $('#foodBtn').addEventListener('click',foodAction);
 $('#subBtn').addEventListener('click',toggleSub);
 $('#planeBtn').addEventListener('click',togglePlane);
 $('#dnaBtn').addEventListener('click',takeDNA);
+$('#dnaLabBtn').addEventListener('click',openLab);
 $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.pack.length)releaseLeash();show('map')}
 $('#back').onclick=goMap;
