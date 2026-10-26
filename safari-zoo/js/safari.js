@@ -63,7 +63,7 @@ async function buildSafari(c,progress){
   NATURE.scatter(scene,types,Math.round(count*QUALITY.trees),place,r).forEach(addCol);
   world.grass=NATURE.makeGrass(E,world.ponds,{half:HALF});if(world.grass)scene.add(world.grass);
   buildCar(scene);buildFootRig();scene.add(cam);
-  sub.on=false;sub.g=null;
+  sub.on=false;sub.g=null;plane.on=false;plane.g=null;
   // build each animal shape once, showing progress
   const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]));
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
@@ -365,7 +365,7 @@ function aimTarget(){
     const ang=f.angleTo(d.normalize());if(ang<.32){const sc=ang*30+dist;if(sc<bs){bs=sc;best={a,dist}}}}
   return best}
 function throwNet(){
-  if(!safari.running)return;
+  if(!safari.running)return;if(mode==='plane'){toast('Land the plane first! Press P.');return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){zooCatch();return}
   if(world.net)return;
@@ -418,7 +418,7 @@ function cageIt(own=me){
 function releaseLeash(){if(!me.pack.length)return;for(const a of me.pack){world.scene.remove(a.net);a.net=null;world.scene.remove(a.rope);a.rope=null;a.state='wander'}
   toast(me.pack.length>1?'Your animals wriggled out of the nets!':'The '+me.pack[0].sp.n+' wriggled out of the net!');me.pack=[]}
 function pressE(){
-  if(!safari.running)return;
+  if(!safari.running)return;if(mode==='plane'){toast('Land the plane first! Press P.');return}
   if(mode==='sub'){const q=V(sub.x+Math.cos(sub.yaw)*3.5,0,sub.z-Math.sin(sub.yaw)*3.5);me.x=q.x;me.z=q.z;me.y=Math.max(H(me.x,me.z)+.3,sub.y-1);me.vy=0;
     look.yaw=sub.yaw+look.yaw;look.pitch=0;mode='foot';footRig.visible=true;netRig.visible=true;setDriveUI();toast('🤿 You jumped out in your snorkel, mask and flippers! Space to swim up, Shift to dive, E by the submarine to get back in.',6000);return}
   if(mode==='foot'&&sub.on){
@@ -436,9 +436,10 @@ function pressE(){
   else toast('Walk back to your truck to get in');
 }
 function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(mode==='car')toast('Jump out of the truck first!')}
-function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car';$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car';
-  const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&mode!=='foot');sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
-  $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub';
+function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car'||mode==='plane';$('#foodBtn').hidden=!(world&&(world.zoo||world.sea&&mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
+  const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&(mode==='car'||mode==='sub'));sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
+  $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||mode==='plane'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub'||mode==='plane';
+  const pb=$('#planeBtn');pb.hidden=!(world&&!world.zoo&&(mode==='car'||mode==='plane'));pb.firstChild.textContent=mode==='plane'?'LAND':'PLANE';$('#eBtn').hidden=mode==='plane';
   if(mode==='sub')$('#eBtn').firstChild.textContent='SNORKEL';else if(mode==='foot'&&sub.on)$('#eBtn').firstChild.textContent='GET IN SUB'}
 
 /* ---------- your pet dinosaurs: they follow you, and you can ride them ---------- */
@@ -454,7 +455,7 @@ function ensurePets(){
 function placePets(){ensurePets();if(!world.pets)return;for(const p of world.pets){const q=car.g.localToWorld(V(p.side*3.5,0,-1));p.x=q.x;p.z=q.z;p.yaw=car.yaw+Math.PI}
   const a=world.asst;if(a&&a.state==='follow'){const q=car.g.localToWorld(V(2.6,0,-.5));a.x=q.x;a.z=q.z}}
 function rideToggle(){
-  if(!safari.running||mode==='sub')return;if(mode==='car'){toast('Jump out of the truck first, then press R to ride a dinosaur!');return}
+  if(!safari.running||mode==='sub'||mode==='plane')return;if(mode==='car'){toast('Jump out of the truck first, then press R to ride a dinosaur!');return}
   if(me.mount){dismount();return}
   ensurePets();if(!world.pets){toast(world.sea?'No raptors in the Deep Blue Sea! Your Velociraptor is waiting on land.':'Your pet dinosaurs are waiting on safari!');return}
   const p=world.pets.map(p=>[p,Math.hypot(p.x-me.x,p.z-me.z)]).sort((a,b)=>a[1]-b[1])[0];
@@ -531,7 +532,9 @@ function ropes(own,hand){own.pack.forEach((a,i)=>{if(!a.rope)return;const pts=a.
     pts.setXYZ(0,hp.x,hp.y,hp.z);pts.setXYZ(1,a.x,a.m.g.position.y+a.m.h*.6,a.z);pts.needsUpdate=true});
 }
 function placeCamera(){
-  if(mode==='sub'){const yaw=sub.yaw+look.yaw,back=V(Math.sin(yaw),0,Math.cos(yaw));
+  if(mode==='plane'){const yaw=plane.yaw+look.yaw,back=V(Math.sin(yaw),0,Math.cos(yaw));
+    cam.position.set(plane.x+back.x*24,plane.y+6-look.pitch*10,plane.z+back.z*24);cam.lookAt(plane.x-back.x*10,plane.y+1,plane.z-back.z*10)}
+  else if(mode==='sub'){const yaw=sub.yaw+look.yaw,back=V(Math.sin(yaw),0,Math.cos(yaw));
     cam.position.set(sub.x+back.x*11,sub.y+3.2-look.pitch*6,sub.z+back.z*11);cam.lookAt(sub.x-back.x*4,sub.y+.6,sub.z-back.z*4);underwater()}
   else if(mode==='car'){cam.position.copy(car.g.localToWorld(V(-.45,2.08,.42)));
     cam.quaternion.copy(car.g.quaternion).multiply(new T.Quaternion().setFromEuler(new T.Euler(look.pitch,look.yaw,0,'YXZ')))}
@@ -544,6 +547,7 @@ const safari={running:false,
     // move in small steps so the jeep keeps full speed even when the computer draws few pictures a second
     const n=Math.min(8,Math.ceil(dt/(1/30))),h=dt/n;
     if(mode==='sub'){for(let i=0;i<n;i++)updateSub(h)}
+    else if(mode==='plane'){for(let i=0;i<n;i++)updatePlane(h)}
     else if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
     updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);
@@ -567,7 +571,8 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;
-  if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
+  if(mode==='plane')msg='✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>P</b> land';
+  else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
   else if(world.zoo)msg=foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
@@ -584,7 +589,7 @@ function hud(){
   c.fillStyle=world.E.water;for(const p of world.ponds){c.beginPath();c.arc(W/2+(p.x-cx)*k,W/2+(p.z-cz)*k,p.r*k,0,7);c.fill()}
   for(const a of world.animals){if(a.sp.def.mate&&a.state!=='follow')continue;c.fillStyle=a.sp.def.mate?'#ff4fa3':a.sp.r===3?'#ffc93c':a.sp.r===2?'#d4602f':'#1d2116';c.beginPath();c.arc(W/2+(a.x-cx)*k,W/2+(a.z-cz)*k,a.sp.r===3?9:7,0,7);c.fill();if(a.sp.r===3){c.strokeStyle='#fff';c.lineWidth=2;c.stroke()}}
   const arrow=(x,z,yaw,col)=>{c.save();c.translate(W/2+(x-cx)*k,W/2+(z-cz)*k);c.rotate(-yaw);c.fillStyle=col;c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-14);c.lineTo(10,10);c.lineTo(0,5);c.lineTo(-10,10);c.closePath();c.fill();c.stroke();c.restore()};
-  if(!sub.on)arrow(car.x,car.z,car.yaw,'#d38a2c');if(mode==='foot')arrow(me.x,me.z,look.yaw,'#2f6fa8');if(mode==='sub')arrow(sub.x,sub.z,sub.yaw,'#ffcf1f');
+  if(!sub.on&&mode!=='plane')arrow(car.x,car.z,car.yaw,'#d38a2c');if(mode==='foot')arrow(me.x,me.z,look.yaw,'#2f6fa8');if(mode==='plane')arrow(plane.x,plane.z,plane.yaw,'#e02a2a');if(mode==='sub')arrow(sub.x,sub.z,sub.yaw,'#ffcf1f');
   c.restore();
 }
 
@@ -678,4 +683,44 @@ function underwater(){
   world.sky.sky.visible=!u;const el=$('#under');if(el&&el.hidden===u)el.hidden=!u;
   const sn=world.sea&&mode==='foot'&&!me.mount&&H(me.x,me.z)<-.4,se=$('#snorkel');if(se&&se.hidden===sn)se.hidden=!sn;
   if(footRig&&footRig.userData.sleeve)footRig.userData.sleeve.color.set(world.sea?'#1d4f8a':'#5f6a40');
+}
+
+/* ---------- your truck turns into a plane to fly over the animals ---------- */
+const plane={on:false,g:null,x:0,y:10,z:0,yaw:0,v:0};
+function planeModel(){
+  const g=new T.Group(),white=new T.MeshPhysicalMaterial({color:'#f6f6f4',roughness:.3,metalness:.2,clearcoat:.8}),red=new T.MeshStandardMaterial({color:'#e02a2a',roughness:.4}),dark=new T.MeshStandardMaterial({color:'#2a2e33',metalness:.6,roughness:.4});
+  const glass=new T.MeshPhysicalMaterial({color:'#7fc8ff',roughness:.05,metalness:.2,emissive:'#2a6aa8',emissiveIntensity:.3});
+  const add=(geo,m,x,y,z,sx=1,sy=1,sz=1)=>{const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;g.add(o);return o};
+  const body=new T.CapsuleGeometry(1,7,8,20);body.rotateX(Math.PI/2);add(body,white,0,0,0);
+  add(new T.SphereGeometry(.9,16,12),glass,0,.55,2.6,1,.7,1.3);
+  add(new T.BoxGeometry(12,.18,2.2),white,0,-.1,.4);for(const sx of[-1,1])add(new T.BoxGeometry(1.4,.2,2.25),red,sx*5.4,-.1,.4);
+  add(new T.BoxGeometry(4.2,.14,1.3),white,0,.3,-3.9);add(new T.BoxGeometry(.16,2.2,1.6),red,0,1.3,-4);
+  add(new T.CylinderGeometry(1.02,1.02,.4,20),red,0,0,1.2,1,1,1).rotation.x=Math.PI/2;
+  for(let i=0;i<4;i++)for(const sx of[-1,1])add(new T.CircleGeometry(.22,12),glass,sx*1.01,.3,1-i*1.2).rotation.y=sx*Math.PI/2;
+  const prop=new T.Group();prop.position.set(0,0,4.6);g.add(prop);for(let i=0;i<3;i++){const b=new T.Mesh(new T.BoxGeometry(.18,1.8,.06),dark);b.position.y=.8;const p=new T.Group();p.rotation.z=i*Math.PI*2/3;p.add(b);prop.add(p)}
+  add(new T.ConeGeometry(.3,.6,12),red,0,0,4.7).rotation.x=Math.PI/2;
+  for(const sx of[-1,1]){add(new T.CylinderGeometry(.06,.06,1,6),dark,sx*1.4,-.9,.8);add(new T.CylinderGeometry(.3,.3,.2,12),dark,sx*1.4,-1.4,.8).rotation.z=Math.PI/2}
+  g.userData.prop=prop;return g;
+}
+function togglePlane(){
+  if(!safari.running)return;
+  if(world.zoo){toast('Planes can fly on safari! Drive out to the world map and pick a place.');return}
+  if(mode==='plane'){
+    // land: the plane turns back into your truck on the ground below
+    world.scene.remove(plane.g);plane.on=false;car.g.visible=true;car.x=plane.x;car.z=plane.z;keepIn(car);collide(car,1.7*TS);car.yaw=plane.yaw;car.v=0;mode='car';me.x=car.x;me.z=car.z;look.yaw=0;look.pitch=-.12;setDriveUI();
+    toast('🛬 You landed! Your plane turned back into your truck.');return}
+  if(mode!=='car'){toast(mode==='sub'?'Turn the submarine back into your truck first (press B)':'Get in your truck first, then turn it into a plane!');return}
+  if(!plane.g)plane.g=planeModel();world.scene.add(plane.g);plane.on=true;car.g.visible=false;
+  plane.x=car.x;plane.z=car.z;plane.yaw=car.yaw;plane.y=HW(car.x,car.z)+3;plane.v=18;car.v=0;mode='plane';look.yaw=0;look.pitch=0;setDriveUI();
+  toast('✈️ Your truck turned into a plane! W faster, S slower, A D to turn, Space to go up, Shift to go down. Press P to land.',7000);
+}
+function updatePlane(dt){
+  const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
+  if(gas>.05)plane.v+=14*gas*dt;if(brk>.05)plane.v-=14*brk*dt;plane.v=clamp(plane.v,12,55);
+  plane.yaw+=turn*.8*dt;
+  plane.x-=Math.sin(plane.yaw)*plane.v*dt;plane.z-=Math.cos(plane.yaw)*plane.v*dt;keepIn(plane);
+  const vy=(keys.rise||pad.rise?1:0)-(keys.run||keys.dive||pad.dive?1:0);const ground=HW(plane.x,plane.z)+2.5;plane.y=clamp(plane.y+vy*12*dt,ground,220);
+  me.x=car.x=plane.x;me.z=car.z=plane.z;me.y=plane.y-1;
+  const g=plane.g,bank=-turn*.5;g.position.set(plane.x,plane.y+Math.sin(performance.now()*.002)*.15,plane.z);g.rotation.set(-vy*.2,plane.yaw+Math.PI,0,'YXZ');g.rotation.z=bank;
+  g.userData.prop.rotation.z+=dt*(20+plane.v);
 }

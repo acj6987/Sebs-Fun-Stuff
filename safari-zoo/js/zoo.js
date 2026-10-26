@@ -55,6 +55,8 @@ function buildZoo(){
     return(Math.abs(x)<ROAD+10+MEGA*2+40||x>0&&x<ULTRA.x+ULTRA.R+40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*900,z=60+rr()*300;return Math.abs(x)<110&&z<190?null:V(x,0,z)},r);
   buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();
+  // planes flying high over the zoo
+  zoo.skyPlanes=[0,1,2].map(i=>{const g=planeModel();g.scale.setScalar(1.6);scene.add(g);return{g,a:i*2.1,r:350+i*120,h:110+i*35,spd:(i%2?-1:1)*(30+i*6),cx:0,cz:-500}});
   // entrance gate
   const gate=new T.Group();gate.position.set(0,0,30);scene.add(gate);
   const stone=NATURE.rockMat('#b8a890'),wood=NATURE.barkMat(false);
@@ -261,6 +263,7 @@ function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
+  for(const p of zoo.skyPlanes||[]){p.a+=p.spd/p.r*dt;const x=p.cx+Math.cos(p.a)*p.r,z=p.cz+Math.sin(p.a)*p.r,d=Math.sign(p.spd);p.g.position.set(x,p.h,z);p.g.rotation.set(0,Math.atan2(-Math.sin(p.a)*d,Math.cos(p.a)*d),-d*.25,'YXZ');p.g.userData.prop.rotation.z+=dt*40}
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
     if(driving&&Math.hypot((mode==='car'?car.x:me.x)-gx,(mode==='car'?car.z:me.z)-gz)<20)near=true;

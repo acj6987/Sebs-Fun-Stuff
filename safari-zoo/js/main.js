@@ -122,6 +122,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyR'){rideToggle();e.preventDefault()}
   if(e.code==='KeyG'){foodAction();e.preventDefault()}
   if(e.code==='KeyB'){toggleSub();e.preventDefault()}
+  if(e.code==='KeyP'){togglePlane();e.preventDefault()}
   if(e.code==='Space'){e.preventDefault();jump()}
   if(e.code==='Escape')goMap()});
 addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=false});
@@ -153,6 +154,7 @@ $('#rideBtn').addEventListener('click',rideToggle);
 $('#eBtn').addEventListener('click',pressE);
 $('#foodBtn').addEventListener('click',foodAction);
 $('#subBtn').addEventListener('click',toggleSub);
+$('#planeBtn').addEventListener('click',togglePlane);
 $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.pack.length)releaseLeash();show('map')}
 $('#back').onclick=goMap;
@@ -231,7 +233,7 @@ async function startZooDrive(id,opts={}){
   if(!zoo.built||curView!=='zoo'){show('zoo');loading(true,'Opening your zoo…');await nextFrame();await enterZoo(t=>$('#loadTxt').textContent=t);loading(false)}
   world=zooDriveWorld();
   if(zoo.carG)zoo.scene.remove(zoo.carG);
-  sub.on=false;buildCar(zoo.scene,opts);zoo.carG=car.g;showTruckEggs();showFood();buildFootRig();zoo.scene.add(cam);refreshCages();
+  sub.on=false;plane.on=false;buildCar(zoo.scene,opts);zoo.carG=car.g;showTruckEggs();showFood();buildFootRig();zoo.scene.add(cam);refreshCages();
   mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
   if(A){car.x=A.inside.x;car.z=A.inside.z;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}
