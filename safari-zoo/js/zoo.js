@@ -945,7 +945,7 @@ function showHeldDNA(){
     g.add(new T.Mesh(new T.CylinderGeometry(.04,.04,.22,10),new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transparent:true,opacity:.5})));
     const l=new T.Mesh(new T.CylinderGeometry(.033,.033,.17,10),new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:1.2}));l.position.y=-.015;g.add(l);footRig.add(g);footRig.userData.tube=g}
   if(!footRig.userData.egg){const e=new T.Mesh(new T.SphereGeometry(.09,14,10),new T.MeshStandardMaterial({color:'#f4efe4',roughness:.5}));e.scale.y=1.3;e.position.set(-.18,-.25,-.45);footRig.add(e);footRig.userData.egg=e}
-  const lab=inLab(),egg=(me.holdEggs||[]).length>0;footRig.userData.tube.visible=lab&&!!me.holdDNA;footRig.userData.egg.visible=egg;netRig.visible=!lab&&!me.noNet;
+  const lab=inLab(),egg=(me.holdEggs||[]).length>0;footRig.userData.tube.visible=lab&&!!me.holdDNA;footRig.userData.egg.visible=egg;netRig.visible=!lab&&!me.noNet&&!(world&&world.zoo);
 }
 function updateLab(dt){
   if(!zoo.mixer)return;const near=curView==='drive'&&world&&world.zoo&&Math.hypot((mode==='car'?car.x:me.x)-LAB.x,(mode==='car'?car.z:me.z)-(LAB.z+LAB.W/2))<9;

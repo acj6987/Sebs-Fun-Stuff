@@ -95,6 +95,7 @@ function quad(p){
   else k.extra('tail','tail',tb,{len:tl,r:p.tail==='long'?.045:.025,tuft:p.tail==='tuft'?(p.tuftCol||p.mane||'#2a1d14'):null,col:p.tail==='long'?p.col:shade(p.col,-.1),ang:p.tail==='long'?2.1:2.75,tip:p.tail==='long'?(p.col2||p.col):null});
   k.anim={kind:'quad',stride:Math.max(.5,leg*1.5),graze:p.graze,fly:p.fly,jiggle:p.jiggle};
   if(p.glam)glam(k,p,{by,at,nb,nd,na,hl,hw,hh});else if(p.fairy)fairyWings(k,[0,by+Hb*.45,L*.1],L*.8);
+  if(p.eagle)for(const sx of[-1,1]){const wn='wing'+(sx>0?'R':'L'),q=[sx*W*.3,by+Hb*.42,L*.12];k.bone(wn,'root',q);k.extra(wn,'ewing',q,{s:sx,size:L*1.25})}
   return k;
 }
 /* ---------- the Sparkle Zebraffe: zebra + giraffe + jaguar, with arms, wings, make-up and a handbag ---------- */
@@ -595,6 +596,12 @@ function extraMesh(e,p){
       for(let i=0;i<20;i++){const a=i/20*Math.PI*2;add(new T.SphereGeometry(e.r*.13,10,8),pm,[Math.cos(a)*e.r,up.y*Math.sin(a)*e.r,up.z*Math.sin(a)*e.r])}break}
     case'tutu':{const geo=new T.CylinderGeometry(1,1.35,1,60,4,true),pp=geo.attributes.position;for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i),a=Math.atan2(z,x),k2=1+Math.sin(a*22)*.05*(pp.getY(i)+.5);pp.setX(i,x*k2);pp.setZ(i,z*k2)}
       geo.computeVertexNormals();geo.rotateX(Math.PI/2);const o=add(geo,glitterMat(e.col,{side:T.DoubleSide,transparent:true,opacity:.85}),null,null,[e.rx,e.ry,e.len]);o.castShadow=false;break}
+    // big brown feathered eagle wings
+    case'ewing':{const z=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.bezierCurveTo(z*.4,-z*.18,z*.85,-z*.12,z*1.05,z*.05);
+      for(let i=0;i<7;i++){const t=i/6,x=z*(1.05-t*.95),y=z*(.05+.45*Math.sin(t*1.4));sh.lineTo(x+z*.06,y+z*.12);sh.lineTo(x,y)}sh.lineTo(0,z*.25);sh.lineTo(0,0);
+      const geo=new T.ShapeGeometry(sh,12);if(e.s<0)geo.scale(-1,1,1);geo.rotateX(Math.PI/2);
+      const o=add(geo,smat('#6a4424',{side:T.DoubleSide,roughness:.85}),null,[.3,0,e.s*.2]);
+      const tips=new T.ShapeGeometry(sh,12);if(e.s<0)tips.scale(-1,1,1);tips.rotateX(Math.PI/2);tips.scale(.55,1,.55);const t2=add(tips,smat('#c8a070',{side:T.DoubleSide,roughness:.85}),[0,.02,0],[.3,0,e.s*.2]);break}
     case'fwing':{const z=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.bezierCurveTo(z*.5,-z*.25,z*1.05,-z*.05,z*.9,z*.35);sh.bezierCurveTo(z*.75,z*.6,z*.3,z*.35,z*.15,z*.3);sh.bezierCurveTo(z*.5,z*.6,z*.55,z*1,z*.25,z*.95);sh.bezierCurveTo(z*.05,z*.85,0,z*.4,0,0);
       const geo=new T.ShapeGeometry(sh,16);if(e.s<0)geo.scale(-1,1,1);geo.rotateX(Math.PI/2);
       const wm=new T.MeshPhysicalMaterial({color:'#ffb8e8',emissive:'#ff7ad8',emissiveIntensity:.25,roughness:.15,iridescence:1,iridescenceIOR:1.6,transparent:true,opacity:.6,side:T.DoubleSide,depthWrite:false});
