@@ -870,7 +870,7 @@ function buildLab(){
   const tank=new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transmission:.5,transparent:true,opacity:.35,side:T.DoubleSide});
   const mx=new T.Group();mx.position.set(0,0,1.5);g.add(mx);
   const base=new T.Mesh(new T.CylinderGeometry(2.2,2.5,1,24),new T.MeshStandardMaterial({color:'#5a6a74',metalness:.7,roughness:.3}));base.position.y=.5;mx.add(base);
-  mx.add(Object.assign(new T.Mesh(new T.CylinderGeometry(1.7,1.7,3.4,28,1,true),tank),{position:V(0,2.7,0)}));
+  const tk=new T.Mesh(new T.CylinderGeometry(1.7,1.7,3.4,28,1,true),tank);tk.position.set(0,2.7,0);mx.add(tk);
   const liq=new T.Mesh(new T.CylinderGeometry(1.55,1.55,1,28),new T.MeshStandardMaterial({color:'#3af08a',emissive:'#2ad06a',emissiveIntensity:.9,transparent:true,opacity:.85}));liq.position.y=1.05;liq.scale.y=.05;mx.add(liq);
   const fun=new T.Mesh(new T.ConeGeometry(1.2,1.2,20,1,true),new T.MeshStandardMaterial({color:'#9aa8b0',metalness:.8,roughness:.3,side:T.DoubleSide}));fun.rotation.x=Math.PI;fun.position.y=5;mx.add(fun);
   const ms=new T.Mesh(new T.PlaneGeometry(4,1),new T.MeshStandardMaterial({map:signTexture(['DNA MIXER'],'#1a9a5a'),side:T.DoubleSide}));ms.position.set(0,6.2,0);mx.add(ms);
