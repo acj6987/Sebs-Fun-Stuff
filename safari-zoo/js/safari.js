@@ -62,7 +62,7 @@ async function buildSafari(c,progress){
   const count={rainforest:2600,jungle:2000,woodland:2000,savanna:1500,outback:1300,polar:800,ocean:3000}[c.hab];
   NATURE.scatter(scene,types,Math.round(count*QUALITY.trees),place,r).forEach(addCol);
   world.grass=NATURE.makeGrass(E,world.ponds,{half:HALF});if(world.grass)scene.add(world.grass);
-  buildCar(scene);buildFootRig();scene.add(cam);
+  buildCar(scene);buildFootRig();scene.add(cam);buildHelpers(scene);
   sub.on=false;sub.g=null;plane.on=false;plane.g=null;
   // build each animal shape once, showing progress
   const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]));
@@ -172,6 +172,11 @@ function buildCar(scene,opts={}){
     for(const x of[-1.13,1.13]){const gl=new T.Mesh(new T.PlaneGeometry(7.9,1.4),glassM);gl.rotation.y=Math.PI/2;gl.position.set(x,2.55,0);tr.add(gl)}
     for(const z of[-3,-1.5,0,1.5,3]){TA(BX,seatM,0,1.12,z,2,.16,.6);TA(BX,seatM,0,1.45,z+.32,2,.55,.1);for(const x of[-.55,.55])car.seats.push(V(x,1.2,z))}
     const sign=new T.Mesh(new T.PlaneGeometry(2,.4),new T.MeshStandardMaterial({map:typeof signTexture==='function'?signTexture(['SAFARI TOURS'],'#2f6a32'):null,color:'#ffffff'}));sign.position.set(0,3,4.03);tr.add(sign);
+  }else if(S.shop.hayTruck){
+    // a nice animal lorry: wooden sides, soft hay, no bars, 16 spaces
+    const hay=new T.MeshStandardMaterial({color:'#e2c870',roughness:1}),slat=new T.MeshStandardMaterial({color:'#9a6a3a',roughness:.8});
+    TA(BX,hay,0,.93,0,2.2,.08,8);for(const y of[1.15,1.55,1.95])for(const x of[-1.12,1.12])TA(BX,slat,x,y,0,.08,.22,8.1);for(const y of[1.15,1.55,1.95])for(const z of[-4.03,4.03])TA(BX,slat,0,y,z,2.3,.22,.08);
+    for(let r=0;r<8;r++)for(const x of[-.55,.55]){const hold=new T.Group();hold.position.set(x,.97,-3.55+r*1.01);tr.add(hold);car.slots.push(hold)}
   }else{
   for(const z of[-3.4,-2.05,-.7])for(const x of[-.55,.55]){const cg=new T.Group();cg.position.set(x,.9,z);tr.add(cg);buildCage(cg);const hold=new T.Group();cg.add(hold);car.slots.push(hold)}
   for(const x of[-.56,.56]){const cg=new T.Group();cg.position.set(x,.9,2.2);tr.add(cg);buildCage(cg,1.06,1.35,3.6);const hold=new T.Group();cg.add(hold);car.pens.push(hold)}
@@ -204,7 +209,9 @@ function refreshCages(){
   car.caged=[];
   const put=(hold,c,bx,by,bz)=>{const a=ANIMALS.make(SP[c.k]);const k=Math.min(bx/(a.rad*2),by/a.h,bz/a.len);a.g.scale.setScalar(k);a.g.position.y=.06;hold.add(a.g);car.caged.push(a);return a};
   const small=S.cages.filter(c=>c.pen==null);
-  car.slots.forEach((s,i)=>{while(s.children.length)s.remove(s.children[0]);if(small[i])put(s,small[i],.85,.95,1.15)});
+  car.slots.forEach((s,i)=>{while(s.children.length)s.remove(s.children[0]);if(small[i])put(s,small[i],.85,.95,S.shop.hayTruck?.9:1.15)});
+  // the rest ride in your workers' trucks
+  (car.helperHolds||[]).forEach((s,j)=>{while(s.children.length)s.remove(s.children[0]);const c=small[car.slots.length+j];if(c)put(s,c,.85,.95,.9)});
   car.pens.forEach((s,i)=>{while(s.children.length)s.remove(s.children[0]);
     S.cages.filter(c=>c.pen===i).forEach((c,j)=>{const a=put(s,c,.45,1.15,1);a.g.position.set(j%2?.24:-.24,.06,-1.15+Math.floor(j/2)*1.15)})});
   coins();
@@ -555,7 +562,7 @@ const safari={running:false,
     else if(mode==='plane'){for(let i=0;i<n;i++)updatePlane(h)}
     else if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
-    updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);
+    updateHelpers();updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
     if(world.tick)world.tick(dt,time);
     if(world.grass)world.grass.userData.update(cam.position,time,world.scene.fog,world.sky.sunDir);
@@ -767,4 +774,31 @@ function updateDNA(time){
   for(const v of world.dnaVials.slice()){v.g.rotation.y=time;v.g.position.y=v.y+Math.sin(time*2+v.x)*.2;
     if(Math.hypot(p.x-v.x,p.y-v.g.position.y,p.z-v.z)<reach){world.scene.remove(v.g);world.dnaVials.splice(world.dnaVials.indexOf(v),1);S.dna[v.k]=(S.dna[v.k]||0)+1;save();
       toast('🧬 You picked up '+SP[v.k].n+' DNA! It is in the DNA box on your truck. Mix it in the DNA Lab at your zoo!',5000)}}
+}
+
+/* ---------- worker trucks from the shop that follow you in a line ---------- */
+function helperTruck(col){
+  const g=new T.Group(),paint=new T.MeshPhysicalMaterial({color:col,roughness:.35,clearcoat:.6}),dark=new T.MeshStandardMaterial({color:'#222',roughness:.8}),glass=new T.MeshStandardMaterial({color:'#2a3a48',roughness:.1,metalness:.4});
+  const hay=new T.MeshStandardMaterial({color:'#e2c870',roughness:1}),slat=new T.MeshStandardMaterial({color:'#9a6a3a',roughness:.8});
+  const B=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o};
+  B(paint,0,1.4,-2.6,2.3,1.9,1.8);B(glass,0,1.85,-3.52,2,.8,.05);B(dark,0,.75,0,2.4,.3,7.4);B(hay,0,.95,.9,2.2,.1,5);
+  for(const x of[-1.12,1.12])for(const y of[1.2,1.6])B(slat,x,y,.9,.08,.22,5);for(const y of[1.2,1.6])B(slat,0,y,3.4,2.3,.22,.08);
+  for(const[x,z]of[[-1.2,-2.5],[1.2,-2.5],[-1.2,2],[1.2,2]]){const w=new T.Mesh(new T.CylinderGeometry(.5,.5,.35,14),dark);w.rotation.z=Math.PI/2;w.position.set(x,.5,z);g.add(w)}
+  const holds=[];for(let r=0;r<2;r++)for(const x of[-.55,.55]){const h=new T.Group();h.position.set(x,1,-.3+r*1.6);g.add(h);holds.push(h)}
+  const d=ANIMALS.make(personSp('staff'));seat(d);d.g.position.set(-.5,1.25-.95*STAFF.s,-2.6);g.add(d.g);
+  g.scale.setScalar(TS*.85);return{g,holds};
+}
+function buildHelpers(scene){
+  car.helpers=[];car.helperHolds=[];car.trail=[];const n=Math.min(16,S.shop.helpers||0);if(!n)return;
+  const cols=['#2f9a4a','#2a5bd7','#d8251f','#ff9a2a','#8a4ad8','#1aa8a8','#ff5fae','#c4843a'];
+  for(let i=0;i<n;i++){const h=helperTruck(cols[i%cols.length]);scene.add(h.g);car.helpers.push(h);car.helperHolds.push(...h.holds)}
+  refreshCages();
+}
+function updateHelpers(){
+  if(!car.helpers||!car.helpers.length)return;const t=car.trail,last=t[t.length-1];
+  if(!last||Math.hypot(car.x-last.x,car.z-last.z)>1){t.push({x:car.x,z:car.z,yaw:car.yaw});if(t.length>900)t.shift()}
+  car.helpers.forEach((h,i)=>{const want=(i+1)*16;let d=0,p=null;
+    for(let j=t.length-1;j>0;j--){d+=Math.hypot(t[j].x-t[j-1].x,t[j].z-t[j-1].z);if(d>=want){p=t[j-1];break}}
+    if(!p){const b=V(Math.sin(car.yaw),0,Math.cos(car.yaw));p={x:car.x+b.x*want,z:car.z+b.z*want,yaw:car.yaw}}
+    h.g.position.set(p.x,HW(p.x,p.z),p.z);h.g.rotation.y=p.yaw;h.g.visible=mode!=='plane'||true});
 }

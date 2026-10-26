@@ -160,7 +160,10 @@ function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.
 const SP={};
 ENV.carnivore=ENV.dino;
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:a[4].home||c.hab}}));
-const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:9999,dome:9999},CAGES=6,PENS=2,PEN_SIZE=6;
+const VALUE=[0,20,60,150],RAR=['','Common','Rare','Super rare'],CAP={paddock:9999,dome:9999},PEN_SIZE=6;
+let CAGES=6,PENS=2;
+// the hay lorry from the shop has 16 spaces and no bars; every worker truck adds 4 more
+function updateCaps(){CAGES=(S.shop.hayTruck?16:6)+4*(S.shop.helpers||0);PENS=S.shop.hayTruck?0:2}
 
 /* ---- save game ---- */
 function fresh(){return{coins:150,holding:[],cages:[],dex:{},uid:1,aid:4,areas:[
@@ -186,7 +189,7 @@ function mixDef(da,db){
 }
 function mixName(a,b){const x=a.n.replace(/\s*\(.*\)/,'').split(' ').pop(),y=b.n.replace(/\s*\(.*\)/,'').split(' ').pop();return x.slice(0,Math.ceil(x.length/2))+y.slice(Math.floor(y.length/2)).toLowerCase()}
 function addMix(m,i){const a=SP[m.a],b=SP[m.b];if(!a||!b)return;const k='mix:'+i;SP[k]={k,n:m.n,e:'🧬',r:3,s:(a.s+b.s)/2,def:mixDef(a.def,b.def),cont:'mix',hab:'dream'}} // made-up animals all live in the Mummy Dream Dome
-S.shop=S.shop||{shuttles:0,workers:0,paint:null};
+S.shop=S.shop||{shuttles:0,workers:0,paint:null};updateCaps();
 S.mixes=S.mixes||[];S.mixes.forEach(addMix);S.dna=S.dna||{};
 {const ok=x=>SP[x.k];S.holding=S.holding.filter(ok);S.cages=S.cages.filter(ok);S.areas.forEach(a=>a.animals=a.animals.filter(ok));
  for(const k in S.dex)if(!SP[k])delete S.dex[k]}

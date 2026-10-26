@@ -989,13 +989,16 @@ function syncLunch(){
 const SHOP=[
   {id:'shuttle',e:'🚐',n:'Safari car for visitors',cost:500,buy(){S.shop.shuttles++;if(zoo.built)syncTours();return'A new safari car is driving visitors around!'}},
   {id:'worker',e:'👷',n:'Zoo worker',cost:200,buy(){S.shop.workers++;if(zoo.built){syncVisitors();syncLunch()}return'A new zoo worker started today!'}},
+  {id:'hay',e:'🚛',n:'Animal lorry: hay, no bars, 16 spaces',cost:2000,once:1,buy(){S.shop.hayTruck=1;S.cages.forEach(c=>delete c.pen);updateCaps();return'Your new animal lorry has soft hay and room for 16 animals! You will drive it next time you go on safari.'}},
+  {id:'helper',e:'🚚',n:'Worker truck that follows you (+4 spaces)',cost:800,max:16,buy(){S.shop.helpers=(S.shop.helpers||0)+1;updateCaps();return'A zoo worker will follow you in their truck on safari! ('+S.shop.helpers+'/16)'}},
   {id:'food',e:'🍖',n:'Food crates for your truck',cost:50,buy(){const f=truckFood();f.meat+=3;f.hay+=3;if(car.g)showFood();return'3 crates of meat and 3 bales of hay are on your truck!'}},
   ...[['#c4843a','Sandy'],['#d8251f','Red'],['#2a5bd7','Blue'],['#ff5fae','Pink'],['#2f9a4a','Green'],['#1d1d22','Black'],['#ffd23a','Yellow']].map(([c,n])=>({id:'paint'+c,e:'🎨',n:n+' truck paint',cost:300,col:c,buy(){S.shop.paint=c;return'Your truck is painted '+n.toLowerCase()+'! You will see it next time you drive.'}}))];
 function openShop(){renderShop();$('#shopPanel').hidden=false}
 function renderShop(){
   $('#shopCoins').textContent='🪙 '+S.coins.toLocaleString()+' coins · '+(S.shop.workers||0)+' workers · '+((S.dreamBonus?6:2)+(S.shop.shuttles||0))+' safari cars';
-  $('#shopList').innerHTML=SHOP.map(it=>`<button data-buy="${it.id}" ${S.coins<it.cost?'disabled':''}>${it.col?`<i style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${it.col}"></i> `:it.e+' '}${it.n}<small>🪙 ${it.cost}</small></button>`).join('');
+  const done=it=>it.once&&S.shop.hayTruck||it.max&&(S.shop.helpers||0)>=it.max;
+  $('#shopList').innerHTML=SHOP.map(it=>`<button data-buy="${it.id}" ${S.coins<it.cost||done(it)?'disabled':''}>${it.col?`<i style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${it.col}"></i> `:it.e+' '}${it.n}<small>🪙 ${it.cost}</small></button>`).join('');
 }
-$('#shopList').addEventListener('click',e=>{const b=e.target.closest('[data-buy]');if(!b)return;const it=SHOP.find(x=>x.id===b.dataset.buy);if(!it||S.coins<it.cost)return;
+$('#shopList').addEventListener('click',e=>{const b=e.target.closest('[data-buy]');if(!b)return;const it=SHOP.find(x=>x.id===b.dataset.buy);if(!it||S.coins<it.cost||it.once&&S.shop.hayTruck||it.max&&(S.shop.helpers||0)>=it.max)return;
   S.coins-=it.cost;const msg=it.buy();save();coins();renderShop();toast('🛒 '+msg,5000)});
 $('#shopClose').onclick=()=>$('#shopPanel').hidden=true;$('#shopOpen').onclick=openShop;
