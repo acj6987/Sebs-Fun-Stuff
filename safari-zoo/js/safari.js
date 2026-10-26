@@ -370,6 +370,7 @@ function throwNet(){
   if(!safari.running)return;if(mode==='plane'){planeCatch();return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){zooCatch();return}
+  if(mode==='foot'){const lf=landedFlyer();if(lf&&!aimTarget()){catchFlyer(lf.f,'with your net');return}}
   if(world.net)return;
   if(me.pack.length>=PACK){toast('You are already leading '+PACK+' animals! Take them to the cages first.');return}
   const t=aimTarget();
@@ -579,6 +580,7 @@ function hud(){
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
   else if(world.sea&&H(me.x,me.z)<-1.2&&!target)msg='🤿 Swimming! <b>Space</b> up · <b>Shift</b> dive · <b>F</b> net · <b>E</b> by the '+(sub.on?'submarine':'truck')+' to get in';
+  else if(mode==='foot'&&!target&&landedFlyer())msg='A <b>'+SP['dino:3'].n+'</b> has landed! Press <b>F</b> to throw your net';
   else msg=target?(target.dist<=16?`Press <b>F</b> to throw your net at the ${target.a.sp.n}`:`Walk closer to the ${target.a.sp.n}`):'Look at an animal · <b>F</b> net · <b>Space</b> jump · <b>E</b> by the truck to get in';
   if(pr.dataset.m!==msg){pr.innerHTML=msg;pr.dataset.m=msg}
   if((hudT++)%3)return;
@@ -727,6 +729,14 @@ function updatePlane(dt){
   g.userData.prop.rotation.z+=dt*(20+plane.v);
 }
 
+function catchFlyer(f,how){
+  if(smallUsed()>=CAGES){toast('Your truck cages are full!');return}
+  world.scene.remove(f.inst.g);world.flyers.splice(world.flyers.indexOf(f),1);const k='dino:3',fresh=!S.dex[k];S.dex[k]=(S.dex[k]||0)+1;S.cages.push({uid:S.uid++,k});S.coins+=VALUE[SP[k].r];save();refreshCages();
+  toast((fresh?'NEW ANIMAL! ':'')+'You caught a '+SP[k].n+' '+how+'! It is in your truck.')}
+// a pterodactyl that has landed, right in front of you
+function landedFlyer(){const f0=V(0,0,-1).applyQuaternion(cam.quaternion);let best=null,bs=1e9;
+  for(const f of world.flyers||[]){if(f.cur>5)continue;const p=f.inst.g.position.clone().add(V(0,1,0)),d=p.sub(cam.position),dist=d.length();if(dist>18)continue;const ang=f0.angleTo(d.normalize());if(ang<.45&&ang*30+dist<bs){bs=ang*30+dist;best={f,dist}}}
+  return best}
 // catch flying animals (like pterodactyls) from your plane
 function planeTarget(){let best=null,bd=45;
   for(const f of world.flyers||[]){const p=f.inst.g.position,d=Math.hypot(p.x-plane.x,p.y-plane.y,p.z-plane.z);if(d<bd){bd=d;best={f,n:SP['dino:3'].n}}}
@@ -734,9 +744,7 @@ function planeTarget(){let best=null,bd=45;
   return best}
 function planeCatch(){
   const t=planeTarget();if(!t){toast('Fly close to a flying animal (or swoop down low) and press F to catch it!');return}
-  if(t.f){if(smallUsed()>=CAGES){toast('Your truck cages are full!');return}
-    world.scene.remove(t.f.inst.g);world.flyers.splice(world.flyers.indexOf(t.f),1);const k='dino:3',fresh=!S.dex[k];S.dex[k]=(S.dex[k]||0)+1;S.cages.push({uid:S.uid++,k});S.coins+=VALUE[SP[k].r];save();refreshCages();
-    toast((fresh?'NEW ANIMAL! ':'')+'✈️ You caught a '+SP[k].n+' from your plane! It is in your truck.');return}
+  if(t.f){catchFlyer(t.f,'from your plane');return}
   me.pack=[t.a];t.a.state='netted';cageIt();
 }
 /* ---------- 🧬 DNA tubes to find on safari ---------- */
