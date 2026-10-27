@@ -15,12 +15,40 @@ function kit(){
 }
 
 /* ---------- four-legged animals ---------- */
+// a real leg: muscle at the top, thin bony lower leg with a knee (front) or hock (back), then a hoof or paw
+function realLeg(k,p,i,x,z,front,hipY,by,lw,lc){
+  const {L,Hb,leg}=p,mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+  const top=[x,hipY,z],cat=!!p.paws;let bend,joint,fet;
+  if(front){bend=[x,by-Hb*.4,z-L*.04];joint=[x,leg*.36,z-L*.005];fet=[x,leg*.09,z+L*.015]}
+  else{bend=[x*1.05,by-Hb*.36,z+L*.07];joint=[x,leg*.44,z-L*.1];fet=[x,leg*.09,z-L*.06]}
+  k.bone('leg'+i,'root',top);k.bone('low'+i,'leg'+i,joint);
+  const o={pat:1,col:lc};
+  // the big muscle: shoulder or thigh
+  if(front)k.ell(mid(top,bend),[lw*2.1,dist(top,bend)*.62,lw*2.5],'leg'+i,Object.assign({k:lw*1.2},o));
+  else k.ell(ad(mid(top,bend),[0,0,-L*.03]),[lw*2.3,dist(top,bend)*.68,lw*3.1],'leg'+i,Object.assign({k:lw*1.2},o));
+  k.cap(bend,joint,lw*(cat?1.5:1.35),lw*(cat?.95:.78),'leg'+i,Object.assign({k:lw*.6},o));
+  k.ell(joint,[lw*.9,lw*1.05,lw*(front?.9:1.15)],'low'+i,Object.assign({k:lw*.3},o));
+  k.cap(joint,fet,lw*(cat?.9:.66),lw*(cat?.85:.6),'low'+i,Object.assign({k:lw*.3},o));
+  if(cat)k.ell([fet[0],lw*.7,fet[2]+lw*.5],[lw*1.05,lw*.7,lw*1.4],'low'+i,Object.assign({k:lw*.3},o));
+  else{k.ell(fet,[lw*.78,lw*.85,lw*.82],'low'+i,Object.assign({k:lw*.3},o));
+    k.cap([fet[0],lw*1.2,fet[2]+lw*.15],[fet[0],.03,fet[2]+lw*.45],lw*.7,lw*.82,'low'+i,{k:lw*.25,col:p.hoof||'#2b2420'})}
+}
 function quad(p){
   const k=kit(),{L,W,Hb,leg}=p,lw=p.legW||W*.15,by=leg+Hb*.42;
   k.bone('root',null,[0,by,0]);
+  const lean=!!p.lean,slim=p.real&&!p.heavy;
+  if(slim){
+    // real animals: a deep chest, high shoulders, a barrel belly (thin waist for cats) and a round rump
+    k.ell([0,by-Hb*.02,L*.24],[W*.5,Hb*.56,L*.27],'root',{k:Hb*.3,pat:1});
+    k.ell([0,by+Hb*.2,L*.28],[W*.38,Hb*.36,L*.17],'root',{k:Hb*.25,pat:1});
+    k.ell([0,by+Hb*(lean?.06:-.04),-L*.02],[W*(lean?.38:.48),Hb*(lean?.36:.47),L*.3],'root',{k:Hb*.3,pat:1});
+    k.ell([0,by+Hb*.05,-L*.27],[W*.46,Hb*.46,L*.24],'root',{k:Hb*.3,pat:1});
+  }else{
   k.ell([0,by+Hb*.04,L*.2],[W*.5,Hb*.52,L*.34],'root',{k:Hb*.4,pat:1,rough:p.armor?.06:0,rf:7});
   k.ell([0,by,-L*.22],[W*.48,Hb*.48,L*.33],'root',{k:Hb*.4,pat:1});
-  k.ell([0,by-Hb*.06,0],[W*.45,Hb*.44,L*.32],'root',{k:Hb*.35,pat:1});
+  k.ell([0,by-Hb*.06,0],[W*.45,Hb*.44,L*.32],'root',{k:Hb*.35,pat:1});}
+  // the rhino's big shoulder hump and the elephant's high domed back
+  if(p.shoulderHump)k.ell([0,by+Hb*.42,L*.22],[W*.32,Hb*.3,L*.2],'root',{k:Hb*.3,pat:1});
   if(p.hump)k.ell([0,by+Hb*.46,p.shag?L*.18:0],[W*.3,Hb*.36,L*.22],'root',{k:Hb*.3,pat:1,col:p.shag,rough:p.shag?.03:0,rf:10});
   if(p.shag)k.ell([0,by+Hb*.06,L*.22],[W*.6,Hb*.62,L*.3],'root',{k:Hb*.25,col:p.shag,rough:.04,rf:9});
   if(p.panda)k.ell([0,by+Hb*.04,L*.17],[W*.53,Hb*.55,L*.15],'root',{k:.02,col:'#161616'});
@@ -29,8 +57,9 @@ function quad(p){
   [[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([sx,sz],i)=>{
     const front=sz>0,x=sx*W*.3,z=sz*L*(front?.31:.29);
     const top=[x,hipY,z],knee=[x*1.02,leg*(front?.5:.56),z+(front?.02:-.07)*L],foot=[x*1.02,.07,z+(front?.03:-.01)*L];
-    k.bone('leg'+i,'root',top);k.bone('low'+i,'leg'+i,knee);
     const lc=p.legCol||null;
+    if(slim){realLeg(k,p,i,x,z,front,hipY,by,lw,lc);return}
+    k.bone('leg'+i,'root',top);k.bone('low'+i,'leg'+i,knee);
     k.ell([x*.92,hipY-Hb*.08,z],[lw*1.9,Hb*.42,lw*(front?2.2:2.8)],'leg'+i,{k:Hb*.3,pat:1,col:p.panda?'#161616':null});
     k.cap(top,knee,lw*1.45,lw*.92,'leg'+i,{k:lw*.9,pat:1,col:lc||(p.panda?'#161616':null)});
     k.cap(knee,foot,lw*.86,lw*.64,'low'+i,{k:lw*.5,pat:p.tex==='giraffe'?0:1,col:lc||(p.panda?'#161616':p.tex==='giraffe'?'#efe0bd':null)});
@@ -46,11 +75,31 @@ function quad(p){
   const {headL:hl,headW:hw,headH:hh}=p,mz=p.muzzle||1,X=[1,0,0];
   const at=(df,du,dx=0)=>ad3(ne,sc(f,df),sc(u,du),sc(X,dx));
   const hcol=p.head||null;
+  if(p.headType==='horse'){
+    // a long horse head: wide cheeks, a long tapering face and soft dark lips
+    k.ell(at(hl*.08,hh*.08),[hw*.48,hh*.46,hl*.28],'head',{k:hh*.3,rot:[hp,0,0],pat:1,col:hcol});
+    k.ell(at(hl*.04,-hh*.22),[hw*.47,hh*.36,hl*.24],'head',{k:hh*.3,rot:[hp,0,0],pat:1,col:hcol});
+    k.cap(at(hl*.28,0),at(hl*.9,-hh*.1),hh*.34,hh*.23,'head',{k:hh*.25,pat:1,col:p.snout||hcol});
+    k.ell(at(hl*.92,-hh*.22),[hh*.24,hh*.15,hl*.1],'head',{k:hh*.08,col:p.nose||'#2a2220',detail:1});
+    for(const s of[-1,1])k.ell(at(hl*.98,-hh*.04,s*hh*.11),[hh*.05,hh*.07,hh*.03],'head',{k:.01,col:'#0c0a0a',detail:1});
+  }else if(p.headType==='cat'){
+    // a big cat face: round skull, short wide muzzle, strong chin and a pink-brown nose
+    k.ell(at(0,hh*.1),[hw*.5,hh*.46,hl*.36],'head',{k:hh*.3,rot:[hp,0,0],pat:1,col:hcol});
+    k.cap(at(hl*.28,-hh*.08),at(hl*.62,-hh*.14),hh*.31,hh*.27,'head',{k:hh*.2,pat:1,col:p.snout||hcol});
+    k.ell(at(hl*.42,-hh*.33),[hw*.25,hh*.14,hl*.17],'head',{k:hh*.1,col:p.snout||hcol,detail:1});
+    k.ell(at(hl*.7,-hh*.04),[hh*.14,hh*.1,hh*.08],'head',{k:.02,col:p.nose||'#2a2220',detail:1});
+    k.ell(at(hl*.18,hh*.3),[hw*.42,hh*.12,hl*.15],'head',{k:hh*.12,pat:1,col:hcol});
+    // the cheetah's black tear lines
+    if(p.tears)for(const s of[-1,1])k.cap(at(hl*.36,hh*.1,s*hw*.3),at(hl*.62,-hh*.24,s*hw*.2),.011,.009,'head',{k:.004,col:'#0d0a08',detail:1});
+  }else{
   k.ell(at(hl*.12,hh*.06),[hw*.5,hh*.5,hl*.32],'head',{k:hh*.35,rot:[hp,0,0],pat:1,col:hcol});
   k.cap(at(hl*.3,-hh*.02),at(hl*.86,-hh*.12),hh*.37*mz,hh*.25*mz,'head',{k:hh*.3,pat:1,col:p.snout||hcol});
-  k.ell(at(hl*.93,-hh*.1),[hh*.2*mz,hh*.15*mz,hh*.08],'head',{k:.02,col:p.nose||'#2a2220',detail:1});
+  k.ell(at(hl*.93,-hh*.1),[hh*.2*mz,hh*.15*mz,hh*.08],'head',{k:.02,col:p.nose||'#2a2220',detail:1});}
+  // the elephant's high domed forehead, the hippo's eyes and ears up on top of its head
+  if(p.dome)k.ell(at(hl*.05,hh*.38),[hw*.42,hh*.36,hl*.3],'head',{k:hh*.3,pat:1});
+  if(p.topEyes)for(const s of[-1,1])k.ell(at(hl*.2,hh*.42,s*hw*.3),[hw*.14,hh*.14,hl*.12],'head',{k:hh*.1,pat:1});
   if(p.cheeks)for(const s of[-1,1])k.ell(at(hl*.45,-hh*.12,s*hw*.25),[hw*.25,hh*.25,hl*.2],'head',{k:hh*.2,pat:1,col:p.snout||hcol});
-  const er=hw*.2,ec=p.earCol||hcol;
+  const er=hw*.2*(p.earS||1),ec=p.earCol||hcol;
   for(const s of[-1,1]){
     const base=at(-hl*.02,hh*.42,s*hw*.3);
     if(p.ears==='pointy')k.cap(base,ad3(base,sc(u,er*2.3),[s*er*.5,0,0]),er*.6,er*.12,'head',{k:er*.4,col:ec,pat:ec?0:1,detail:1});
@@ -59,7 +108,7 @@ function quad(p){
     if(p.ears==='fluffy')k.ell(ad(base,[s*er*.9,0,0]),[er*1.45,er*1.45,er*.65],'head',{k:er*.3,col:'#d4d6d8',rough:.02,rf:25,detail:1});
     if(p.ears==='big')k.extra('head','ear',at(-hl*.08,-hh*.05,s*hw*.55),{s,size:[.06,hh*.85,hl*.62],col:p.col});
     // eyes
-    k.extra('head','eye',at(hl*.32,hh*.16,s*hw*.4),{r:Math.max(.018,hw*.075)*(p.eyeS||1),s});
+    k.extra('head','eye',p.topEyes?at(hl*.24,hh*.5,s*hw*.33):at(hl*.32,hh*.16,s*hw*.4),{r:Math.max(.018,hw*.075)*(p.eyeS||1),s});
   }
   if(p.panda)for(const s of[-1,1])k.ell(at(hl*.3,hh*.12,s*hw*.27),[hw*.15,hh*.17,hl*.1],'head',{k:.02,col:'#161616',detail:1});
   if(p.mask)k.ell(at(hl*.27,hh*.12),[hw*.53,hh*.14,hl*.18],'head',{k:.02,col:'#1d1d1d',detail:1});
@@ -70,7 +119,7 @@ function quad(p){
     k.bone('trunk','head',t0);k.bone('trunk2','trunk',t1);
     k.cap(t0,t1,.2,.15,'trunk',{k:.1,pat:1});k.cap(t1,t2,.15,.11,'trunk2',{k:.06,pat:1});k.cap(t2,t3,.11,.08,'trunk2',{k:.05,pat:1})}
   if(p.tusks)for(const s of[-1,1])k.extra('head','tusk',at(hl*.6,-hh*.32,s*hw*.27),{s,len:.65*p.tusks,r:.055*Math.min(1,p.tusks+.3)});
-  if(p.horn){k.extra('head','horn',at(hl*.78,hh*.08),{len:.55,r:.09,tilt:.35});k.extra('head','horn',at(hl*.5,hh*.2),{len:.28,r:.07,tilt:.2})}
+  if(p.horn){const hL=p.hornL||1;k.extra('head','horn',at(hl*.82,hh*.12),{len:.55*hL,r:.09*Math.sqrt(hL),tilt:.35});k.extra('head','horn',at(hl*.55,hh*.24),{len:.28*hL,r:.07*Math.sqrt(hL),tilt:.2})}
   if(p.horns)for(const s of[-1,1])k.extra('head','horns',at(0,hh*.4,s*hw*.38),{s,kind2:p.horns});
   if(p.antlers)for(const s of[-1,1])k.extra('head','antler',at(-hl*.05,hh*.42,s*hw*.22),{s});
   if(p.tri){k.extra('head','trifrill',at(-hl*.15,hh*.35),{r:hw*1.15,col:p.col2||p.col,tilt:hp});
@@ -452,8 +501,11 @@ function painter(p){
     // real animals: darker along the back, paler underneath, dusty legs and mottled skin like in the photos
     if(p.real&&!pr.col){if(ny>.25)c=mixc(c,p.back?C(p.back):[c[0]*.8,c[1]*.8,c[2]*.8],Math.min(1,(ny-.25)*1.6)*(p.back?.7:.5));
       if(p.dust&&/^(low|leg)/.test(pr.bone))c=mixc(c,C(p.dust),(/^low/.test(pr.bone)?.55:.25)*(.7+.6*fbm(x*3,y*3,z*3)));
-      if(p.skin){const m=.88+.24*fbm(x*22,y*22,z*22);c=[c[0]*m,c[1]*m,c[2]*m]}}
-    const v=p.real?(.9+.2*fbm(x*9,y*9,z*9))*(p.dim||.74):.86+.28*fbm(x*9,y*9,z*9);
+      if(p.skin){const m=.88+.24*fbm(x*22,y*22,z*22);c=[c[0]*m,c[1]*m,c[2]*m]}
+      // the gazelle's black side stripe and white bottom
+      if(p.flank&&pr.bone==='root'&&Math.abs(nx)>.55&&Math.abs(y-(p.leg+p.Hb*.34))<p.Hb*.07)c=mixc(c,C(p.flank),.9);
+      if(p.rumpWhite&&pr.bone==='root'&&z<-p.L*.36&&ny<.6)c=mixc(c,belly,.85)}
+    const v=p.real?(.9+.2*fbm(x*9,y*9,z*9))*(p.dim||.82):.86+.28*fbm(x*9,y*9,z*9);
     return[c[0]*v,c[1]*v,c[2]*v];
   };
 }
@@ -483,7 +535,7 @@ function mats(){
       for(let j=0;j<5;j++){x+=(r()-.5)*14;y+=(r()-.5)*5+3;g.lineTo(x,y)}g.stroke()}},3.2,5);
   MATS={
     skin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.92,normalMap:skinN,normalScale:new T.Vector2(2.4,2.4)}),
-    wetSkin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.5,clearcoat:.35,clearcoatRoughness:.45,normalMap:skinN,normalScale:new T.Vector2(1,1)}),
+    wetSkin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.6,clearcoat:.15,clearcoatRoughness:.45,normalMap:skinN,normalScale:new T.Vector2(1,1)}),
     fur:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.9,sheen:.35,sheenRoughness:.6,sheenColor:new T.Color(.18,.17,.15),normalMap:furN,normalScale:new T.Vector2(.7,.7)}),
     feather:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.75,sheen:.6,sheenRoughness:.4,sheenColor:new T.Color(.25,.25,.25),normalMap:featherN,normalScale:new T.Vector2(.4,.4)}),
     scale:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.55,clearcoat:.25,clearcoatRoughness:.5,normalMap:scaleN,normalScale:new T.Vector2(.6,.6)}),
@@ -532,7 +584,8 @@ function extraMesh(e,p){
     case'eye':add(new T.SphereGeometry(e.r,14,10),e.owl?m.owlEye:m.eye);if(e.owl)add(new T.SphereGeometry(e.r*.5,10,8),m.eye,[0,0,e.r*.6]);break;
     case'tusk':{const geo=new T.ConeGeometry(e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,m.ivory,null,e.down?[Math.PI*.95,0,0]:[1.25,e.s*.12,0]);break}
     case'horn':{const geo=new T.ConeGeometry(e.r,e.len,12);geo.translate(0,e.len/2,0);add(geo,smat(e.col||'#9b948a',{roughness:.6}),null,[e.tilt,0,0]);break}
-    case'horns':{const big=e.kind2==='buffalo',curve=new T.QuadraticBezierCurve3(new T.Vector3(0,0,0),new T.Vector3(e.s*(big?.55:.2),big?.05:.12,-.05),new T.Vector3(e.s*(big?.7:.22),big?.4:.28,-.15));
+    case'horns':{if(e.kind2==='gazelle'){const c=new T.CubicBezierCurve3(new T.Vector3(0,0,0),new T.Vector3(e.s*.02,.14,-.07),new T.Vector3(e.s*.05,.26,-.02),new T.Vector3(e.s*.04,.32,.05));add(new T.TubeGeometry(c,14,.017,7),m.horn);break}
+      const big=e.kind2==='buffalo',curve=new T.QuadraticBezierCurve3(new T.Vector3(0,0,0),new T.Vector3(e.s*(big?.55:.2),big?.05:.12,-.05),new T.Vector3(e.s*(big?.7:.22),big?.4:.28,-.15));
       add(new T.TubeGeometry(curve,12,big?.06:.045,8),m.horn);break}
     case'antler':{const am=m.antler,mk=(a,b,r)=>{const c=new T.LineCurve3(new T.Vector3(...a),new T.Vector3(...b));add(new T.TubeGeometry(c,2,r,6),am)};const s=e.s;
       mk([0,0,0],[s*.12,.35,-.08],.028);mk([s*.12,.35,-.08],[s*.28,.62,-.02],.022);mk([s*.12,.35,-.08],[s*.1,.6,.12],.018);mk([s*.28,.62,-.02],[s*.42,.78,-.1],.016);mk([s*.28,.62,-.02],[s*.3,.85,.05],.015);mk([s*.06,.18,-.04],[s*.06,.32,.12],.016);break}
@@ -643,7 +696,7 @@ function species(sp){
   const p=sp.def,plan=p.plan||'quad',k=PLANS[plan](p);
   const opts={bones:k.bones.length,paint:painter(Object.assign({},p,{col:p.col||p.body}))};
   const prims=()=>k.prims.map(o=>Object.assign({},o,{a:o.a&&o.a.slice(),b:o.b&&o.b.slice(),c:o.c&&o.c.slice(),r:o.r&&o.r.slice(),bone:k.bones.findIndex(b=>b.name===o.bone)}));
-  const geo=MESHER.build(prims(),Object.assign({res:QUALITY.animalRes,maxCells:QUALITY.animalCells},opts));
+  const geo=MESHER.build(prims(),Object.assign({res:QUALITY.animalRes*(p.resK||1),maxCells:QUALITY.animalCells*Math.pow(p.resK||1,3)},opts));
   const geoLow=MESHER.build(prims(),Object.assign({res:30,maxCells:5e4,maxRes:40,low:1},opts));
   const bb=geo.boundingBox,sz=p.sz||1;
   return cache[sp.k]={k,geo,geoLow,mat:matFor(p),h:(bb.max.y)*sz,rad:Math.max(bb.max.x-bb.min.x,bb.max.z-bb.min.z)/2*sz,len:(bb.max.z-bb.min.z)*sz,sz};

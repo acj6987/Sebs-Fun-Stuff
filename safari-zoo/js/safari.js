@@ -297,14 +297,18 @@ function startHunt(){
     const prey=world.animals.filter(b=>p.sp.def.hunts.includes(b.sp.n)&&b.state==='wander'&&Math.hypot(b.x-p.x,b.z-p.z)<90).sort((u,v)=>Math.hypot(u.x-p.x,u.z-p.z)-Math.hypot(v.x-p.x,v.z-p.z))[0];
     if(!prey)continue;
     const team=p.grp?p.grp.members.filter(m=>m.state==='wander'):[p];
-    for(const h of team){h.state='hunt';h.prey=prey;h.huntT=16}
-    prey.state='chased';prey.hunter=p;prey.chT=16;if(prey.grp)prey.grp.fleeT=6;
-    if(Math.hypot(p.x-px,p.z-pz)<120)toast('Look! '+(team.length>1?'The '+p.sp.n.toLowerCase()+'s are':'A '+p.sp.n.toLowerCase()+' is')+' hunting a '+prey.sp.n.toLowerCase()+'!');
+    // first they sneak up low in the grass, then they sprint
+    for(const h of team){h.state='stalk';h.prey=prey;h.stalkT=25;h.pounceT=undefined}
+    if(Math.hypot(p.x-px,p.z-pz)<120)toast('Shh! '+(team.length>1?'The '+p.sp.n.toLowerCase()+'s are':'A '+p.sp.n.toLowerCase()+' is')+' sneaking up on a '+prey.sp.n.toLowerCase()+'…');
     return}
 }
+function sprintAt(a,prey){const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
+  for(const h of world.animals)if(h.prey===prey&&h.state==='stalk'){h.state='hunt';h.huntT=16}
+  if(prey.state==='wander'){prey.state='chased';prey.hunter=a;prey.chT=16;if(prey.grp)prey.grp.fleeT=6;
+    if(Math.hypot(a.x-px,a.z-pz)<120)toast('Look! The '+a.sp.n.toLowerCase()+' is chasing the '+prey.sp.n.toLowerCase()+'!')}}
 function updateAnimals(dt,time){
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
-  world.huntT=(world.huntT??12)-dt;if(world.huntT<=0){world.huntT=18+Math.random()*22;startHunt()}
+  world.huntT=(world.huntT??6)-dt;if(world.huntT<=0){world.huntT=10+Math.random()*12;startHunt()}
   for(const a of world.animals){
     const d=Math.hypot(a.x-px,a.z-pz),r=a.sp.r,G=a.grp;
     if(G&&G.fleeT>0)G.fleeT-=dt/Math.max(1,G.members.length);
@@ -312,13 +316,26 @@ function updateAnimals(dt,time){
       // netted animals follow you in a line, each one behind the one before
       const own=me.pack.includes(a)?me:world.asst,i=own.pack.indexOf(a),lead=i>0?own.pack[i-1]:own,gap=i>0?2.2+a.m.rad+lead.m.rad:3.2,td=Math.hypot(lead.x-a.x,lead.z-a.z);
       if((mode==='foot'||own!==me)&&td>gap){const s=Math.min(7,(td-gap+.2)*2.2);a.vx=(lead.x-a.x)/td*s;a.vz=(lead.z-a.z)/td*s}else{a.vx*=.8;a.vz*=.8}}
-    else if(a.state==='caught'){a.vx=a.vz=0;a.dead=(a.dead||0)+dt;a.m.g.rotation.z=Math.min(Math.PI/2,a.dead*2.5);if(a.dead>4){removeAnimal(a);continue}}
+    else if(a.state==='caught'){a.vx=a.vz=0;a.dead=(a.dead||0)+dt;a.m.g.rotation.z=Math.min(Math.PI/2,a.dead*2.5);if(a.dead>50){removeAnimal(a);continue}}
+    else if(a.state==='stalk'){
+      // creeping low through the grass towards the prey
+      const q=a.prey;if(!q||!world.animals.includes(q)||q.state==='caught'||q.state==='netted'){a.state='rest';a.restT=4;a.vx=a.vz=0}
+      else{const dx=q.x-a.x,dz=q.z-a.z,dd=Math.hypot(dx,dz)||1,s=a.sp.s*.9;a.vx=dx/dd*s;a.vz=dz/dd*s;a.graze=0;
+        if(dd<28||(a.stalkT-=dt)<=0||q.state!=='wander')sprintAt(a,q)}}
+    else if(a.state==='eat'){
+      // eating their catch, heads down, until they are full
+      const q=a.prey;a.graze=1;if(q){const tx=q.x+a.ex,tz=q.z+a.ez,ex=tx-a.x,ez=tz-a.z,ed=Math.hypot(ex,ez);if(ed>.3){a.vx=ex/ed*Math.min(3,ed*2);a.vz=ez/ed*Math.min(3,ed*2)}else{a.vx=a.vz=0;a.yaw=Math.atan2(q.x-a.x,q.z-a.z)}}
+      if((a.eatT-=dt)<=0||!q||!world.animals.includes(q)){a.state='rest';a.restT=20;a.vx=a.vz=0;a.prey=null}}
     else if(a.state==='hunt'){
       const q=a.prey;if(!q||!world.animals.includes(q)||q.state==='caught'||q.state==='netted'||(a.huntT-=dt)<=0){a.state='rest';a.restT=6;a.vx=a.vz=0}
       else{const dx=q.x-a.x,dz=q.z-a.z,dd=Math.hypot(dx,dz)||1,fs=Math.max(a.sp.s*4.2,10.5);a.vx=dx/dd*fs;a.vz=dz/dd*fs;
-        if(dd<1.4+a.m.rad*.6+q.m.rad*.6){q.state='caught';q.icon.visible=false;q.vx=q.vz=0;
-          if(Math.hypot(a.x-px,a.z-pz)<120)toast('The '+a.sp.n.toLowerCase()+' caught the '+q.sp.n.toLowerCase()+'!');
-          for(const h of world.animals)if(h.prey===q){h.state='rest';h.restT=12;h.vx=h.vz=0;h.graze=1}}}}
+        // last few metres: a big pounce
+        if(dd<5+a.m.rad&&!(a.pounceT>-1)){a.pounceT=.6}
+        if(dd<1.4+a.m.rad*.6+q.m.rad*.6){q.state='caught';q.icon.visible=false;q.vx=q.vz=0;q.dead=0;
+          // the rest of the herd runs off and finds a new leader
+          if(q.grp){const G=q.grp;G.members=G.members.filter(m=>m!==q);G.fleeT=8;for(const m of G.members)if(m.state==='wander'||m.state==='chased'){const ex=m.x-q.x,ez=m.z-q.z,ed=Math.hypot(ex,ez)||1;m.state='flee';m.vx=ex/ed*9;m.vz=ez/ed*9}q.grp=null}
+          if(Math.hypot(a.x-px,a.z-pz)<120)toast('The '+a.sp.n.toLowerCase()+' caught the '+q.sp.n.toLowerCase()+'! Now '+(a.grp?'they are':'it is')+' eating it.');
+          let n=0;for(const h of world.animals)if(h.prey===q){const ang=n++*1.9+.5,r=q.m.rad+h.m.rad*.8+.4;h.state='eat';h.eatT=30+Math.random()*10;h.ex=Math.sin(ang)*r;h.ez=Math.cos(ang)*r;h.vx=h.vz=0;h.pounceT=undefined}}}}
     else if(a.state==='chased'){
       const h=a.hunter,dx=a.x-h.x,dz=a.z-h.z,dd=Math.hypot(dx,dz)||1,fs=Math.max(a.sp.s*2.6,7.6);a.vx=dx/dd*fs;a.vz=dz/dd*fs;
       if((a.chT-=dt)<=0||!world.animals.includes(h)||h.state!=='hunt'){a.state='wander';a.t=0}}
@@ -358,6 +375,9 @@ function updateAnimals(dt,time){
     if(spd>.15){const ty=Math.atan2(a.vx,a.vz);let dy=ty-a.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));a.yaw+=dy*Math.min(1,dt*5)}
     if(a.state!=='wander')a.soar=0;
     a.alt=lerp(a.alt,a.m.A.fly&&(a.state==='flee'||a.state==='chased'||a.soar)?7:0,Math.min(1,dt*1.5));
+    if(a.pounceT>0){a.pounceT-=dt;a.alt=Math.sin((1-Math.max(0,a.pounceT)/.6)*Math.PI)*Math.max(1,a.m.h*.6);a.vx*=1.02;a.vz*=1.02}
+    // stalking hunters crouch low
+    a.sy0=a.sy0||a.m.inner.scale.y;a.m.inner.scale.y=lerp(a.m.inner.scale.y,a.sy0*(a.state==='stalk'?.8:1),Math.min(1,dt*4));
     let pitch=0;
     if(world.sea){const h=H(a.x,a.z),d=a.sp.def;
       if(d.swim){let y=-(d.dorsalS&&a.m.h>1?a.m.h*.7:a.m.h*.85);
