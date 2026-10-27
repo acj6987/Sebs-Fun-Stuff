@@ -239,7 +239,7 @@ async function startZooDrive(id,opts={}){
   if(!zoo.built||curView!=='zoo'){show('zoo');loading(true,'Opening your zoo…');await nextFrame();await enterZoo(t=>$('#loadTxt').textContent=t);loading(false)}
   world=zooDriveWorld();
   if(zoo.carG)zoo.scene.remove(zoo.carG);
-  sub.on=false;plane.on=false;for(const h of car.helpers||[])h.g.parent&&h.g.parent.remove(h.g);buildCar(zoo.scene,opts);zoo.carG=car.g;if(!opts.tour)buildHelpers(zoo.scene);else car.helpers=car.helperHolds=[];showTruckEggs();showFood();buildFootRig();zoo.scene.add(cam);refreshCages();
+  sub.on=false;plane.on=false;if(plane.star){plane.star=0;if(plane.g)zoo.scene.remove(plane.g);plane.g=null;for(const w of zoo.wing||[])zoo.scene.remove(w.g);zoo.wing=[];for(const s of zoo.parked||[])s.visible=true}for(const h of car.helpers||[])h.g.parent&&h.g.parent.remove(h.g);buildCar(zoo.scene,opts);zoo.carG=car.g;if(!opts.tour)buildHelpers(zoo.scene);else car.helpers=car.helperHolds=[];showTruckEggs();showFood();buildFootRig();zoo.scene.add(cam);refreshCages();
   mode='car';me.pack=[];car.v=0;car.steer=0;look.yaw=0;look.pitch=-.12;
   const A=id!=null&&zoo.areas.get(id);
   if(A){car.x=A.inside.x;car.z=A.inside.z;$('#where').textContent='Dome '+(S.areas.indexOf(A.area)+1)+' · '+HAB[A.area.hab].name}

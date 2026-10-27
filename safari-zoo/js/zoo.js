@@ -54,7 +54,7 @@ function buildZoo(){
   zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
     return(Math.abs(x)<ROAD+10+MEGA*2+40||x>0&&x<ULTRA.x+ULTRA.R+40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*900,z=60+rr()*300;return Math.abs(x)<110&&z<190?null:V(x,0,z)},r);
-  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();buildLab();buildStaffArea();
+  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();buildLab();buildStaffArea();buildLaunchRoom();
   // planes flying high over the zoo
   zoo.skyPlanes=[0,1,2].map(i=>{const g=planeModel();g.scale.setScalar(1.6);scene.add(g);return{g,a:i*2.1,r:350+i*120,h:110+i*35,spd:(i%2?-1:1)*(30+i*6),cx:0,cz:-500}});
   // entrance gate
@@ -266,7 +266,7 @@ function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
-  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);
+  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);updateLaunchShow(dt);
   for(const p of zoo.skyPlanes||[]){p.a+=p.spd/p.r*dt;const x=p.cx+Math.cos(p.a)*p.r,z=p.cz+Math.sin(p.a)*p.r,d=Math.sign(p.spd);p.g.position.set(x,p.h,z);p.g.rotation.set(0,Math.atan2(-Math.sin(p.a)*d,Math.cos(p.a)*d),-d*.25,'YXZ');p.g.userData.prop.rotation.z+=dt*40}
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
@@ -1035,3 +1035,121 @@ function renderShop(){
 $('#shopList').addEventListener('click',e=>{const b=e.target.closest('[data-buy]');if(!b)return;const it=SHOP.find(x=>x.id===b.dataset.buy);if(!it||S.coins<it.cost||it.once&&S.shop.hayTruck||it.max&&(S.shop.helpers||0)>=it.max)return;
   S.coins-=it.cost;const msg=it.buy();save();coins();renderShop();toast('🛒 '+msg,5000)});
 $('#shopClose').onclick=()=>$('#shopPanel').hidden=true;$('#shopOpen').onclick=openShop;
+
+/* ---------- 🚀 the Launch Room: the Starfleet, a starship for everyone ---------- */
+const LAUNCH={x:240,z:0,D:30,W:24},PAD={x:271,z:0};
+// a starship: points its nose along +z like the plane
+function starModel(col='#2a6ae0'){
+  const g=new T.Group(),white=new T.MeshPhysicalMaterial({color:'#f4f6fa',roughness:.25,metalness:.35,clearcoat:1}),blue=new T.MeshStandardMaterial({color:col,roughness:.35,metalness:.4});
+  const gold=new T.MeshStandardMaterial({color:'#ffd23a',emissive:'#a07a00',emissiveIntensity:.6,metalness:.6,roughness:.3,side:T.DoubleSide}),dark=new T.MeshStandardMaterial({color:'#2a2e38',metalness:.7,roughness:.4});
+  const glass=new T.MeshPhysicalMaterial({color:'#7fd8ff',roughness:.05,emissive:'#2a8ad8',emissiveIntensity:.5}),fire=new T.MeshBasicMaterial({color:'#ffb43a',transparent:true,opacity:.85,fog:false,depthWrite:false});
+  const add=(geo,m,x,y,z)=>{const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o};
+  const body=new T.CapsuleGeometry(1.1,6,8,20);body.rotateX(Math.PI/2);add(body,white,0,0,0);
+  const nose=new T.ConeGeometry(1.1,3.2,20);nose.rotateX(Math.PI/2);add(nose,blue,0,0,5.1);
+  const cock=add(new T.SphereGeometry(.85,16,12),glass,0,.75,1.8);cock.scale.set(1,.6,1.6);
+  // swept-back wings, each with a gold star
+  for(const sx of[-1,1]){const w=new T.Shape();w.moveTo(0,1.5);w.lineTo(sx*5.5,-2.2);w.lineTo(sx*5.5,-3.2);w.lineTo(0,-3);
+    const wg=new T.ExtrudeGeometry(w,{depth:.2,bevelEnabled:false});wg.rotateX(Math.PI/2);add(wg,blue,0,.1,0);
+    const st=new T.ShapeGeometry(starShape(.9));st.rotateX(-Math.PI/2);add(st,gold,sx*3.2,.14,-1.4);
+    add(new T.CylinderGeometry(.55,.65,1.8,14),dark,sx*.95,-.2,-3.9).rotation.x=Math.PI/2}
+  const fin=add(new T.BoxGeometry(.2,2.2,2),blue,0,1.4,-3);fin.rotation.x=-.4;
+  const fl=new T.Group();fl.position.z=-4.8;g.add(fl);
+  for(const sx of[-1,1]){const c=new T.ConeGeometry(.5,2.4,12);c.translate(0,1.2,0);c.rotateX(-Math.PI/2);const m=new T.Mesh(c,fire);m.position.set(sx*.95,-.2,0);fl.add(m)}
+  g.userData.prop=fl;g.userData.fire=fl;return g;
+}
+function starShape(r){const s=new T.Shape();for(let i=0;i<10;i++){const a=i*Math.PI/5,d=i%2?r*.42:r;s[i?'lineTo':'moveTo'](Math.sin(a)*d,Math.cos(a)*d)}return s}
+const FLEET_COLS=['#e02a2a','#2fb84a','#a04ad8','#ff8a1a','#1ab8c8','#ff4fa8'];
+function buildLaunchRoom(){
+  const g=new T.Group();g.position.set(LAUNCH.x,0,LAUNCH.z);zoo.scene.add(g);const {D,W}=LAUNCH,Ht=12;
+  const wall=new T.MeshStandardMaterial({color:'#1c2a5a',roughness:.6}),roof=new T.MeshStandardMaterial({color:'#e8ecf4',roughness:.4,metalness:.3}),floor=new T.MeshStandardMaterial({color:'#3a4048',roughness:.8});
+  const glow=new T.MeshStandardMaterial({color:'#3ad8ff',emissive:'#1ab8ff',emissiveIntensity:1.2}),yel=new T.MeshStandardMaterial({color:'#ffd23a',emissive:'#a07a00',emissiveIntensity:.4});
+  const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;g.add(o);return o};
+  box(floor,0,.05,0,D,.1,W);box(wall,0,Ht/2,-W/2,D,Ht,.5);for(const sd of[-1,1])box(wall,sd*D/2,Ht/2,0,.5,Ht,W);
+  for(const sd of[-1,1])box(wall,sd*(D/2-5),Ht/2,W/2,10,Ht,.5);box(wall,0,Ht-1.5,W/2,D,3,.5);box(roof,0,Ht+.2,0,D+1.5,.4,W+1.5);
+  // twinkly stars on the walls and big mission screens
+  for(let i=0;i<40;i++){const s=new T.Mesh(new T.ShapeGeometry(starShape(.25+Math.random()*.3)),yel);s.position.set((Math.random()-.5)*(D-2),2+Math.random()*(Ht-4),-W/2+.3);g.add(s)}
+  for(const x of[-8,0,8])box(glow,x,5.5,-W/2+.35,6,3.2,.1);box(new T.MeshStandardMaterial({color:'#5a6270',metalness:.5,roughness:.4}),0,.6,-W/2+3,16,1.2,1.6);
+  // the Starfleet waits inside, one starship for everyone
+  zoo.parked=[];const spots=[[-9,-3],[0,-3],[9,-3],[-9,5],[0,5],[9,5],[-4.5,1]];
+  spots.forEach(([x,z],i)=>{const s=starModel(i===spots.length-1?'#ffb020':FLEET_COLS[i%FLEET_COLS.length]);s.userData.fire.visible=false;s.scale.setScalar(.75);s.position.set(LAUNCH.x+x,1.2,LAUNCH.z+z);zoo.scene.add(s);zoo.parked.push(s)});
+  const st=new T.Mesh(new T.PlaneGeometry(12,3),new T.MeshStandardMaterial({map:signTexture(['🚀 LAUNCH ROOM','The Starfleet · a starship for everyone · press P'],'#1c2a5a'),roughness:.7}));st.position.set(0,Ht-1.5,W/2+.3);g.add(st);
+  for(let x=-D/2;x<=D/2;x+=1.8)zoo.cols.push({x:LAUNCH.x+x,z:LAUNCH.z-W/2,r:1});
+  for(const sd of[-1,1]){for(let z=-W/2;z<=W/2;z+=1.8)zoo.cols.push({x:LAUNCH.x+sd*D/2,z:LAUNCH.z+z,r:1});for(let x=0;x<=10;x+=1.8)zoo.cols.push({x:LAUNCH.x+sd*(D/2-x),z:LAUNCH.z+W/2,r:1})}
+  // the launch pad outside, with a big star painted on it and a tower
+  const pad=new T.Mesh(new T.CylinderGeometry(9,9.5,.6,40),new T.MeshStandardMaterial({color:'#8a8e96',roughness:.8}));pad.position.set(PAD.x,.3,PAD.z);pad.receiveShadow=true;zoo.scene.add(pad);
+  const ps=new T.Mesh(new T.ShapeGeometry(starShape(6.5)),yel);ps.rotation.x=-Math.PI/2;ps.position.set(PAD.x,.62,PAD.z);zoo.scene.add(ps);
+  const red=new T.MeshStandardMaterial({color:'#d83a2a',roughness:.5});
+  for(let y=0;y<22;y+=2){const b=new T.Mesh(new T.BoxGeometry(2.4,.25,2.4),red);b.position.set(PAD.x+11,y+1,PAD.z);zoo.scene.add(b)}
+  for(const[a,b]of[[-1,-1],[-1,1],[1,-1],[1,1]]){const p=new T.Mesh(new T.BoxGeometry(.3,22,.3),red);p.position.set(PAD.x+11+a*1.1,11,PAD.z+b*1.1);p.castShadow=true;zoo.scene.add(p)}
+  zoo.cols.push({x:PAD.x+11,z:PAD.z,r:2});
+  // visitors blast off too: a starship full of visitors goes to space now and then
+  zoo.show={g:starModel('#ff4fa8'),t:-20};zoo.show.g.visible=false;zoo.scene.add(zoo.show.g);
+}
+function nearLaunch(x,z){return Math.abs(x-LAUNCH.x)<LAUNCH.D/2+6&&Math.abs(z-LAUNCH.z)<LAUNCH.W/2+10||Math.hypot(x-PAD.x,z-PAD.z)<16}
+// press P: blast off from the Launch Room, or fly home if you are already up there
+function launchShip(){
+  if(mode==='plane'&&plane.star){if(!plane.homing){plane.homing=1;toast('🛬 Autopilot on! The Starfleet is flying home to the Launch Room…',6000)}return}
+  if(mode!=='foot'&&mode!=='car')return;
+  const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
+  if(!nearLaunch(px,pz)){toast('🚀 Go to the Launch Room (past the Animal Doctor) and press P to blast off in your Starfleet!',6000);return}
+  if(me.pack.length)releaseLeash();if(me.mount)dismount(true);
+  if(plane.g&&plane.g.parent)plane.g.parent.remove(plane.g);plane.g=starModel('#ffb020');world.scene.add(plane.g);
+  Object.assign(plane,{on:true,star:1,homing:0,x:PAD.x,z:PAD.z,y:2.6,yaw:0,v:0,launchT:3.5,boost:0,pitch:-Math.PI/2,from:mode});
+  zoo.wing=FLEET_COLS.map((c,i)=>{const s=starModel(c);world.scene.add(s);const k=Math.floor(i/2)+1,side=i%2?1:-1;return{g:s,side:side*7*k,back:8*k,x:0,y:0,z:0}});
+  for(const w of zoo.wing){const p=wingSpot(w);w.x=p.x;w.z=p.z;w.y=2.6}
+  for(const s of zoo.parked||[])s.visible=false;
+  mode='plane';car.v=0;footRig.visible=false;netRig.visible=false;look.yaw=0;look.pitch=.15;setDriveUI();
+  toast('🚀 Everyone get in! The whole Starfleet is on the launch pad… 3…',1200);
+}
+function wingSpot(w){const b={x:Math.sin(plane.yaw),z:Math.cos(plane.yaw)},s={x:Math.cos(plane.yaw),z:-Math.sin(plane.yaw)};return{x:plane.x+b.x*w.back+s.x*w.side,z:plane.z+b.z*w.back+s.z*w.side}}
+function landShip(){
+  for(const w of zoo.wing||[])world.scene.remove(w.g);zoo.wing=[];world.scene.remove(plane.g);plane.g=null;plane.on=false;plane.star=0;
+  for(const s of zoo.parked||[])s.visible=true;
+  me.x=PAD.x-12;me.z=PAD.z+4;me.y=0;me.vy=0;mode='foot';look.yaw=Math.PI/2;look.pitch=0;footRig.visible=true;netRig.visible=!me.noNet;setDriveUI();
+  toast('🛬 The Starfleet landed back at the Launch Room! Everyone had a great trip to space. Your truck is where you left it.',7000)}
+function updateStar(dt){
+  const g=plane.g;let turn=0,vy=0,gas=0;
+  if(plane.launchT>0){const was=Math.ceil(plane.launchT);plane.launchT-=dt;const n=Math.ceil(plane.launchT);
+    if(n!==was&&n>0)toast('🚀 '+n+'…',1000);if(plane.launchT<=0){plane.boost=3;toast('🔥 BLAST OFF! W faster · S slower · A D turn · Space up · Shift down · P to fly home',8000)}
+    gas=plane.launchT<1.5?.6:0}
+  else if(plane.boost>0){plane.boost-=dt;plane.y+=(30+(3-plane.boost)*25)*dt;plane.pitch=lerp(plane.pitch,-.35,dt*.8);gas=1;if(plane.boost<=0)plane.v=40}
+  else if(plane.homing){const dx=PAD.x-plane.x,dz=PAD.z-plane.z,d=Math.hypot(dx,dz),sp=clamp(d*.8,6,160);
+    if(d>.5){const k=Math.min(1,sp*dt/d);plane.x+=dx*k;plane.z+=dz*k;let dy=Math.atan2(-dx,-dz)-plane.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));plane.yaw+=dy*Math.min(1,dt*2);turn=clamp(dy,-1,1)}
+    const want=d>40?Math.min(plane.y,Math.max(60,d*.5)):2.6;plane.y=lerp(plane.y,want,Math.min(1,dt*(d>40?.4:1.2)));plane.pitch=lerp(plane.pitch,d>40?.1:0,dt*2);gas=.4;
+    if(d<1.5&&plane.y<3.5){landShip();return}}
+  else{gas=keys.up?1:pad.gas;const brk=keys.down?1:pad.brake;turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
+    if(gas>.05)plane.v+=35*gas*dt;if(brk>.05)plane.v-=35*brk*dt;plane.v=clamp(plane.v,15,160);plane.yaw+=turn*.9*dt;
+    plane.x=clamp(plane.x-Math.sin(plane.yaw)*plane.v*dt,-2500,2500);plane.z=clamp(plane.z-Math.cos(plane.yaw)*plane.v*dt,-3000,2000);
+    vy=(keys.rise||pad.rise?1:0)-(keys.run||keys.dive||pad.dive?1:0);plane.y=clamp(plane.y+vy*45*dt,6,950);plane.pitch=lerp(plane.pitch,-vy*.3,dt*4)}
+  me.x=plane.x;me.z=plane.z;me.y=plane.y-1;
+  const shake=plane.launchT>0?(3.5-plane.launchT)*.04:0;
+  g.position.set(plane.x+(Math.random()-.5)*shake,plane.y+(plane.launchT>0?0:Math.sin(performance.now()*.002)*.2),plane.z+(Math.random()-.5)*shake);
+  g.rotation.set(plane.pitch,plane.yaw+Math.PI,0,'YXZ');g.rotation.z=-turn*.5;
+  const f=g.userData.fire;f.visible=gas>0||plane.launchT<=0;f.scale.set(1,1,.5+gas*.9+Math.random()*.3);
+  // the rest of the Starfleet flies in a V behind you
+  for(const w of zoo.wing||[]){const p=wingSpot(w),k=plane.launchT>0?1:Math.min(1,dt*3);w.x=lerp(w.x,p.x,k);w.z=lerp(w.z,p.z,k);w.y=lerp(w.y,plane.launchT>0?2.6:plane.y-2-w.back*.15,plane.boost>0?Math.min(1,dt*2):k);
+    w.g.position.set(w.x,w.y+Math.sin(performance.now()*.002+w.side)*.3,w.z);w.g.rotation.copy(g.rotation);const wf=w.g.userData.fire;wf.visible=f.visible;wf.scale.copy(f.scale)}
+}
+// high up, the sky turns black and you can see the stars, the moon and a ringed planet
+function spaceSky(){
+  const s=mode==='plane'&&plane.star?clamp((plane.y-150)/400,0,1):0;
+  if(!zoo.space){if(!s)return;const g=new T.Group(),n=2500,pos=new Float32Array(n*3);
+    for(let i=0;i<n;i++){const v=V(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize().multiplyScalar(880);pos.set([v.x,v.y,v.z],i*3)}
+    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3));
+    const stars=new T.Points(geo,new T.PointsMaterial({color:'#ffffff',size:2.2,sizeAttenuation:false,fog:false,transparent:true,depthWrite:false}));stars.renderOrder=-9;g.add(stars);
+    const moon=new T.Mesh(new T.SphereGeometry(60,32,20),new T.MeshBasicMaterial({color:'#e8e8e0',fog:false,transparent:true}));moon.position.set(-500,420,-450);moon.renderOrder=-8;g.add(moon);
+    const pl=new T.Mesh(new T.SphereGeometry(90,32,20),new T.MeshBasicMaterial({color:'#e89a4a',fog:false,transparent:true}));pl.position.set(550,300,-500);pl.renderOrder=-8;g.add(pl);
+    const ring=new T.Mesh(new T.RingGeometry(120,170,48),new T.MeshBasicMaterial({color:'#f4d8a0',fog:false,side:T.DoubleSide,transparent:true,opacity:.8}));ring.position.copy(pl.position);ring.rotation.set(1.2,.3,0);ring.renderOrder=-8;g.add(ring);
+    zoo.space={g,mats:[stars.material,moon.material,pl.material,ring.material]};zoo.scene.add(g)}
+  const sp=zoo.space;sp.g.visible=s>0;if(!s)return;sp.g.position.copy(cam.position);for(const m of sp.mats)m.opacity=s*(m===sp.mats[3]?.8:1);
+  const f=world.scene.fog,blk=new T.Color('#03040c');f.color.lerp(blk,s);world.scene.background.lerp(blk,s);f.far*=1+s*4;world.sky.sky.visible=s<.6}
+// every so often a starship full of visitors blasts off and comes back from space
+function updateLaunchShow(dt){
+  const sh=zoo.show;if(!sh)return;if(plane.star){sh.g.visible=false;sh.t=-20;return}sh.t+=dt;const t=sh.t,g=sh.g;
+  if(t<0){g.visible=false;return}g.visible=true;
+  // 0-4 countdown on the pad, 4-14 up to space, 14-30 away, 30-40 back down, then a rest
+  const y=t<4?2.6:t<14?2.6+Math.pow((t-4)/10,2)*700:t<30?2000:t<40?2.6+Math.pow((40-t)/10,2)*700:2.6;
+  g.position.set(PAD.x+(t<4?(Math.random()-.5)*t*.03:0),y,PAD.z);g.rotation.set(-Math.PI/2,Math.PI,0,'YXZ');g.visible=y<1500;
+  const f=g.userData.fire;f.visible=t>3&&t<40;f.scale.set(1,1,.8+Math.random()*.6);
+  if(t>=45){sh.t=-40;S.coins+=300;save();coins();if(curView==='drive'&&Math.hypot(me.x-PAD.x,me.z-PAD.z)<150)toast('🚀 A starship full of visitors came back from space! They loved it. +300 coins')}
+}

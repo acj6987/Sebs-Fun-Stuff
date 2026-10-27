@@ -63,7 +63,7 @@ async function buildSafari(c,progress){
   NATURE.scatter(scene,types,Math.round(count*QUALITY.trees),place,r).forEach(addCol);
   world.grass=NATURE.makeGrass(E,world.ponds,{half:HALF});if(world.grass)scene.add(world.grass);
   buildCar(scene);buildFootRig();scene.add(cam);buildHelpers(scene);
-  sub.on=false;sub.g=null;plane.on=false;plane.g=null;
+  sub.on=false;sub.g=null;plane.on=false;plane.g=null;plane.star=0;
   // build each animal shape once, showing progress
   const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]));
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
@@ -430,7 +430,7 @@ function cageIt(own=me){
 function releaseLeash(){if(!me.pack.length)return;for(const a of me.pack){world.scene.remove(a.net);a.net=null;world.scene.remove(a.rope);a.rope=null;a.state='wander'}
   toast(me.pack.length>1?'Your animals wriggled out of the nets!':'The '+me.pack[0].sp.n+' wriggled out of the net!');me.pack=[]}
 function pressE(){
-  if(!safari.running)return;if(mode==='plane'){toast('Land the plane first! Press P.');return}
+  if(!safari.running)return;if(mode==='plane'){toast(plane.star?'Press P to fly the Starfleet home first!':'Land the plane first! Press P.');return}
   if(mode==='sub'){const q=V(sub.x+Math.cos(sub.yaw)*3.5,0,sub.z-Math.sin(sub.yaw)*3.5);me.x=q.x;me.z=q.z;me.y=Math.max(H(me.x,me.z)+.3,sub.y-1);me.vy=0;
     look.yaw=sub.yaw+look.yaw;look.pitch=0;mode='foot';footRig.visible=true;netRig.visible=!me.noNet;setDriveUI();toast('🤿 You jumped out in your snorkel, mask and flippers! Space to swim up, Shift to dive, E by the submarine to get back in.',6000);return}
   if(mode==='foot'&&sub.on){
@@ -451,7 +451,7 @@ function jump(){if(mode==='foot'&&me.ground){me.vy=6.5;me.ground=false}else if(m
 function setDriveUI(){$('#eBtn').firstChild.textContent=mode==='car'?'JUMP OUT':'GET IN';const rb=$('#rideBtn');if(rb){rb.hidden=mode!=='foot'||!!(world&&(world.zoo||world.sea));rb.firstChild.textContent=me.mount?'GET OFF':'RIDE DINO'}$('#netBtn').hidden=mode==='car'||!!me.noNet;$('#netBtn').firstChild.textContent=world&&world.zoo?'CATCH':'THROW NET';const nt=$('#netToggle');nt.hidden=mode!=='foot';nt.firstChild.textContent=me.noNet?'🎣 GET NET':'🎣 PUT NET AWAY';$('#dnaBtn').hidden=!(world&&world.zoo&&mode==='foot');$('#foodBtn').hidden=!(world&&(world.zoo||mode==='foot'));$('#cross').hidden=mode==='car'||mode==='plane';
   const sea=!!(world&&world.sea),sb=$('#subBtn');sb.hidden=!(sea&&(mode==='car'||mode==='sub'));sb.firstChild.textContent=mode==='sub'?'BACK TO TRUCK':'SUBMARINE';
   $('#upBtn').hidden=$('#downBtn').hidden=!(mode==='sub'||mode==='plane'||sea&&mode==='foot');$('#jumpBtn').hidden=mode==='sub'||mode==='plane';
-  const pb=$('#planeBtn');pb.hidden=!(world&&!world.zoo&&(mode==='car'||mode==='plane'));pb.firstChild.textContent=mode==='plane'?'LAND':'PLANE';$('#eBtn').hidden=mode==='plane';
+  const pb=$('#planeBtn');pb.hidden=!(world&&(world.zoo?mode!=='sub':mode==='car'||mode==='plane'));pb.firstChild.textContent=mode==='plane'?(plane.star?'FLY HOME':'LAND'):world&&world.zoo?'🚀 LAUNCH':'PLANE';$('#eBtn').hidden=mode==='plane';
   if(mode==='sub')$('#eBtn').firstChild.textContent='SNORKEL';else if(mode==='foot'&&sub.on)$('#eBtn').firstChild.textContent='GET IN SUB'}
 
 /* ---------- your pet dinosaurs: they follow you, and you can ride them ---------- */
@@ -545,7 +545,7 @@ function ropes(own,hand){own.pack.forEach((a,i)=>{if(!a.rope)return;const pts=a.
 }
 function placeCamera(){
   if(mode==='plane'){const yaw=plane.yaw+look.yaw,back=V(Math.sin(yaw),0,Math.cos(yaw));
-    cam.position.set(plane.x+back.x*24,plane.y+6-look.pitch*10,plane.z+back.z*24);cam.lookAt(plane.x-back.x*10,plane.y+1,plane.z-back.z*10)}
+    const bk=plane.star?30:24;cam.position.set(plane.x+back.x*bk,plane.y+6-look.pitch*10,plane.z+back.z*bk);cam.lookAt(plane.x-back.x*10,plane.y+1,plane.z-back.z*10)}
   else if(mode==='sub'){const yaw=sub.yaw+look.yaw,back=V(Math.sin(yaw),0,Math.cos(yaw));
     cam.position.set(sub.x+back.x*11,sub.y+3.2-look.pitch*6,sub.z+back.z*11);cam.lookAt(sub.x-back.x*4,sub.y+.6,sub.z-back.z*4);underwater()}
   else if(mode==='car'){cam.position.copy(car.g.localToWorld(V(-.45,2.08,.42)));
@@ -553,13 +553,14 @@ function placeCamera(){
   else{cam.position.set(me.x,me.y+1.65+(me.mount?me.mount.saddle-.6:0)+Math.sin(me.bob)*(me.mount?.12:.05),me.z);cam.rotation.set(look.pitch,look.yaw,0,'YXZ');footRig.position.y=-.12+Math.sin(me.bob*2)*.01}
   const fx=mode==='car'?car.x:me.x,fz=mode==='car'?car.z:me.z;world.sky.follow(fx,H(fx,fz),fz);
   if(mode!=='sub')underwater();
+  if(world.zoo)spaceSky();
 }
 const safari={running:false,
   frame(dt,time){
     // move in small steps so the jeep keeps full speed even when the computer draws few pictures a second
     const n=Math.min(8,Math.ceil(dt/(1/30))),h=dt/n;
     if(mode==='sub'){for(let i=0;i<n;i++)updateSub(h)}
-    else if(mode==='plane'){for(let i=0;i<n;i++)updatePlane(h)}
+    else if(mode==='plane'){for(let i=0;i<n&&mode==='plane';i++)updatePlane(h)}
     else if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
     updateHelpers();updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);
@@ -583,7 +584,8 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;
-  if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
+  if(mode==='plane'&&plane.star)msg=plane.launchT>0?'🚀 Countdown… hold on tight!':plane.homing?'🛬 Autopilot: flying home to the Launch Room…':'🚀 <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up to space · <b>Shift</b> down · <b>P</b> fly home · '+Math.round(plane.y)+' m high';
+  else if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
   else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
   else if(world.zoo)msg=labHint()||foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
@@ -719,7 +721,7 @@ function planeModel(){
 }
 function togglePlane(){
   if(!safari.running)return;
-  if(world.zoo){toast('Planes can fly on safari! Drive out to the world map and pick a place.');return}
+  if(world.zoo){launchShip();return}
   if(mode==='plane'){
     // land: the plane turns back into your truck on the ground below
     world.scene.remove(plane.g);plane.on=false;car.g.visible=true;car.x=plane.x;car.z=plane.z;keepIn(car);collide(car,1.7*TS);car.yaw=plane.yaw;car.v=0;mode='car';me.x=car.x;me.z=car.z;look.yaw=0;look.pitch=-.12;setDriveUI();
@@ -730,6 +732,7 @@ function togglePlane(){
   toast('✈️ Your truck turned into a plane! W faster, S slower, A D to turn, Space to go up, Shift to go down. Press P to land.',7000);
 }
 function updatePlane(dt){
+  if(plane.star){updateStar(dt);return}
   const gas=keys.up?1:pad.gas,brk=keys.down?1:pad.brake,turn=((keys.left?1:0)-(keys.right?1:0))||-pad.steer;
   if(gas>.05)plane.v+=14*gas*dt;if(brk>.05)plane.v-=14*brk*dt;plane.v=clamp(plane.v,12,55);
   plane.yaw+=turn*.8*dt;
