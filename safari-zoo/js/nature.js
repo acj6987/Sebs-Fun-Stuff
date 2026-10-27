@@ -233,8 +233,12 @@ function treeTypes(hab){
   const dead=()=>{const b=[];limb(b,V(0,0,0),V(.2,3,0),.2,.12);limb(b,V(.2,2.5,0),V(1.4,3.6,.3),.1,.03,5);limb(b,V(.15,2,0),V(-1,3,-.4),.09,.03,5);return[[merge(b),barkMat(true)]]};
   const mound=()=>{const g=new T.ConeGeometry(1,3.4,9,6);g.translate(0,1.7,0);const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i);p.setX(i,p.getX(i)*(1+MESHER.noise3(p.getX(i)*3,y*2,p.getZ(i)*3)*.3));p.setZ(i,p.getZ(i)*(1+MESHER.noise3(p.getZ(i)*3,y*2,1)*.3))}g.computeVertexNormals();return[[g,rockMat('#a8683c')]]};
   const rock=(col,big,flat)=>[[rockGeo(r()*10,flat),rockMat(col)]];
+  // a fat old baobab tree with stubby branches
+  const baobab=()=>{const b=[],l=[];limb(b,V(0,0,0),V(0,3,0),1.5,1.15,14);limb(b,V(0,3,0),V(0,5.2,0),1.15,.75,14);
+    for(let i=0;i<7;i++){const a=i*.9+r()*.4,d=2+r()*1.2,e=V(Math.cos(a)*d,6.4+r()*1.4,Math.sin(a)*d);limb(b,V(0,4.8,0),e,.35,.1,6);cards(l,e,4,V(.7,.3,.7),1.3,r,{lightCenter:V(0,5,0)})}
+    return[[merge(b),solidMat('#8c7a6c',{roughness:.95})],[merge(l),leafMat('acacia')]]};
   const E=ENV[hab];
-  if(hab==='savanna'){T2(5,acacia(),{s:[.8,1.3],col:.5});T2(1.5,acacia(),{s:[.6,1],col:.4});T2(3,bush('dry',1.2),{s:[.8,1.5]});T2(1,mound(),{s:[.7,1.2],col:.9});T2(2,rock(E.rock),{s:[.6,1.8],col:1});T2(.4,rock(E.rock),{s:[3,6],col:4});T2(.6,dead(),{s:[.8,1.2],col:.3})}
+  if(hab==='savanna'){T2(5,acacia(),{s:[.8,1.3],col:.5});T2(1.5,acacia(),{s:[.6,1],col:.4});T2(3,bush('dry',1.2),{s:[.8,1.5]});T2(1,mound(),{s:[.7,1.2],col:.9});T2(2,rock(E.rock),{s:[.6,1.8],col:1});T2(.4,rock(E.rock),{s:[3,6],col:4});T2(.6,dead(),{s:[.8,1.2],col:.3});T2(.45,baobab(),{s:[1,1.5],col:1.6})}
   if(hab==='rainforest'){T2(4,giant(),{s:[.8,1.2],col:1.1});T2(4,broad(9,6),{s:[.8,1.3],col:.5});T2(3,palm(),{s:[.8,1.2],col:.4});T2(6,fern(),{s:[.8,1.6]});T2(4,bush('broad',1.3),{s:[.8,1.5]});T2(1,rock('#5b6650'),{s:[.6,1.6],col:1})}
   if(hab==='jungle'){T2(5,bamboo(),{s:[.8,1.2],col:.9});T2(3,broad(8,5),{s:[.8,1.2],col:.5});T2(1.2,broad(6,4.5,'blossom'),{s:[.8,1.2],col:.4});T2(3,bush('bamboo',1),{s:[.8,1.4]});T2(1.5,rock(E.rock),{s:[.6,1.8],col:1})}
   if(hab==='woodland'){T2(5,pine(),{s:[.8,1.5],col:.5});T2(3,broad(9,6.5),{s:[.8,1.3],col:.6});T2(1,broad(8,4,'broad',pale),{s:[.8,1.2],col:.35});T2(3,bush('bush',1.1),{s:[.8,1.4]});T2(2,rock(E.rock),{s:[.6,1.8],col:1});T2(2,fern(),{s:[.6,1]})}

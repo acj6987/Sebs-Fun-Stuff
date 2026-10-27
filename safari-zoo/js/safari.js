@@ -14,7 +14,7 @@ function seaH(x,z){let h=-7+baseH(x,z)*.5;
 // where you stand or drive: on the sea floor in shallow water, floating or swimming in deep water
 function HW(x,z){const h=H(x,z);return world.sea?Math.max(h,-1.15):h}
 function H(x,z){if(world.flat)return 0;if(world.sea)return seaH(x,z);let h=baseH(x,z);
-  const d=Math.max(Math.abs(x),Math.abs(z));if(d>HALF-60)h+=Math.pow(d-(HALF-60),1.5)*.09;
+  const d=Math.max(Math.abs(x),Math.abs(z));if(d>HALF-60)h+=world.c.hab==='savanna'?Math.min(38,Math.pow(d-(HALF-60),1.25)*.2):Math.pow(d-(HALF-60),1.5)*.09;
   for(const p of world.ponds){const dd=Math.hypot(x-p.x,z-p.z);if(dd<p.r*1.4){const t=sm(p.r*.75,p.r*1.4,dd);h=h*t+(p.lvl-.9)*(1-t)}}
   return h}
 function inPond(x,z){return world.ponds.some(p=>Math.hypot(x-p.x,z-p.z)<p.r*.95)}
@@ -53,6 +53,7 @@ async function buildSafari(c,progress){
   ground.receiveShadow=true;scene.add(ground);
   for(const p of world.ponds){const w=NATURE.waterMesh(p.r*1.1,E.water);w.position.set(p.x,p.lvl,p.z);scene.add(w);world.waters.push(w)}
   if(c.hab==='dino')addVolcano(scene);
+  if(c.hab==='savanna')addKilimanjaro(world.sky);
   if(c.sea){const w=NATURE.waterMesh(WS*1.2,E.water);w.material.opacity=.5;w.material.side=T.DoubleSide;w.position.y=0;scene.add(w);world.waters.push(w);buildReef(scene,r);buildTreasure(scene,r)}
   progress('Growing trees…');await nextFrame();
   const types=NATURE.treeTypes(c.hab);
@@ -76,6 +77,16 @@ async function buildSafari(c,progress){
   c.animals.forEach((x,i)=>spawnAnimal(true,SP[c.id+':'+i]));
   while(world.animals.length<world.maxAn)spawnAnimal(true);
 }
+
+// Mount Kilimanjaro far away on the horizon, blue in the haze with snow on top
+function addKilimanjaro(sky){
+  const mk=(R0,h,top,seed)=>{const g=new T.CylinderGeometry(R0*top,R0,h,64,10);g.translate(0,h/2,0);const p=g.attributes.position,col=new Float32Array(p.count*3),c=new T.Color();
+    for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),a=Math.atan2(z,x),n=MESHER.fbm(Math.cos(a)*3+seed,y*.02,Math.sin(a)*3);
+      const k=1+(n-.5)*.35*(1-y/h);p.setX(i,x*k);p.setZ(i,z*k);const snow=y/h>.8-(n-.5)*.25;
+      c.set(snow?'#eef2f6':'#8597ab').lerp(new T.Color('#a9b6c4'),1-y/h);col.set([c.r,c.g,c.b],i*3)}
+    g.setAttribute('color',new T.BufferAttribute(col,3));return new T.Mesh(g,new T.MeshBasicMaterial({vertexColors:true,fog:false}))};
+  const kibo=mk(420,210,.16,1);kibo.position.set(-160,-30,-830);sky.sky.add(kibo);
+  const maw=mk(170,150,.08,7);maw.position.set(260,-30,-800);sky.sky.add(maw)}
 
 /* ---------- flying reptiles that circle in the sky ---------- */
 function makeFlyers(scene,sp,n,center,rr,alt,scale=1){

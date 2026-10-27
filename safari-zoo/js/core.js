@@ -25,7 +25,7 @@ const HAB={
 };
 // how each habitat looks in 3D
 const ENV={
-  savanna:{zen:'#3d78c2',hor:'#f0d6a8',fog:'#e4cfa2',ground:'#b99a55',patch:'#9c8045',rock:'#8b7a62',water:'#3e7f92',grass:['#8a7a3a','#e0c878'],grassH:1.1,grassN:60000,sunEl:.55},
+  savanna:{zen:'#2f6cbc',hor:'#d8e0e3',fog:'#cfd6d3',ground:'#b39552',patch:'#8e8446',rock:'#8b7a62',water:'#3e7f92',grass:['#8a7a3a','#e0c878'],grassH:1.1,grassN:60000,sunEl:.55},
   rainforest:{zen:'#4f8fb8',hor:'#d6e6d2',fog:'#b5cdb5',ground:'#56732f',patch:'#3f5a24',rock:'#5b6650',water:'#355e4e',grass:['#2f5a1e','#6fa040'],grassH:.7,grassN:45000,sunEl:.75},
   jungle:{zen:'#5f9cd6',hor:'#e6eedb',fog:'#d5e2cb',ground:'#6f8f45',patch:'#587a35',rock:'#7d8576',water:'#4a8798',grass:['#4a7a2a','#9cc860'],grassH:.75,grassN:50000,sunEl:.6},
   woodland:{zen:'#4f86cc',hor:'#dfe9ee',fog:'#c9d8dc',ground:'#5b7d38',patch:'#46652a',rock:'#7a7c78',water:'#3f7896',grass:['#3c6a24','#88b850'],grassH:.55,grassN:55000,sunEl:.5},
@@ -39,14 +39,14 @@ const ENV={
 const CONT=[
  {id:'africa',name:'Africa',place:'Serengeti savanna',hab:'savanna',deco:['🌳','🦓','🌾'],
   animals:[
-   ['Zebra','🦓',1,2.2,{herd:[4,7],L:1.9,W:.68,Hb:.85,leg:.85,legW:.075,neck:.62,neckW:.16,neckAng:.55,headL:.62,headW:.24,headH:.27,col:'#f2efe8',tex:'stripes',col2:'#151515',freq:19,thin:.0,noBelly:1,mane:'#151515',snout:'#2a2626',nose:'#141212',ears:'pointy',tail:'tuft',graze:1}],
-   ['Giraffe','🦒',1,1.8,{herd:[2,4],L:1.9,W:.72,Hb:.95,leg:1.75,legW:.07,neck:2.1,neckW:.13,neckAng:.28,headL:.58,headW:.2,headH:.24,col:'#e8c98d',tex:'giraffe',col2:'#8e4b1c',ossicones:1,ears:'long',tail:'tuft',tl:.8,graze:0}],
-   ['Elephant','🐘',1,1.5,{herd:[3,5],L:3.2,W:1.6,Hb:2,leg:1.3,legW:.3,neck:.25,neckW:.62,neckAng:1.25,headL:1.05,headW:1,headH:1,col:'#8b8682',hoof:'#6c6864',ears:'big',trunk:1,tusks:1,tail:'tuft',tl:1,eyeS:.7,noBelly:1}],
-   ['Hippo','🦛',2,1.6,{herd:[2,3],L:2.9,W:1.45,Hb:1.25,leg:.45,legW:.24,neck:.2,neckW:.55,neckAng:1.35,headL:.95,headW:.8,headH:.6,muzzle:1.6,col:'#7a6670',belly:'#b4868e',hoof:'#5a4a52',snout:'#8a6e78',ears:'round',tail:'short',hp:.2}],
-   ['Rhino','🦏',2,1.8,{herd:[1,2],L:2.9,W:1.3,Hb:1.3,leg:.7,legW:.22,neck:.3,neckW:.5,neckAng:1.2,headL:.85,headW:.45,headH:.5,col:'#8a857f',hoof:'#5f5a55',horn:1,ears:'pointy',tail:'tuft',tl:.5,noBelly:1,hp:.45}],
-   ['Lion','🦁',2,2,{hunts:['Zebra', 'Giraffe'],herd:[3,4],L:1.75,W:.58,Hb:.72,leg:.7,legW:.09,neck:.3,neckW:.24,neckAng:1.05,headL:.45,headW:.4,headH:.4,col:'#c4975a',lionMane:'#5a3518',snout:'#e0c49a',nose:'#8a5a4a',cheeks:1,ears:'round',tail:'tuft',tl:.9,tuftCol:'#3a2210',paws:1}],
-   ['Gorilla','🦍',3,1.4,{herd:[2,3],plan:'ape',col:'#2a2a2c',face:'#3a3634',s:1.6}],
-   ['Cheetah','🐆',3,2.4,{hunts:['Zebra'],herd:[1,2],L:1.4,W:.42,Hb:.5,leg:.8,legW:.06,neck:.3,neckW:.13,neckAng:1,headL:.32,headW:.26,headH:.24,col:'#dcb066',belly:'#f3e6c8',tex:'dots',col2:'#1e140a',ears:'round',tail:'long',tl:.85,snout:'#ecd8b0',cheeks:1,paws:1}],
+   ['Zebra','🦓',1,2.2,{herd:[4,7],L:1.9,W:.68,Hb:.85,leg:.85,legW:.075,neck:.62,neckW:.16,neckAng:.55,headL:.62,headW:.24,headH:.27,real:1,dim:.9,col:'#ecebe3',tex:'stripes',col2:'#17171a',freq:19,thin:.0,noBelly:1,mane:'#151515',snout:'#2a2626',nose:'#141212',ears:'pointy',tail:'tuft',graze:1}],
+   ['Giraffe','🦒',1,1.8,{herd:[2,4],L:1.9,W:.72,Hb:.95,leg:1.75,legW:.07,neck:2.1,neckW:.13,neckAng:.28,headL:.58,headW:.2,headH:.24,real:1,col:'#e6cf9e',tex:'giraffe',giraF:6,col2:'#6a3412',lineCol:'#ece0c2',ossicones:1,ears:'long',tail:'tuft',tl:.8,graze:0}],
+   ['Elephant','🐘',1,1.5,{herd:[3,5],L:3.2,W:1.6,Hb:2,leg:1.3,legW:.3,neck:.25,neckW:.62,neckAng:1.25,headL:1.05,headW:1,headH:1,real:1,skin:1,col:'#5f5a55',dust:'#7e5c42',hoof:'#4e4a46',ears:'big',trunk:1,tusks:1,tail:'tuft',tl:1,eyeS:.7,noBelly:1}],
+   ['Hippo','🦛',2,1.6,{herd:[2,3],L:2.9,W:1.45,Hb:1.25,leg:.45,legW:.24,neck:.2,neckW:.55,neckAng:1.35,headL:.95,headW:.8,headH:.6,muzzle:1.6,real:1,skin:'wet',col:'#594b42',belly:'#9a6c5a',hoof:'#3e3436',snout:'#8a6866',ears:'round',tail:'short',hp:.2}],
+   ['Rhino','🦏',2,1.8,{herd:[1,2],L:2.9,W:1.3,Hb:1.3,leg:.7,legW:.22,neck:.3,neckW:.5,neckAng:1.2,headL:.85,headW:.45,headH:.5,real:1,skin:1,col:'#6a655e',dust:'#86705a',hoof:'#4a4540',horn:1,ears:'pointy',tail:'tuft',tl:.5,noBelly:1,hp:.45}],
+   ['Lion','🦁',2,2,{hunts:['Zebra', 'Giraffe'],herd:[3,4],L:1.75,W:.58,Hb:.72,leg:.7,legW:.09,neck:.3,neckW:.24,neckAng:1.05,headL:.45,headW:.4,headH:.4,real:1,col:'#b9853f',back:'#96682f',belly:'#e4cda4',lionMane:'#4e2e14',snout:'#e6d0aa',nose:'#7a4a42',cheeks:1,ears:'round',tail:'tuft',tl:.9,tuftCol:'#3a2210',paws:1}],
+   ['Gorilla','🦍',3,1.4,{herd:[2,3],plan:'ape',real:1,col:'#1e1c1c',back:'#55524e',face:'#2c2726',s:1.6}],
+   ['Cheetah','🐆',3,2.4,{hunts:['Zebra'],herd:[1,2],L:1.4,W:.42,Hb:.5,leg:.8,legW:.06,neck:.3,neckW:.13,neckAng:1,headL:.32,headW:.26,headH:.24,real:1,col:'#d7a656',back:'#c18d40',belly:'#f4ead4',tex:'dots',dotF:9,dotR:.33,col2:'#17110b',ears:'round',tail:'long',tl:.85,snout:'#ecd8b0',cheeks:1,paws:1}],
   ]},
  {id:'samerica',name:'South America',place:'Amazon rainforest',hab:'rainforest',deco:['🌴','🦜','🌺'],
   animals:[

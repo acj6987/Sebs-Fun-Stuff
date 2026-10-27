@@ -443,13 +443,17 @@ function painter(p){
       else{const m=pr.m;t=x*m[6]+y*m[7]+z*m[8]}
       if(pat==='stripes'){const w=Math.sin(t*(p.freq||17)+(fbm(x*2.2,y*2.2,z*2.2)-.5)*4);
         const tiger=p.belly&&ny<-.45;if(w>(p.thin||0)&&!tiger)c=mixc(c,c2,Math.min(1,(w-(p.thin||0))*14))}
-      if(pat==='giraffe'){const[f1,f2]=voronoi(x*4.2,y*4.2,z*4.2);c=f2-f1<.13?C(p.lineCol||'#f1e4c4'):mixc(c2,C(shade(p.col2,-.06)),fbm(x*6,y*6,z*6))}
-      if(pat==='dots'){const[f1]=voronoi(x*10,y*10,z*10);if(f1<.24)c=c2}
+      if(pat==='giraffe'){const gf=p.giraF||4.2,[f1,f2]=voronoi(x*gf,y*gf,z*gf);c=f2-f1<(p.real?.08:.13)?C(p.lineCol||'#f1e4c4'):mixc(c2,C(shade(p.col2,-.06)),fbm(x*6,y*6,z*6))}
+      if(pat==='dots'){const f=p.dotF||10,[f1]=voronoi(x*f,y*f,z*f);if(f1<(p.dotR||.24))c=c2}
       if(pat==='rosette'){const[f1]=voronoi(x*6,y*6,z*6);if(f1>.2&&f1<.34)c=c2;else if(f1<=.2)c=mixc(c,c2,.18)}
       if(pat==='spots'){if(fbm(x*5,y*5,z*5)>.6)c=c2}
       if(pat==='rings'){if(Math.sin(t*16)>.1)c=C(p.col2||'#222')}
     }
-    const v=.86+.28*fbm(x*9,y*9,z*9);
+    // real animals: darker along the back, paler underneath, dusty legs and mottled skin like in the photos
+    if(p.real&&!pr.col){if(ny>.25)c=mixc(c,p.back?C(p.back):[c[0]*.8,c[1]*.8,c[2]*.8],Math.min(1,(ny-.25)*1.6)*(p.back?.7:.5));
+      if(p.dust&&/^(low|leg)/.test(pr.bone))c=mixc(c,C(p.dust),(/^low/.test(pr.bone)?.55:.25)*(.7+.6*fbm(x*3,y*3,z*3)));
+      if(p.skin){const m=.88+.24*fbm(x*22,y*22,z*22);c=[c[0]*m,c[1]*m,c[2]*m]}}
+    const v=p.real?(.9+.2*fbm(x*9,y*9,z*9))*(p.dim||.74):.86+.28*fbm(x*9,y*9,z*9);
     return[c[0]*v,c[1]*v,c[2]*v];
   };
 }
@@ -475,7 +479,11 @@ function mats(){
   const furN=normalTexture(256,(g,S)=>{for(let i=0;i<9000;i++){const x=r()*S,y=r()*S,l=4+r()*9;g.strokeStyle=`rgba(${r()<.5?0:255},${r()<.5?0:255},${r()<.5?0:255},.18)`;g.strokeStyle=r()<.5?'rgba(0,0,0,.22)':'rgba(255,255,255,.22)';g.lineWidth=1;g.beginPath();g.moveTo(x,y);g.lineTo(x+(r()-.5)*2,y+l);g.stroke()}},3,6);
   const scaleN=normalTexture(256,(g,S)=>{for(let y=0;y<S;y+=10)for(let x=0;x<S;x+=12){const ox=(y/10)%2?6:0;const gr=g.createRadialGradient(x+ox,y,1,x+ox,y,7);gr.addColorStop(0,'#fff');gr.addColorStop(1,'#000');g.fillStyle=gr;g.beginPath();g.ellipse(x+ox,y,6,5,0,0,7);g.fill()}},2.2,10);
   const featherN=normalTexture(256,(g,S)=>{for(let i=0;i<500;i++){const x=r()*S,y=r()*S;g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=2;g.beginPath();g.arc(x,y,7+r()*4,0,Math.PI);g.stroke()}},2,6);
+  const skinN=normalTexture(256,(g,S)=>{for(let i=0;i<2600;i++){let x=r()*S,y=r()*S;g.strokeStyle=r()<.5?'rgba(0,0,0,.5)':'rgba(0,0,0,.3)';g.lineWidth=1+r();g.beginPath();g.moveTo(x,y);
+      for(let j=0;j<5;j++){x+=(r()-.5)*14;y+=(r()-.5)*5+3;g.lineTo(x,y)}g.stroke()}},3.2,5);
   MATS={
+    skin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.92,normalMap:skinN,normalScale:new T.Vector2(2.4,2.4)}),
+    wetSkin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.5,clearcoat:.35,clearcoatRoughness:.45,normalMap:skinN,normalScale:new T.Vector2(1,1)}),
     fur:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.9,sheen:.35,sheenRoughness:.6,sheenColor:new T.Color(.18,.17,.15),normalMap:furN,normalScale:new T.Vector2(.7,.7)}),
     feather:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.75,sheen:.6,sheenRoughness:.4,sheenColor:new T.Color(.25,.25,.25),normalMap:featherN,normalScale:new T.Vector2(.4,.4)}),
     scale:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.55,clearcoat:.25,clearcoatRoughness:.5,normalMap:scaleN,normalScale:new T.Vector2(.6,.6)}),
@@ -508,6 +516,7 @@ let glamBody=null;
 function matFor(p){const plan=p.plan||'quad',m=mats();
   if(p.glow)return new T.MeshPhysicalMaterial({vertexColors:true,roughness:.15,clearcoat:1,transparent:true,opacity:.72,emissive:p.glow,emissiveIntensity:.35});
   if(p.glam||p.sparkle)return glamBody||(glamBody=addSparkle(new T.MeshPhysicalMaterial({vertexColors:true,roughness:.45,clearcoat:.6,clearcoatRoughness:.2,iridescence:.6,iridescenceIOR:1.4,sheen:.8,sheenColor:new T.Color('#ffb0e0'),normalMap:m.fur.normalMap,normalScale:new T.Vector2(.3,.3)}),50,2.6));
+  if(p.skin)return p.skin==='wet'?m.wetSkin:m.skin;
   if(plan==='fish')return m.wet;
   if(plan==='person')return m.cloth;
   if(plan==='theropod'||p.scaly)return m.scale;
