@@ -584,7 +584,9 @@ function extraMesh(e,p){
     case'eye':add(new T.SphereGeometry(e.r,14,10),e.owl?m.owlEye:m.eye);if(e.owl)add(new T.SphereGeometry(e.r*.5,10,8),m.eye,[0,0,e.r*.6]);break;
     case'tusk':{const geo=new T.ConeGeometry(e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,m.ivory,null,e.down?[Math.PI*.95,0,0]:[1.25,e.s*.12,0]);break}
     case'horn':{const geo=new T.ConeGeometry(e.r,e.len,12);geo.translate(0,e.len/2,0);add(geo,smat(e.col||'#9b948a',{roughness:.6}),null,[e.tilt,0,0]);break}
-    case'horns':{if(e.kind2==='gazelle'){const c=new T.CubicBezierCurve3(new T.Vector3(0,0,0),new T.Vector3(e.s*.02,.14,-.07),new T.Vector3(e.s*.05,.26,-.02),new T.Vector3(e.s*.04,.32,.05));add(new T.TubeGeometry(c,14,.017,7),m.horn);break}
+    case'horns':{const hc={gnu:[[.25,-.05,0],[.38,.12,-.02],[.28,.3,-.08],.04],impala:[[.06,.25,-.12],[.14,.45,-.05],[.08,.6,.02],.022]}[e.kind2];
+      if(hc){const[a,b,c,r]=hc,P=v=>new T.Vector3(e.s*v[0],v[1],v[2]);add(new T.TubeGeometry(new T.CubicBezierCurve3(new T.Vector3(0,0,0),P(a),P(b),P(c)),14,r,7),m.horn);break}
+      if(e.kind2==='gazelle'){const c=new T.CubicBezierCurve3(new T.Vector3(0,0,0),new T.Vector3(e.s*.02,.14,-.07),new T.Vector3(e.s*.05,.26,-.02),new T.Vector3(e.s*.04,.32,.05));add(new T.TubeGeometry(c,14,.017,7),m.horn);break}
       const big=e.kind2==='buffalo',curve=new T.QuadraticBezierCurve3(new T.Vector3(0,0,0),new T.Vector3(e.s*(big?.55:.2),big?.05:.12,-.05),new T.Vector3(e.s*(big?.7:.22),big?.4:.28,-.15));
       add(new T.TubeGeometry(curve,12,big?.06:.045,8),m.horn);break}
     case'antler':{const am=m.antler,mk=(a,b,r)=>{const c=new T.LineCurve3(new T.Vector3(...a),new T.Vector3(...b));add(new T.TubeGeometry(c,2,r,6),am)};const s=e.s;

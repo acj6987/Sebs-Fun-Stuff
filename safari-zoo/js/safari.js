@@ -30,7 +30,7 @@ const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
 async function buildSafari(c,progress){
   const E=ENV[c.hab],r=rng(hash(c.id));
   const scene=new T.Scene();safariScene=scene;
-  world={c,E,scene,ponds:[],cols:new Map(),animals:[],net:null,respawn:[],waters:[],sea:!!c.sea,maxAn:c.sea?70:40};
+  world={c,E,scene,ponds:[],cols:new Map(),animals:[],net:null,respawn:[],waters:[],sea:!!c.sea,maxAn:c.sea?70:c.id==='africa'?65:40};
   world.sky=NATURE.setupSky(R,scene,E);
   if(c.sea){world.islands=[{x:0,z:0,r:72,hill:4}];
     for(let t=0;t<400&&world.islands.length<8;t++){const I={x:(r()-.5)*(WS-150),z:(r()-.5)*(WS-150),r:32+r()*45,hill:r()*9};
