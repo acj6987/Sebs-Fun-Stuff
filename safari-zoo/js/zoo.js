@@ -140,9 +140,11 @@ function buildArea(area,i){
   for(let a=0;a<Math.PI*2;a+=1.8/R0){const d=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(d)<da)continue;cols.push({x:Math.sin(a)*R0,z:Math.cos(a)*R0,r:1})}
   cols.push({x:px,z:pz,r:pr});
   const house=buildHouse(grp,R0,cols);
+  buildBarn(grp,R0,cols,area);
   grp.updateMatrixWorld(true);const W=(lx,lz)=>{const v=grp.localToWorld(V(lx,0,lz));return{x:v.x,z:v.z}};
   zoo.areas.set(area.id,{grp,area,x,z,R0,side,doors,open:0,cols:cols.map(c=>Object.assign(W(c.x,c.z),{r:c.r})),
     pond:Object.assign(W(px,pz),{r:pr}),door:W(0,R0),inside:W(0,R0-16),house,food:[],islands:isl.map(q=>Object.assign(W(q.x,q.z),{r:q.r}))});
+  {const A=zoo.areas.get(area.id);A.barnP=barnArea(A)}
 }
 // the animal house: a big barn inside the dome with an open front, where animals shelter and mums have their babies
 function buildHouse(grp,R0,cols){
@@ -207,6 +209,8 @@ function syncZooAnimals(){
   for(const a of zoo.animals)zoo.scene.remove(a.inst.g);zoo.animals=[];
   for(const area of S.areas){const A=zoo.areas.get(area.id);if(!A)continue;
     for(const an of area.animals){const r=rng(an.uid*13),p=swims(an)?poolSpot(A,r):an.preg?houseSpot(A,r):randomSpot(A,r);addZooAnimal(an,A,p.x,p.z,r()*6.28)}}
+  for(const A of zoo.areas.values()){const P=A.barnP;if(!P)continue;P.area.animals=A.area.barn=A.area.barn||[];
+    for(const an of P.area.animals){const s=barnSpot(P),o=addZooAnimal(an,P,s.x,s.z,Math.random()*6.28);const k=Math.min(1,3.6/o.inst.h,5.5/Math.max(o.inst.len,1));if(k<1)o.inst.inner.scale.multiplyScalar(k)}}
   if(zoo.vetArea)zoo.vetArea.area=vetWard();
   for(const P of[...(zoo.penAreas||[]),zoo.vetArea].filter(Boolean))for(const an of P.area.animals){const o=addZooAnimal(an,P,P.x+(Math.random()-.5)*8,P.z+(Math.random()-.5)*8,Math.random()*6.28);const k=Math.min(1,5/o.inst.h,9/Math.max(o.inst.len,1));if(k<1)o.inst.inner.scale.multiplyScalar(k)}
   syncMumTags();
@@ -219,6 +223,7 @@ function nextSpot(o){
   if(swims(o.an))return poolSpot(o.A);
   if(SP[o.an.k].def.soar&&o.A.islands&&o.A.islands.length&&Math.random()<.55){const q=Math.random()<.6?o.A.islands[Math.floor(Math.random()*o.A.islands.length)]:null;
     if(q){const a=Math.random()*6.28,d=Math.random()*q.r*.6;return{x:q.x+Math.sin(a)*d,z:q.z+Math.cos(a)*d}}return poolSpot(o.A)}
+  if(o.A.pen==='barn')return barnSpot(o.A);
   if(o.A.pen)return{x:o.A.x+(Math.random()-.5)*12,z:o.A.z+(Math.random()-.5)*12};
   const pile=o.A.food.find(f=>f.type===eats(SP[o.an.k]));
   if(pile){const a=(o.an.uid*2.4)%6.28,d=pile.r+1+SP[o.an.k].def.L*.6||3;return{x:pile.x+Math.sin(a)*d,z:pile.z+Math.cos(a)*d,pile}}
@@ -238,11 +243,12 @@ function updateZooAnimals(dt,time){
     // move out of the way of the jeep or of you
     if(driving&&!o.follow&&!swims(o.an)&&Math.hypot(o.x-px,o.z-pz)<9){const a=Math.atan2(o.x-px,o.z-pz);const lim=o.A.R0-4;let nx=o.x+Math.sin(a)*8-o.A.x,nz=o.z+Math.cos(a)*8-o.A.z;const d=Math.hypot(nx,nz);if(d>lim){nx*=lim/d;nz*=lim/d}o.tx=o.A.x+nx;o.tz=o.A.z+nz;o.t=2}
     const dx=o.tx-o.x,dz=o.tz-o.z,d=Math.hypot(dx,dz);let spd=0;
-    if(d>.4){spd=Math.min(SP[o.an.k].s*(o.follow?2.2:driving&&o.t===2?1.4:.55),o.follow?d*2:d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
+    if(d>.4){spd=Math.min(SP[o.an.k].s*(o.follow||o.dash?2.2:driving&&o.t===2?1.4:.55),o.follow?d*2:d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
       const ty=Math.atan2(dx,dz);let dy=ty-o.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.yaw+=dy*Math.min(1,dt*4)}
-    else{o.t-=dt;if(o.pile&&o.pile.left>0){o.pile.left-=dt;o.t=Math.max(o.t,.5)}
+    else{o.t-=dt;o.dash=0;if(o.pile&&o.pile.left>0){o.pile.left-=dt;o.t=Math.max(o.t,.5)}
       if(o.t<=0){o.t=3+Math.random()*6;const p=nextSpot(o);o.tx=p.x;o.tz=p.z;o.pile=p.pile||null}}
     if(o.pile&&o.pile.left<=0)o.pile=null;
+    if(o.A.pen==='barn'){const b=o.A.b;o.x=clamp(o.x,b.x0,b.x1);o.z=clamp(o.z,b.z0,b.z1);o.tx=clamp(o.tx,b.x0,b.x1);o.tz=clamp(o.tz,b.z0,b.z1)}
     const far=Math.hypot(o.x-cam.position.x,o.z-cam.position.z)>110;if(far!==o.far){o.far=far;ANIMALS.setLOD(o.inst,far)}
     ANIMALS.animate(o.inst,dt,spd,time,{graze:spd<.1&&(!!o.pile||Math.sin(time*.3+o.an.uid)>.3)});
     const sw=SP[o.an.k].def.swim;let base=.06;
@@ -328,7 +334,8 @@ function autoHome(){
   const moving=S.holding.splice(0),made=[];
   for(const a of S.areas)for(const an of a.animals.slice())if(SP[an.k].hab!==a.hab){a.animals.splice(a.animals.indexOf(an),1);moving.push(an)}
   for(const an of moving){const hab=SP[an.k].hab;let d=S.areas.find(a=>a.hab===hab);
-    if(!d){d={id:S.aid++,type:'dome',hab,animals:[],eggs:[]};S.areas.push(d);made.push(hab)}d.animals.push(an)}
+    if(!d){d={id:S.aid++,type:'dome',hab,animals:[],eggs:[]};S.areas.push(d);made.push(hab)}
+    const wait=an.wait&&!SP[an.k].def.mate;delete an.wait;(wait?(d.barn=d.barn||[]):d.animals).push(an)}
   // the Mummy Dream megadome is always ready for them at the front of the zoo
   if(!S.areas.some(a=>a.hab==='dream')){S.areas.push({id:S.aid++,type:'dome',hab:'dream',animals:[],eggs:[]});made.push('dream')}
   save();return made;
@@ -768,7 +775,7 @@ function foodAction(){
   // use where YOU are: in the truck or walking about
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   if(inLab()||nearLab(px,pz)){openLab();return}
-  if(nearNursery(px,pz)&&dropEggs())return;if(nearPens(px,pz)&&dropFamily())return;if(nearDoctor(px,pz)&&visitDoctor())return;const f=truckFood();
+  {const bA=nearBarn(px,pz);if(bA&&(bA.area.barn||[]).length){openRelease(bA.area.id);return}}if(nearNursery(px,pz)&&dropEggs())return;if(nearPens(px,pz)&&dropFamily())return;if(nearDoctor(px,pz)&&visitDoctor())return;const f=truckFood();
   if(nearStore()){if(f.meat>=FOOD.max&&f.hay>=FOOD.max){toast('Your truck is full of food! Drive it to a dome and press G to feed the animals.');return}
     f.meat=FOOD.max;f.hay=FOOD.max;save();showFood();toast('🥩🌾 Loaded '+FOOD.max+' crates of meat and '+FOOD.max+' bales of hay onto your truck! Take them to the domes and press G.');return}
   const A=domeAt(car.x,car.z);
@@ -1153,3 +1160,64 @@ function updateLaunchShow(dt){
   const f=g.userData.fire;f.visible=t>3&&t<40;f.scale.set(1,1,.8+Math.random()*.6);
   if(t>=45){sh.t=-40;S.coins+=300;save();coins();if(curView==='drive'&&Math.hypot(me.x-PAD.x,me.z-PAD.z)<150)toast('🚀 A starship full of visitors came back from space! They loved it. +300 coins')}
 }
+
+/* ---------- 🔒 animal houses beside every dome: new animals wait behind bars until you release them ---------- */
+const BARN={x0:-37,x1:-17,z0:1.5,z1:8.5,Ht:5}; // in the dome's own space, just outside its glass wall by the door
+function buildBarn(grp,R0,cols,area){
+  const {x0,x1,Ht}=BARN,z0=R0+BARN.z0,z1=R0+BARN.z1,cx=(x0+x1)/2,W=x1-x0,D=z1-z0;
+  const wall=new T.MeshStandardMaterial({color:'#b8a890',roughness:.85}),roof=new T.MeshStandardMaterial({color:'#6a4a2a',roughness:.7}),iron=new T.MeshStandardMaterial({color:'#3a3d42',metalness:.7,roughness:.35});
+  const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;grp.add(o);return o};
+  box(new T.MeshStandardMaterial({color:'#9a9488',roughness:.95}),cx,.06,(z0+z1)/2,W,.12,D);box(wall,cx,Ht/2,z0,W,Ht,.4);
+  for(const x of[x0,x1])box(wall,x,Ht/2,(z0+z1)/2,.4,Ht,D);box(roof,cx,Ht+.2,(z0+z1)/2,W+1,.4,D+1.2);
+  // the front is all bars, with bars between the three cages too
+  const bars=[];const bar=(x,z,h=Ht,r=.06)=>{const g=new T.CylinderGeometry(r,r,h,6);g.translate(x,h/2,z);bars.push(g)};
+  for(let x=x0+.3;x<x1;x+=.45)bar(x,z1);
+  for(const dx of[W/3,2*W/3])for(let z=z0+.3;z<z1;z+=.45)bar(x0+dx,z);
+  for(const y of[.15,Ht-.15]){const g=new T.BoxGeometry(W,.12,.12);g.translate(cx,y,z1);bars.push(g)}
+  const bm=new T.Mesh(NATURE.merge(bars),iron);bm.castShadow=true;grp.add(bm);
+  const st=new T.Mesh(new T.PlaneGeometry(9,2.2),new T.MeshStandardMaterial({map:signTexture(['🔒 '+(area.hab==='dream'?'DREAM':HAB[area.hab].name.toUpperCase())+' ANIMAL HOUSE','New animals wait here · release them!'],'#6a4210'),roughness:.7}));
+  st.position.set(cx,Ht+1.5,z1+.62);grp.add(st);
+  for(let x=x0;x<=x1;x+=1.6){cols.push({x,z:z1,r:.9});cols.push({x,z:z0,r:.9})}for(let z=z0;z<=z1;z+=1.6){cols.push({x:x0,z,r:.9});cols.push({x:x1,z,r:.9})}
+}
+// where the waiting animals walk about inside the animal house (in world space)
+function barnArea(A){
+  const a=A.grp.localToWorld(V(BARN.x0+1.5,0,A.R0+BARN.z0+1.2)),b=A.grp.localToWorld(V(BARN.x1-1.5,0,A.R0+BARN.z1-1.2));
+  const B={x0:Math.min(a.x,b.x),x1:Math.max(a.x,b.x),z0:Math.min(a.z,b.z),z1:Math.max(a.z,b.z)};
+  A.area.barn=A.area.barn||[];
+  return{pen:'barn',dome:A,b:B,x:(B.x0+B.x1)/2,z:(B.z0+B.z1)/2,R0:4,area:{animals:A.area.barn,hab:'pen'},food:[],pond:{x:0,z:0,r:0}}}
+function barnSpot(P){const b=P.b;return{x:b.x0+Math.random()*(b.x1-b.x0),z:b.z0+Math.random()*(b.z1-b.z0)}}
+function nearBarn(x,z){for(const A of zoo.areas.values()){const P=A.barnP;if(P&&x>P.b.x0-8&&x<P.b.x1+8&&z>P.b.z0-8&&z<P.b.z1+8)return A}return null}
+function barnHint(){const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,A=nearBarn(px,pz);if(!A)return'';const n=(A.area.barn||[]).length;
+  return n?'🔒 '+n+' animal'+(n>1?'s':'')+' waiting in the animal house · press <b>G</b> to release them':'🔒 The animal house is empty'}
+// the Release animals panel: pick a place, then pick who to let out
+let relArea=null;
+function domeName(a){return a.hab==='dream'?'Mummy Dream Dome':a.hab==='dino'?'Ultra Dino Dome':HAB[a.hab].name+' dome'}
+function openRelease(id){relArea=id==null?null:id;renderRelease();$('#relPanel').hidden=false}
+function renderRelease(){
+  const list=$('#relList'),info=$('#relInfo');
+  if(relArea==null){const ws=S.areas.filter(a=>a.animals.length||(a.barn||[]).length);
+    info.textContent=ws.length?'Pick a place:':'No animals yet. Animals you bring to the zoo wait in the animal house next to their dome.';
+    list.innerHTML=ws.map(a=>`<button data-area="${a.id}"><span>${HAB[a.hab]?HAB[a.hab].i:'💖'} ${domeName(a)}</span><small>${(a.barn||[]).length?'🔒 '+a.barn.length+' waiting · ':''}${a.animals.length} out</small></button>`).join('');$('#relBack').hidden=true;return}
+  const a=S.areas.find(x=>x.id===relArea);if(!a){relArea=null;renderRelease();return}
+  const wait={},out={};for(const an of a.barn||[])wait[an.k]=(wait[an.k]||0)+1;for(const an of a.animals)out[an.k]=(out[an.k]||0)+1;
+  const ks=[...new Set([...Object.keys(wait),...Object.keys(out)])];
+  info.textContent='All the animals in the '+domeName(a)+'. Press an animal to let it out, or to put it back in the animal house:';
+  list.innerHTML=((a.barn||[]).length>1?`<button class="all" data-k="*"><span>🔓 Everyone</span><b>RELEASE ALL ×${a.barn.length}</b></button>`:'')+
+    ks.map(k=>wait[k]?`<button data-k="${k}"><span>${SP[k].e} ${SP[k].n} ×${wait[k]}</span><b style="color:#b8741a">🔓 RELEASE</b></button>`
+      :`<button data-back="${k}" style="border-color:#2f9a4a"><span>${SP[k].e} ${SP[k].n} ×${out[k]}</span><b style="color:#2f9a4a">✅ OUT · 🔒 put back</b></button>`).join('');$('#relBack').hidden=false}
+// put animals back in the animal house
+function lockAnimals(id,k){const a=S.areas.find(x=>x.id===id);if(!a)return;a.barn=a.barn||[];const back=a.animals.filter(an=>an.k===k&&!an.preg);if(!back.length){toast('That mum is about to have her baby, so she stays out for now!');return}
+  for(const an of back){a.animals.splice(a.animals.indexOf(an),1);a.barn.push(an)}save();syncZooAnimals();if(curView==='zoo')renderZooUI();toast('🔒 The '+SP[k].n+(back.length>1?'s went':' went')+' back into the animal house.')}
+function releaseAnimals(id,k){
+  const a=S.areas.find(x=>x.id===id);if(!a||!a.barn)return;const out=a.barn.filter(an=>k==='*'||an.k===k);if(!out.length)return;
+  for(const an of out){a.barn.splice(a.barn.indexOf(an),1);a.animals.push(an)}
+  save();syncZooAnimals();if(curView==='zoo')renderZooUI();
+  // they come out of the animal house and run in through the dome's door
+  const A=zoo.areas.get(id);if(A)for(const o of zoo.animals)if(out.includes(o.an)){o.x=A.door.x+(Math.random()-.5)*6;o.z=A.door.z+(Math.random()-.5)*6;o.dash=1}
+  const names=[...new Set(out.map(an=>SP[an.k].n))];
+  toast('🔓 The '+(names.length>2?out.length+' animals':names.join(' and ')+(out.length>1?'s':''))+' ran out into the '+domeName(a)+'!',6000)}
+$('#relList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.area){relArea=+b.dataset.area;renderRelease();return}
+  if(b.dataset.k){releaseAnimals(relArea,b.dataset.k);renderRelease()}
+  if(b.dataset.back){lockAnimals(relArea,b.dataset.back);renderRelease()}});
+$('#relBack').onclick=()=>{relArea=null;renderRelease()};$('#relClose').onclick=()=>$('#relPanel').hidden=true;$('#relOpen').onclick=()=>openRelease(null);

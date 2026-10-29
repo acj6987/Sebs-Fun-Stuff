@@ -271,8 +271,8 @@ function spawnAnimal(initial,force){
   if(sp.def.mate){if(sp.def.male)return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
   const okAt=(x,z)=>livesAt(sp,x,z);
   let x,z,tries=0;do{x=(Math.random()-.5)*2*(LIMIT-15);z=(Math.random()-.5)*2*(LIMIT-15);tries++}
-  while(tries<(world.sea?300:50)&&(!okAt(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
-  if(initial&&world.animals.length<4&&!world.sea){const a=Math.random()*6.28,d=45+Math.random()*30;x=Math.sin(a)*d;z=-Math.cos(a)*d}
+  while(tries<(world.sea||sp.def.swim||sp.def.nearWater?300:50)&&(!okAt(x,z)||Math.hypot(x-me.x,z-me.z)<(initial?45:110)||Math.hypot(x-car.x,z-car.z)<(initial?45:110)));
+  if(initial&&world.animals.length<4&&!world.sea&&!sp.def.swim&&!sp.def.nearWater){const a=Math.random()*6.28,d=45+Math.random()*30;x=Math.sin(a)*d;z=-Math.cos(a)*d}
   // the Mummy Dreams hide on the island furthest from where you start, tucked in among the trees
   if(kinds&&world.islands){const I=world.islands.slice().sort((p,q)=>Math.hypot(q.x,q.z)-Math.hypot(p.x,p.z))[0],a=Math.random()*6.28,d=I.r*.35*Math.random();x=I.x+Math.sin(a)*d;z=I.z+Math.cos(a)*d}
   // animals that live together come as a herd, pride or pack
@@ -286,7 +286,7 @@ function spawnAnimal(initial,force){
   }
 }
 // fish stay in the deep water, land animals stay on the islands; turtles and the Sparkle Zebraffe go anywhere
-function livesAt(sp,x,z){if(!world.sea)return!inPond(x,z);const h=H(x,z),d=sp.def;return d.swim?h<-2.2:d.amph?true:h>.8}
+function livesAt(sp,x,z){if(!world.sea){if(sp.def.swim)return inPond(x,z);if(sp.def.nearWater&&!world.ponds.some(p=>Math.hypot(x-p.x,z-p.z)<p.r+25))return false;return sp.def.amph||!inPond(x,z)}const h=H(x,z),d=sp.def;return d.swim?h<-2.2:d.amph?true:h>.8}
 function removeAnimal(a){world.scene.remove(a.m.g);world.animals.splice(world.animals.indexOf(a),1);
   if(a.grp){a.grp.members=a.grp.members.filter(m=>m!==a)}world.respawn.push(10)}
 // hunters chase their prey; if they catch it, it falls over and is gone
@@ -371,6 +371,9 @@ function updateAnimals(dt,time){
     a.x+=a.vx*dt;a.z+=a.vz*dt;
     if(world.sea&&a.state!=='netted'&&!(a.sp.def.fly&&a.alt>1.5)){const d=a.sp.def,h=H(a.x,a.z);
       if(d.swim?h>-1.3:!d.amph&&h<-.3){a.x-=a.vx*dt;a.z-=a.vz*dt;a.vx=-a.vx;a.vz=-a.vz;a.t=Math.min(a.t,.6)}}
+    // fish and frogs stay in the waterholes
+    if(!world.sea&&a.sp.def.swim&&a.state!=='netted'&&a.state!=='caught'&&!inPond(a.x,a.z)){a.x-=a.vx*dt;a.z-=a.vz*dt;a.vx=-a.vx;a.vz=-a.vz;a.t=Math.min(a.t,.6);
+      if(!inPond(a.x,a.z)){const p=world.ponds.reduce((b,q)=>Math.hypot(a.x-q.x,a.z-q.z)<Math.hypot(a.x-b.x,a.z-b.z)?q:b);a.vx=(p.x-a.x)*.5;a.vz=(p.z-a.z)*.5}}
     const spd=Math.hypot(a.vx,a.vz);
     if(spd>.15){const ty=Math.atan2(a.vx,a.vz);let dy=ty-a.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));a.yaw+=dy*Math.min(1,dt*5)}
     if(a.state!=='wander')a.soar=0;
@@ -385,6 +388,7 @@ function updateAnimals(dt,time){
         if(d.jump&&a.state!=='netted'){a.jt=(a.jt||0)-dt;if(a.jt<-8&&spd>.4&&Math.random()<dt*.15)a.jt=1.3;if(a.jt>0){const q=(1.3-a.jt)/1.3;y+=Math.sin(q*Math.PI)*3.4;pitch=-Math.cos(q*Math.PI)*.7}}
         a.alt=Math.max(h,y)-h}
       else if(h<-a.m.h*.45&&a.alt<1)a.alt=Math.max(a.alt,-a.m.h*.45-h)}
+    else if(a.sp.def.swim&&a.state!=='netted'){const p=world.ponds.find(p=>Math.hypot(a.x-p.x,a.z-p.z)<p.r*1.3);if(p)a.alt=(p.lvl-a.m.h*.7)-H(a.x,a.z)}
     a.m.inner.rotation.x=pitch;
     // far animals: simpler model, very far: hidden
     const vis=d<260;a.m.g.visible=vis;if(!vis)continue;
@@ -618,7 +622,7 @@ function hud(){
   if(mode==='plane'&&plane.star)msg=plane.launchT>0?'🚀 Countdown… hold on tight!':plane.homing?'🛬 Autopilot: flying home to the Launch Room…':'🚀 <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up to space · <b>Shift</b> down · <b>P</b> fly home · '+Math.round(plane.y)+' m high';
   else if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
   else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
-  else if(world.zoo)msg=labHint()||foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
+  else if(world.zoo)msg=labHint()||barnHint()||foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
   else if(world.sea&&H(me.x,me.z)<-1.2&&!target)msg='🤿 Swimming! <b>Space</b> up · <b>Shift</b> dive · <b>F</b> net · <b>E</b> by the '+(sub.on?'submarine':'truck')+' to get in';

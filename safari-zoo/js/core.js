@@ -42,7 +42,7 @@ const CONT=[
    ['Zebra','🦓',1,2.2,{herd:[4,7],L:1.9,W:.68,Hb:.85,leg:.85,legW:.075,neck:.62,neckW:.16,neckAng:.55,headL:.62,headW:.24,headH:.27,real:1,dim:.9,resK:1.6,headType:'horse',earS:1.35,hoof:'#1e1a18',col:'#ecebe3',tex:'stripes',col2:'#17171a',freq:19,thin:.0,noBelly:1,mane:'#151515',snout:'#2a2626',nose:'#141212',ears:'pointy',tail:'tuft',graze:1}],
    ['Giraffe','🦒',1,1.8,{herd:[2,4],L:1.9,W:.72,Hb:.95,leg:1.75,legW:.07,neck:2.1,neckW:.13,neckAng:.28,headL:.58,headW:.2,headH:.24,real:1,resK:1.4,headType:'horse',col:'#e6cf9e',tex:'giraffe',giraF:6,col2:'#6a3412',lineCol:'#ece0c2',ossicones:1,ears:'long',tail:'tuft',tl:.8,graze:0}],
    ['Elephant','🐘',1,1.5,{herd:[3,5],L:3.2,W:1.6,Hb:2,leg:1.3,legW:.3,neck:.25,neckW:.62,neckAng:1.25,headL:1.05,headW:1,headH:1,real:1,heavy:1,dome:1,skin:1,col:'#5f5a55',dust:'#7e5c42',hoof:'#4e4a46',ears:'big',trunk:1,tusks:1,tail:'tuft',tl:1,eyeS:.7,noBelly:1}],
-   ['Hippo','🦛',2,1.6,{herd:[2,3],L:2.9,W:1.45,Hb:1.25,leg:.45,legW:.24,neck:.25,neckW:.6,neckAng:1.35,headL:1.1,headW:.85,headH:.58,muzzle:1.8,real:1,heavy:1,topEyes:1,skin:'wet',col:'#665850',belly:'#7a645c',hoof:'#3e3436',snout:'#7c6660',ears:'round',tail:'short',hp:.2}],
+   ['Hippo','🦛',2,1.6,{herd:[2,3],L:2.9,W:1.45,Hb:1.25,leg:.45,legW:.24,neck:.25,neckW:.6,neckAng:1.35,headL:1.1,headW:.85,headH:.58,muzzle:1.8,real:1,heavy:1,topEyes:1,nearWater:1,amph:1,skin:'wet',col:'#665850',belly:'#7a645c',hoof:'#3e3436',snout:'#7c6660',ears:'round',tail:'short',hp:.2}],
    ['Rhino','🦏',2,1.8,{herd:[1,2],L:2.9,W:1.3,Hb:1.3,leg:.7,legW:.22,neck:.45,neckW:.5,neckAng:1.3,headL:1,headW:.5,headH:.55,hornL:1.5,real:1,heavy:1,shoulderHump:1,skin:1,col:'#6a655e',dust:'#86705a',hoof:'#4a4540',horn:1,ears:'pointy',tail:'tuft',tl:.5,noBelly:1,hp:.45}],
    ['Lion','🦁',2,2,{hunts:['Zebra','Giraffe','Gazelle','Wildebeest','Cape Buffalo','Warthog','Impala'],herd:[3,4],L:1.75,W:.58,Hb:.72,leg:.7,legW:.09,neck:.3,neckW:.24,neckAng:1.05,headL:.45,headW:.4,headH:.4,real:1,headType:'cat',lean:1,col:'#a8763a',back:'#8a5f2c',belly:'#e4cda4',lionMane:'#4e2e14',snout:'#e6d0aa',nose:'#7a4a42',cheeks:1,ears:'round',tail:'tuft',tl:.9,tuftCol:'#3a2210',paws:1}],
    ['Gorilla','🦍',3,1.4,{herd:[2,3],plan:'ape',real:1,col:'#1e1c1c',back:'#55524e',face:'#2c2726',s:1.6}],
@@ -139,7 +139,7 @@ CONT.find(c=>c.id==='africa').animals.push(
  ['Leopard','🐆',3,2.1,{hunts:['Gazelle','Impala','Warthog','Baboon'],herd:[1,1],real:1,resK:1.4,headType:'cat',L:1.45,W:.48,Hb:.55,leg:.62,legW:.075,neck:.3,neckW:.16,neckAng:1,headL:.34,headW:.3,headH:.27,col:'#d9a650',back:'#c4903e',belly:'#f4ead6',tex:'rosette',col2:'#1e140c',snout:'#ecdcb8',nose:'#7a4a42',cheeks:1,ears:'round',tail:'long',tl:.95,paws:1}],
  ['Impala','🦌',1,2.7,{herd:[4,7],real:1,headType:'horse',lean:1,L:1.3,W:.38,Hb:.5,leg:.78,legW:.038,neck:.45,neckW:.09,neckAng:.6,headL:.32,headW:.14,headH:.16,col:'#b8733a',back:'#9a5c2c',belly:'#f6f1e8',rumpWhite:1,snout:'#c08050',nose:'#1e1712',ears:'pointy',earS:1.3,horns:'impala',hoof:'#1e1712',tail:'tuft',tl:.3,tuftCol:'#f6f1e8',graze:1}],
  ['Ostrich','🪶',1,2.6,{herd:[2,4],plan:'bird',s:1.45,body:'#1c1918',wing:'#2a2522',head:'#c9a59a',beak:'#d6b39a',leg:1.25,neck:1.1,neckAng:.12,legCol:'#d8a596',beakL:.45,tailCol:'#f2efe8'}],
- ['Nile Crocodile','🐊',2,1,{hunts:['Gazelle','Wildebeest','Zebra','Impala'],plan:'lizard',col:'#4f5634',col2:'#2f3420',tex:'spots',belly:'#c8c294',s:2.1,croc:1}],
+ ['Nile Crocodile','🐊',2,1,{nearWater:1,amph:1,hunts:['Gazelle','Wildebeest','Zebra','Impala'],plan:'lizard',col:'#4f5634',col2:'#2f3420',tex:'spots',belly:'#c8c294',s:2.1,croc:1}],
  ['Baboon','🐒',1,1.9,{herd:[3,5],plan:'ape',col:'#8a7a58',face:'#3a2e2a',s:.8,tail:1}],
  ['Chimpanzee','🐒',2,1.6,{herd:[2,4],plan:'ape',col:'#1e1a18',face:'#c8a088',s:1}],
  ['Black Mamba','🐍',2,1.8,{plan:'snake',col:'#5c5a52',col2:'#4a4844',belly:'#c8c4b0',s:1,n:22}],
@@ -148,7 +148,12 @@ CONT.find(c=>c.id==='africa').animals.push(
  ['Ring-tailed Lemur','🐒',2,1.8,{herd:[3,5],real:1,L:.45,W:.2,Hb:.2,leg:.2,legW:.035,neck:.08,neckW:.09,neckAng:1.1,headL:.17,headW:.13,headH:.12,col:'#9c9a98',back:'#8a7a6c',belly:'#f0eeea',head:'#9c9a98',snout:'#f0eeea',nose:'#141212',ears:'pointy',tail:'ringed',tl:.65,col2:'#1a1818',paws:1,sz:1.6}],
  ['Aardvark','🐽',2,1.2,{herd:[1,1],real:1,L:1.1,W:.45,Hb:.5,leg:.35,legW:.07,neck:.15,neckW:.2,neckAng:1.25,headL:.55,headW:.22,headH:.2,col:'#9a7a68',back:'#86685a',snout:'#b8988a',nose:'#d8a8a0',ears:'long',earS:1.6,tail:'long',tl:.6,paws:1,hp:.55}],
  ['Pangolin','🦎',3,.9,{herd:[1,1],L:.75,W:.32,Hb:.3,leg:.18,legW:.05,neck:.12,neckW:.14,neckAng:1.2,headL:.22,headW:.12,headH:.12,col:'#8c6a44',scaly:1,rough:.03,ears:'round',tail:'long',tl:.7,paws:1,noBelly:1,sz:1.5}],
- ['Lesser Flamingo','🦩',1,1.4,{herd:[4,6],plan:'bird',s:.65,body:'#f2a6b8',wing:'#e05a7a',head:'#f2a6b8',beak:'#5a2a30',leg:1,neck:.85,neckAng:.15,legCol:'#e98aa0',beakL:.9}]);
+ ['Lesser Flamingo','🦩',1,1.4,{herd:[4,6],nearWater:1,plan:'bird',s:.65,body:'#f2a6b8',wing:'#e05a7a',head:'#f2a6b8',beak:'#5a2a30',leg:1,neck:.85,neckAng:.15,legCol:'#e98aa0',beakL:.9}],
+ // water creatures that live in Africa's waterholes and rivers
+ ['Nile Tilapia','🐟',1,1.4,{swim:1,herd:[3,5],sz:2,plan:'fish',s:.45,tall:.45,wide:.16,col:'#7e8c7a',tex:'stripes',col2:'#5c6a5a',freq:8,thin:.55,belly:'#d8dccc',fin:'#c8705e'}],
+ ['Nile Perch','🐟',2,1.2,{swim:1,herd:[1,2],sz:1.4,plan:'fish',s:1.5,tall:.34,wide:.16,col:'#a6aea6',belly:'#eef0ea',fin:'#8a948c',dorsalS:.12}],
+ ['African Catfish','🐟',1,1,{swim:1,herd:[1,3],sz:1.6,plan:'fish',s:1,tall:.26,wide:.24,col:'#4c4c42',tex:'spots',col2:'#2e2e28',belly:'#c8c0a8',fin:'#3a3a32'}],
+ ['African Clawed Frog','🐸',1,1,{swim:1,herd:[2,4],plan:'frog',col:'#6c6a4c',col2:'#4a4834',tex:'spots',belly:'#e8e0c8',s:.4,sz:1.6}]);
 // the sea: islands, loads of fish, and the one and only Sparkle Zebraffe
 const FISHES=['Clownfish','Blue Tang','Yellow Tang','Angelfish','Pufferfish'];
 CONT.push({id:'ocean',name:'🌊 Deep Blue Sea',place:'Deep blue sea with islands',hab:'ocean',sea:1,deco:['🏝️','🐠','✨'],
@@ -181,7 +186,7 @@ CONT.at(-1).animals.push(
   ['White Jiggly Hippo','🦛',2,1.4,{home:'dream',amph:1,jiggle:1,herd:[2,3],L:2.9,W:1.45,Hb:1.25,leg:.45,legW:.24,neck:.2,neckW:.55,neckAng:1.35,headL:.95,headW:.8,headH:.6,muzzle:1.6,col:'#f6f4f2',belly:'#ffdbe4',hoof:'#e8c8d0',snout:'#ffe2ea',ears:'round',earCol:'#ffc0d0',tail:'short',hp:.2}],
   ['Bubble Dragon','🐉',3,2,{home:'dream',amph:1,soar:1,fly:1,fairy:1,sparkle:1,plan:'lizard',s:1.6,col:'#3ab8ff',tex:'spots',col2:'#b45aff',belly:'#c8f0ff',frill:'#ff7ad8'}]);
 const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=2000000;
-function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.areas.some(a=>a.animals.some(x=>x.k===k))||!!(S.vet&&S.vet.animals.some(x=>x.k===k))||(S.fam||[]).some(p=>p.some(x=>x.k===k))}
+function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.areas.some(a=>a.animals.some(x=>x.k===k)||(a.barn||[]).some(x=>x.k===k))||!!(S.vet&&S.vet.animals.some(x=>x.k===k))||(S.fam||[]).some(p=>p.some(x=>x.k===k))}
 const SP={};
 ENV.carnivore=ENV.dino;
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:a[4].home||c.hab}}));

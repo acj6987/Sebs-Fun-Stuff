@@ -166,7 +166,7 @@ $('#back').onclick=goMap;
 $('#toZoo1').onclick=openZoo;
 $('#toZoo2').onclick=()=>{if(me.pack.length)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
 $('#zooMap').onclick=()=>show('map');
-function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages.map(c=>(delete c.pen,c)));S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They went straight into their domes.'),50)}
+function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages.map(c=>(delete c.pen,c.wait=1,c)));S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They are waiting in the animal house next to their dome. Press 🔓 Release animals to let them out.',7000),50)}
 
 /* ---------- zoo panel ---------- */
 let selected=null;
@@ -190,7 +190,7 @@ function renderAreaCard(){
   if(!area){card.hidden=true;return}
   card.hidden=false;
   $('#acTitle').textContent=(S.areas.indexOf(area)+1)+'. '+HAB[area.hab].i+' '+HAB[area.hab].name+' Dome';
-  $('#acCount').textContent=area.animals.length+' animal'+(area.animals.length===1?'':'s')+' live here'+(area.eggs.length?' · 🥚 '+area.eggs.length+' egg'+(area.eggs.length>1?'s':'')+' waiting to hatch':'')+' · room for as many as you catch';
+  $('#acCount').textContent=area.animals.length+' animal'+(area.animals.length===1?'':'s')+' live here'+(area.eggs.length?' · 🥚 '+area.eggs.length+' egg'+(area.eggs.length>1?'s':'')+' waiting to hatch':'')+((area.barn||[]).length?' · 🔒 '+area.barn.length+' waiting in the animal house':'')+' · room for as many as you catch';
   $('#acList').innerHTML=area.animals.length?area.animals.map(an=>{const s=SP[an.k],ok=happy(an,area);
     return `<li><span class="e">${s.e}</span><span><b>${s.n}${an.born?' (baby)':''}</b><small>${ok?'Happy here':'Wants a '+HAB[s.hab].name+' home'}</small></span><span class="two"><button class="mini" data-load="${an.uid}">🚚 Truck</button><button class="mini" data-free="${an.uid}">🌿 Set free</button></span></li>`}).join('')
     :'<li class="empty">No animals here yet. Catch some '+HAB[area.hab].name+' animals on safari!</li>';
@@ -216,8 +216,8 @@ $('#acList').addEventListener('click',e=>{const area=S.areas.find(a=>a.id===zoo.
   if(fr){if(fr.dataset.sure!=='1'){fr.dataset.sure='1';fr.textContent='Tap again to set free';setTimeout(()=>{if(fr.isConnected){fr.dataset.sure='';fr.textContent='🌿 Set free'}},3000);return}
     const u=+fr.dataset.free,i=area.animals.findIndex(x=>x.uid===u),an=area.animals.splice(i,1)[0];save();syncZooAnimals();renderZooUI();
     toast('Bye bye '+SP[an.k].n+'! It went back to the wild.')}});
-$('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0).map(c=>(delete c.pen,c)));const made=autoHome();
-  [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are back in their domes!')});
+$('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0).map(c=>(delete c.pen,c.wait=1,c)));const made=autoHome();
+  [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are waiting in the animal houses next to their domes. Press 🔓 Release animals to let them out!',6000)});
 $('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=700;w.tx=0;w.tz=-400};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');
 function build(type){const free=(S.freeDomes||0)>0,cost=free?0:250;
