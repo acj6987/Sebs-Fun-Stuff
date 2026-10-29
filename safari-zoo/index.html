@@ -60,6 +60,15 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 #dnaPanel{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(10,30,20,.55)}
 #dnaPanel .dnaBox{background:var(--paper,#fdf3dc);color:var(--ink,#222);border-radius:22px;padding:18px 20px;width:min(560px,92vw);max-height:86vh;overflow:auto;text-align:center}
 #shopPanel{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(40,10,30,.55)}
+#showPanel{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(60,20,10,.55)}
+#showPanel .dnaBox{background:var(--paper,#fdf3dc);color:var(--ink,#222);border-radius:22px;padding:18px 20px;width:min(560px,92vw);max-height:86vh;overflow:auto;text-align:center}
+#showList{display:flex;flex-direction:column;gap:8px;margin:12px 0}#showList button{display:flex;justify-content:space-between;align-items:center;border:3px solid #d8442a;background:#fff;border-radius:14px;padding:10px 14px;font-weight:800;font-size:17px}
+#speaker{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;display:flex;gap:12px;align-items:center;background:#2a1a3a;color:#fff;border:4px solid #ffcf3a;border-radius:20px;padding:10px 14px;width:min(640px,94vw);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#speaker .mic{font-size:44px;animation:micBob .5s ease-in-out infinite alternate}#speaker .say{flex:1;font-weight:800;font-size:17px;line-height:1.3}
+#speaker .btns{display:flex;flex-direction:column;gap:6px}#speaker button{border:0;border-radius:12px;padding:8px 12px;font-weight:800;font-size:15px;background:#ffcf3a;color:#3a1a00}#speaker #showEnd{background:#eee}
+@keyframes micBob{to{transform:translateY(-4px) rotate(-8deg)}}
+#cheer{position:fixed;inset:0;pointer-events:none;z-index:49;overflow:hidden}#cheer i{position:absolute;bottom:-60px;font-size:40px;font-style:normal;animation:cheerUp 2.2s ease-out forwards}
+@keyframes cheerUp{to{transform:translateY(-75vh) scale(1.3);opacity:0}}
 #relPanel{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(40,25,10,.55)}
 #relPanel .dnaBox{background:var(--paper,#fdf3dc);color:var(--ink,#222);border-radius:22px;padding:18px 20px;width:min(560px,92vw);max-height:86vh;overflow:auto;text-align:center}
 #relList{display:flex;flex-direction:column;gap:8px;margin:12px 0}#relList button{display:flex;justify-content:space-between;align-items:center;border:3px solid #b8741a;background:#fff;border-radius:14px;padding:10px 14px;font-weight:800;font-size:17px}#relList button.all{background:#ffe9b8}
@@ -238,6 +247,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <button class="act green" id="driveZoo">🚙 Drive around the zoo</button>
     <button class="act" id="goEnc">Go into an enclosure</button>
     <button class="act blue" id="dinoTour">🚙 Give a tour · 600 each</button>
+    <button class="act" id="showOpen" style="background:#d8442a;box-shadow:0 5px 0 #7a2010">🎤 Feeding Show</button>
     <button class="act" id="relOpen" style="background:#b8741a;box-shadow:0 5px 0 #6a4210">🔓 Release animals</button>
     <button class="act" id="shopOpen" style="background:#c2368a;box-shadow:0 5px 0 #6a1a4a">🛒 Shop</button>
     <button class="act" id="dnaOpen" style="background:#1a9a5a;box-shadow:0 5px 0 #0e5a34">🧬 DNA Lab</button>
@@ -279,6 +289,9 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 
 <div id="loading" hidden><div class="spinner"></div><span id="loadTxt">Loading…</span><small>Building the 3D world takes a few seconds</small></div>
 <div id="toast" hidden></div>
+<div id="showPanel" hidden><div class="dnaBox"><h2>🎤 Feeding Show</h2><p>Visitors pay <b>600,000</b> coins to watch you feed an animal! Which animal?</p><div id="showList"></div><button class="act blue" id="showClose">Close</button></div></div>
+<div id="speaker" hidden><div class="mic">🎤</div><div class="say"></div><div class="btns"><button id="showFeed">🍖 Throw food</button><button id="showEnd">End show</button></div></div>
+<div id="cheer"></div>
 <div id="relPanel" hidden><div class="dnaBox"><h2>🔓 Release animals</h2><p id="relInfo"></p><div id="relList"></div><button class="act blue" id="relBack" hidden>⬅ Back</button> <button class="act blue" id="relClose">Close</button></div></div>
 <div id="shopPanel" hidden><div class="dnaBox"><h2>🛒 Zoo Shop</h2><p id="shopCoins"></p><div id="shopList"></div><button class="act blue" id="shopClose">Close</button></div></div>
 <div id="dnaPanel" hidden><div class="dnaBox"><h2>🧬 DNA Lab</h2><p>Pick two kinds of DNA, then mix them to make a brand-new animal!</p>

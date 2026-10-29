@@ -144,7 +144,6 @@ function buildArea(area,i){
   grp.updateMatrixWorld(true);const W=(lx,lz)=>{const v=grp.localToWorld(V(lx,0,lz));return{x:v.x,z:v.z}};
   zoo.areas.set(area.id,{grp,area,x,z,R0,side,doors,open:0,cols:cols.map(c=>Object.assign(W(c.x,c.z),{r:c.r})),
     pond:Object.assign(W(px,pz),{r:pr}),door:W(0,R0),inside:W(0,R0-16),house,food:[],islands:isl.map(q=>Object.assign(W(q.x,q.z),{r:q.r}))});
-  {const A=zoo.areas.get(area.id);A.barnP=barnArea(A)}
 }
 // the animal house: a big barn inside the dome with an open front, where animals shelter and mums have their babies
 function buildHouse(grp,R0,cols){
@@ -209,8 +208,7 @@ function syncZooAnimals(){
   for(const a of zoo.animals)zoo.scene.remove(a.inst.g);zoo.animals=[];
   for(const area of S.areas){const A=zoo.areas.get(area.id);if(!A)continue;
     for(const an of area.animals){const r=rng(an.uid*13),p=swims(an)?poolSpot(A,r):an.preg?houseSpot(A,r):randomSpot(A,r);addZooAnimal(an,A,p.x,p.z,r()*6.28)}}
-  for(const A of zoo.areas.values()){const P=A.barnP;if(!P)continue;P.area.animals=A.area.barn=A.area.barn||[];
-    for(const an of P.area.animals){const s=barnSpot(P),o=addZooAnimal(an,P,s.x,s.z,Math.random()*6.28);const k=Math.min(1,3.6/o.inst.h,5.5/Math.max(o.inst.len,1));if(k<1)o.inst.inner.scale.multiplyScalar(k)}}
+  for(const A of zoo.areas.values())syncBarn(A);
   if(zoo.vetArea)zoo.vetArea.area=vetWard();
   for(const P of[...(zoo.penAreas||[]),zoo.vetArea].filter(Boolean))for(const an of P.area.animals){const o=addZooAnimal(an,P,P.x+(Math.random()-.5)*8,P.z+(Math.random()-.5)*8,Math.random()*6.28);const k=Math.min(1,5/o.inst.h,9/Math.max(o.inst.len,1));if(k<1)o.inst.inner.scale.multiplyScalar(k)}
   syncMumTags();
@@ -272,7 +270,7 @@ function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
-  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);updateLaunchShow(dt);
+  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);updateShow(dt,time);updateLaunchShow(dt);
   for(const p of zoo.skyPlanes||[]){p.a+=p.spd/p.r*dt;const x=p.cx+Math.cos(p.a)*p.r,z=p.cz+Math.sin(p.a)*p.r,d=Math.sign(p.spd);p.g.position.set(x,p.h,z);p.g.rotation.set(0,Math.atan2(-Math.sin(p.a)*d,Math.cos(p.a)*d),-d*.25,'YXZ');p.g.userData.prop.rotation.z+=dt*40}
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
@@ -1162,31 +1160,45 @@ function updateLaunchShow(dt){
 }
 
 /* ---------- 🔒 animal houses beside every dome: new animals wait behind bars until you release them ---------- */
-const BARN={x0:-37,x1:-17,z0:1.5,z1:8.5,Ht:5}; // in the dome's own space, just outside its glass wall by the door
+// a long row of barred cages along the front of the dome: one cage for each kind of animal, room for hundreds
+const BARN={n:28,w:6,start:17,z0:1.5,z1:8.5,Ht:5,show:4};
+function cageX(i){const side=i<BARN.n?-1:1,j=i%BARN.n;return side*(BARN.start+BARN.w*(j+.5))}
 function buildBarn(grp,R0,cols,area){
-  const {x0,x1,Ht}=BARN,z0=R0+BARN.z0,z1=R0+BARN.z1,cx=(x0+x1)/2,W=x1-x0,D=z1-z0;
-  const wall=new T.MeshStandardMaterial({color:'#b8a890',roughness:.85}),roof=new T.MeshStandardMaterial({color:'#6a4a2a',roughness:.7}),iron=new T.MeshStandardMaterial({color:'#3a3d42',metalness:.7,roughness:.35});
-  const box=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;grp.add(o);return o};
-  box(new T.MeshStandardMaterial({color:'#9a9488',roughness:.95}),cx,.06,(z0+z1)/2,W,.12,D);box(wall,cx,Ht/2,z0,W,Ht,.4);
-  for(const x of[x0,x1])box(wall,x,Ht/2,(z0+z1)/2,.4,Ht,D);box(roof,cx,Ht+.2,(z0+z1)/2,W+1,.4,D+1.2);
-  // the front is all bars, with bars between the three cages too
-  const bars=[];const bar=(x,z,h=Ht,r=.06)=>{const g=new T.CylinderGeometry(r,r,h,6);g.translate(x,h/2,z);bars.push(g)};
-  for(let x=x0+.3;x<x1;x+=.45)bar(x,z1);
-  for(const dx of[W/3,2*W/3])for(let z=z0+.3;z<z1;z+=.45)bar(x0+dx,z);
-  for(const y of[.15,Ht-.15]){const g=new T.BoxGeometry(W,.12,.12);g.translate(cx,y,z1);bars.push(g)}
-  const bm=new T.Mesh(NATURE.merge(bars),iron);bm.castShadow=true;grp.add(bm);
-  const st=new T.Mesh(new T.PlaneGeometry(9,2.2),new T.MeshStandardMaterial({map:signTexture(['🔒 '+(area.hab==='dream'?'DREAM':HAB[area.hab].name.toUpperCase())+' ANIMAL HOUSE','New animals wait here · release them!'],'#6a4210'),roughness:.7}));
-  st.position.set(cx,Ht+1.5,z1+.62);grp.add(st);
-  for(let x=x0;x<=x1;x+=1.6){cols.push({x,z:z1,r:.9});cols.push({x,z:z0,r:.9})}for(let z=z0;z<=z1;z+=1.6){cols.push({x:x0,z,r:.9});cols.push({x:x1,z,r:.9})}
+  const {n,w,start,Ht}=BARN,z0=R0+BARN.z0,z1=R0+BARN.z1,D=z1-z0,zc=(z0+z1)/2,L=n*w;
+  const walls=[],roofs=[],bars=[],floors=[];
+  const box=(list,a,b,c,x,y,z)=>{const g=new T.BoxGeometry(a,b,c);g.translate(x,y,z);list.push(g)};
+  const bar=(x,z)=>{const g=new T.CylinderGeometry(.06,.06,Ht,6);g.translate(x,Ht/2,z);bars.push(g)};
+  for(const sd of[-1,1]){const xa=sd*start,xb=sd*(start+L),xm=(xa+xb)/2;
+    box(floors,L,.12,D,xm,.06,zc);box(walls,L,Ht,.4,xm,Ht/2,z0);box(roofs,L+1,.4,D+1.2,xm,Ht+.2,zc);
+    for(const x of[xa,xb])box(walls,.4,Ht,D,x,Ht/2,zc);
+    for(let t=.3;t<L;t+=.45)bar(xa+sd*t,z1);
+    for(let c=1;c<n;c++)for(let z=z0+.3;z<z1;z+=.45)bar(xa+sd*c*w,z);
+    for(const y of[.15,Ht-.15])box(bars,L,.12,.12,xm,y,z1);
+    for(let t=0;t<=L;t+=1.6){cols.push({x:xa+sd*t,z:z1,r:.9});cols.push({x:xa+sd*t,z:z0,r:.9})}
+    for(let z=z0;z<=z1;z+=1.6)for(const x of[xa,xb])cols.push({x,z,r:.9})}
+  const mk=(list,m)=>{const o=new T.Mesh(NATURE.merge(list),m);o.castShadow=o.receiveShadow=true;grp.add(o)};
+  mk(floors,new T.MeshStandardMaterial({color:'#9a9488',roughness:.95}));mk(walls,new T.MeshStandardMaterial({color:'#b8a890',roughness:.85}));
+  mk(roofs,new T.MeshStandardMaterial({color:'#6a4a2a',roughness:.7}));mk(bars,new T.MeshStandardMaterial({color:'#3a3d42',metalness:.7,roughness:.35}));
+  const st=new T.Mesh(new T.PlaneGeometry(9,2.2),new T.MeshStandardMaterial({map:signTexture(['🔒 '+(area.hab==='dream'?'DREAM':area.hab==='dino'?'DINO':HAB[area.hab].name.toUpperCase())+' ANIMAL HOUSE','Every animal has its own cage'],'#6a4210'),roughness:.7}));
+  st.position.set(-start-4.5,Ht+2.6,z1+.62);grp.add(st);
 }
-// where the waiting animals walk about inside the animal house (in world space)
-function barnArea(A){
-  const a=A.grp.localToWorld(V(BARN.x0+1.5,0,A.R0+BARN.z0+1.2)),b=A.grp.localToWorld(V(BARN.x1-1.5,0,A.R0+BARN.z1-1.2));
+// the kinds of animal waiting, in the order they arrived: each one gets the next cage
+function barnKinds(area){const ks=[];for(const an of area.barn||[])if(!ks.includes(an.k))ks.push(an.k);return ks.slice(0,BARN.n*2)}
+function cageArea(A,i){
+  const x=cageX(i),a=A.grp.localToWorld(V(x-BARN.w/2+1,0,A.R0+BARN.z0+1.2)),b=A.grp.localToWorld(V(x+BARN.w/2-1,0,A.R0+BARN.z1-1.2));
   const B={x0:Math.min(a.x,b.x),x1:Math.max(a.x,b.x),z0:Math.min(a.z,b.z),z1:Math.max(a.z,b.z)};
-  A.area.barn=A.area.barn||[];
-  return{pen:'barn',dome:A,b:B,x:(B.x0+B.x1)/2,z:(B.z0+B.z1)/2,R0:4,area:{animals:A.area.barn,hab:'pen'},food:[],pond:{x:0,z:0,r:0}}}
+  return{pen:'barn',dome:A,b:B,x:(B.x0+B.x1)/2,z:(B.z0+B.z1)/2,R0:2,area:{animals:A.area.barn,hab:'pen'},food:[],pond:{x:0,z:0,r:0}}}
+// put the waiting animals in their cages, with a name sign on each one
+function syncBarn(A){
+  A.area.barn=A.area.barn||[];if(A.barnSigns)A.grp.remove(A.barnSigns);const g=new T.Group();A.barnSigns=g;A.grp.add(g);A.cages={};
+  barnKinds(A.area).forEach((k,i)=>{const P=cageArea(A,i);A.cages[k]=P;const n=A.area.barn.filter(an=>an.k===k).length;
+    const sg=new T.Mesh(new T.PlaneGeometry(5.4,1.5),new T.MeshStandardMaterial({map:signTexture([SP[k].e+' '+SP[k].n,'×'+n],'#3a2a1a'),roughness:.7}));
+    sg.position.set(cageX(i),BARN.Ht-.9,A.R0+BARN.z1+.3);g.add(sg);
+    A.area.barn.filter(an=>an.k===k).slice(0,BARN.show).forEach(an=>{const s=barnSpot(P),o=addZooAnimal(an,P,s.x,s.z,Math.random()*6.28);
+      const f=Math.min(1,3.4/o.inst.h,4/Math.max(o.inst.len,1));if(f<1)o.inst.inner.scale.multiplyScalar(f)})})}
 function barnSpot(P){const b=P.b;return{x:b.x0+Math.random()*(b.x1-b.x0),z:b.z0+Math.random()*(b.z1-b.z0)}}
-function nearBarn(x,z){for(const A of zoo.areas.values()){const P=A.barnP;if(P&&x>P.b.x0-8&&x<P.b.x1+8&&z>P.b.z0-8&&z<P.b.z1+8)return A}return null}
+function nearBarn(x,z){for(const A of zoo.areas.values()){if(!A.grp)continue;const l=A.grp.worldToLocal(V(x,0,z));
+  if(Math.abs(l.x)>BARN.start-6&&Math.abs(l.x)<BARN.start+BARN.n*BARN.w+6&&l.z>A.R0-4&&l.z<A.R0+BARN.z1+10)return A}return null}
 function barnHint(){const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,A=nearBarn(px,pz);if(!A)return'';const n=(A.area.barn||[]).length;
   return n?'🔒 '+n+' animal'+(n>1?'s':'')+' waiting in the animal house · press <b>G</b> to release them':'🔒 The animal house is empty'}
 // the Release animals panel: pick a place, then pick who to let out
@@ -1202,7 +1214,7 @@ function renderRelease(){
   const wait={},out={};for(const an of a.barn||[])wait[an.k]=(wait[an.k]||0)+1;for(const an of a.animals)out[an.k]=(out[an.k]||0)+1;
   const ks=[...new Set([...Object.keys(wait),...Object.keys(out)])];
   info.textContent='All the animals in the '+domeName(a)+'. Press an animal to let it out, or to put it back in the animal house:';
-  list.innerHTML=((a.barn||[]).length>1?`<button class="all" data-k="*"><span>🔓 Everyone</span><b>RELEASE ALL ×${a.barn.length}</b></button>`:'')+
+  list.innerHTML=(a.animals.length?`<button class="all" data-allin="1"><span>🔒 All of them in</span><b>PUT ALL IN ×${a.animals.length}</b></button>`:'')+((a.barn||[]).length>1?`<button class="all" data-k="*"><span>🔓 Everyone</span><b>RELEASE ALL ×${a.barn.length}</b></button>`:'')+
     ks.map(k=>wait[k]?`<button data-k="${k}"><span>${SP[k].e} ${SP[k].n} ×${wait[k]}</span><b style="color:#b8741a">🔓 RELEASE</b></button>`
       :`<button data-back="${k}" style="border-color:#2f9a4a"><span>${SP[k].e} ${SP[k].n} ×${out[k]}</span><b style="color:#2f9a4a">✅ OUT · 🔒 put back</b></button>`).join('');$('#relBack').hidden=false}
 // put animals back in the animal house
@@ -1219,5 +1231,49 @@ function releaseAnimals(id,k){
 $('#relList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.area){relArea=+b.dataset.area;renderRelease();return}
   if(b.dataset.k){releaseAnimals(relArea,b.dataset.k);renderRelease()}
-  if(b.dataset.back){lockAnimals(relArea,b.dataset.back);renderRelease()}});
+  if(b.dataset.back){lockAnimals(relArea,b.dataset.back);renderRelease()}
+  if(b.dataset.allin){const a=S.areas.find(x=>x.id===relArea);if(a)for(const k of new Set(a.animals.map(an=>an.k)))lockAnimals(relArea,k);renderRelease()}});
 $('#relBack').onclick=()=>{relArea=null;renderRelease()};$('#relClose').onclick=()=>$('#relPanel').hidden=true;$('#relOpen').onclick=()=>openRelease(null);
+
+/* ---------- 🎤 the Feeding Show: visitors pay to watch you feed an animal, the speaker tells everyone and the crowd cheers ---------- */
+const SHOW_FEE=600000;
+const SHOW_LINES=['Look at it go! What an appetite!','Give it up for the zookeeper!','More food coming up! Who wants more?','Wow! Did you see that? Amazing!','Everybody cheer! Louder!','Yum yum yum! Best dinner ever!'];
+function openShow(){
+  const seen=new Set(),ks=[];for(const a of S.areas)for(const an of a.animals)if(!seen.has(an.k)&&zoo.animals.some(o=>o.an===an)){seen.add(an.k);ks.push(an.k)}
+  $('#showList').innerHTML=ks.length?ks.map(k=>`<button data-show="${k}"><span>${SP[k].e} ${SP[k].n}</span><small>👥 +600,000</small></button>`).join(''):'<p>Release some animals into their domes first!</p>';
+  $('#showPanel').hidden=false}
+function showSay(text){$('#speaker .say').textContent='📢 '+text;
+  try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1.05;u.pitch=1.15;speechSynthesis.speak(u)}}catch(e){}}
+// the crowd cheers: clapping hands and confetti float up, and you hear them
+function cheer(){
+  const box=$('#cheer');for(let i=0;i<14;i++){const e=document.createElement('i');e.textContent=['👏','🎉','🙌','⭐','🥳','📣'][i%6];e.style.left=(5+Math.random()*90)+'%';e.style.animationDelay=(Math.random()*.5)+'s';box.appendChild(e);setTimeout(()=>e.remove(),2800)}
+  if(zoo.show2)zoo.show2.cheerT=2.5;
+  try{const ac=zoo.ac||(zoo.ac=new(window.AudioContext||window.webkitAudioContext)()),n=ac.sampleRate*1.8,buf=ac.createBuffer(1,n,ac.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<n;i++){const t=i/n;d[i]=(Math.random()*2-1)*Math.min(1,t*8)*(1-t)*(.6+.4*Math.sin(i/ac.sampleRate*40))}
+    const s=ac.createBufferSource();s.buffer=buf;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=1100;f.Q.value=.7;const g=ac.createGain();g.gain.value=.5;s.connect(f).connect(g).connect(ac.destination);s.start()}catch(e){}}
+function startShow(k){
+  const o=zoo.animals.find(o=>o.an.k===k&&S.areas.includes(o.A.area));if(!o){toast('That animal is not out in its dome right now');return}
+  $('#showPanel').hidden=true;if(zoo.show2)endShow(true);
+  // a crowd gathers round to watch
+  const crowd=[];for(let i=0;i<12;i++){const a=-1.2+i*.22,r=11+(i%2)*2.5,inst=ANIMALS.make(personSp(i%LOOKS.length));const x=o.x+Math.sin(a+Math.PI)*r,z=o.z+Math.cos(a+Math.PI)*r;
+    inst.g.position.set(x,0,z);inst.g.rotation.y=Math.atan2(o.x-x,o.z-z);zoo.scene.add(inst.g);crowd.push({inst,x,z,ph:Math.random()*6})}
+  zoo.show2={k,A:o.A,o,crowd,t:0,cheerT:0};
+  S.coins+=SHOW_FEE;save();coins();
+  const w=zoo.cam.w;w.tx=o.x;w.tz=o.z;w.dist=22;w.pitch=.35;
+  $('#speaker').hidden=false;const n=SP[k].n;
+  showSay('Ladies and gentlemen, boys and girls! Welcome to the Feeding Show! Today we are feeding the '+n+'! Give a big cheer!');cheer();
+  setTimeout(()=>{if(zoo.show2&&zoo.show2.k===k)throwShowFood()},3500);
+  toast('🎤 The visitors paid 600,000 coins to watch the '+n+' Feeding Show!',6000)}
+function throwShowFood(){
+  const sh=zoo.show2;if(!sh)return;const o=sh.o,type=eats(SP[sh.k])||'meat';
+  dropPile(sh.A,type,o.x+(Math.random()-.5)*4,o.z+(Math.random()-.5)*4);
+  for(const q of zoo.animals)if(q.A===sh.A&&q.an.k===sh.k){const s=nextSpot(q);q.tx=s.x;q.tz=s.z;q.pile=s.pile||null;q.t=0;q.dash=1}
+  showSay(SHOW_LINES[Math.floor(Math.random()*SHOW_LINES.length)]);cheer()}
+function endShow(quiet){const sh=zoo.show2;if(!sh)return;for(const c of sh.crowd)zoo.scene.remove(c.inst.g);zoo.show2=null;$('#speaker').hidden=true;
+  try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}if(!quiet)toast('🎤 What a show! The visitors loved it. Come back soon!')}
+function updateShow(dt,time){const sh=zoo.show2;if(!sh)return;sh.t+=dt;sh.cheerT-=dt;
+  for(const c of sh.crowd){ANIMALS.animate(c.inst,dt,0,time,{});c.inst.g.position.y=sh.cheerT>0?Math.abs(Math.sin(time*9+c.ph))*.5:0}
+  if(curView==='zoo'){const w=zoo.cam.w;w.tx=lerp(w.tx,sh.o.x,dt*2);w.tz=lerp(w.tz,sh.o.z,dt*2)}}
+$('#showOpen').onclick=openShow;$('#showClose').onclick=()=>$('#showPanel').hidden=true;
+$('#showList').addEventListener('click',e=>{const b=e.target.closest('[data-show]');if(b)startShow(b.dataset.show)});
+$('#showFeed').onclick=throwShowFood;$('#showEnd').onclick=()=>endShow();
