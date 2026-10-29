@@ -1243,8 +1243,7 @@ function openShow(){
   const seen=new Set(),ks=[];for(const a of S.areas)for(const an of a.animals)if(!seen.has(an.k)&&zoo.animals.some(o=>o.an===an)){seen.add(an.k);ks.push(an.k)}
   $('#showList').innerHTML=ks.length?ks.map(k=>`<button data-show="${k}"><span>${SP[k].e} ${SP[k].n}</span><small>👥 +600,000</small></button>`).join(''):'<p>Release some animals into their domes first!</p>';
   $('#showPanel').hidden=false}
-function showSay(text){$('#speaker .say').textContent='📢 '+text;
-  try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1.05;u.pitch=1.15;speechSynthesis.speak(u)}}catch(e){}}
+function showSay(text){$('#speaker .say').textContent='📢 '+text}
 // the crowd cheers: clapping hands and confetti float up, and you hear them
 function cheer(){
   const box=$('#cheer');for(let i=0;i<14;i++){const e=document.createElement('i');e.textContent=['👏','🎉','🙌','⭐','🥳','📣'][i%6];e.style.left=(5+Math.random()*90)+'%';e.style.animationDelay=(Math.random()*.5)+'s';box.appendChild(e);setTimeout(()=>e.remove(),2800)}
@@ -1326,24 +1325,29 @@ function droneModel(){const g=new T.Group(),body=new T.MeshStandardMaterial({col
 function startProgramme(){
   const seen=new Set(),list=[];for(const o of zoo.animals)if(S.areas.includes(o.A.area)&&!seen.has(o.an.k)){seen.add(o.an.k);list.push(o)}
   if(!list.length){toast('Release some animals into their domes first, then the drone can film them!');return}
-  if(zoo.show2)endShow(true);list.sort(()=>Math.random()-.5);
+  if(zoo.show2)endShow(true);
   const d=droneModel();zoo.scene.add(d);const c=zoo.cam;d.position.set(c.tx,30,c.tz);
-  zoo.prog={list:list.slice(0,8),i:-1,drone:d,ang:0,viewers:800+Math.floor(Math.random()*400),earned:0,seg:0};
+  zoo.prog={list,drone:d,ang:0,viewers:800+Math.floor(Math.random()*400),earned:0};
   document.body.classList.add('onAir');$('#tv').hidden=false;cam.position.set(c.tx,40,c.tz);
-  sayLines(['Hello and welcome to The Animal Programme! Today our drone pilot Dan is flying us around the zoo to meet the animals. Let\'s go!'],()=>nextSegment())}
-function nextSegment(){
-  const P=zoo.prog;if(!P)return;P.i++;
-  if(P.i>=P.list.length){sayLines(['That\'s all for today! Thank you for watching The Animal Programme. See you next time!'],()=>stopProgramme());return}
-  const o=P.list[P.i];if(!zoo.animals.includes(o)){nextSegment();return}
-  P.o=o;P.ang=Math.random()*6;P.seg++;const pay=P.viewers*5;P.earned+=pay;S.coins+=pay;save();coins();
-  sayLines(storyFor(o),()=>{if(zoo.prog===P)setTimeout(()=>{if(zoo.prog===P&&P.o===o)nextSegment()},2500)})}
+  $('#tvPick').innerHTML='<b style="color:#fff;text-shadow:0 1px 3px #000">🚁 Where should the drone go?</b>'+list.map(o=>`<button data-go="${o.an.k}">${SP[o.an.k].e} ${SP[o.an.k].n}</button>`).join('');
+  $('#tvSub').textContent='Welcome to The Animal Programme! Pick an animal (or say or type its name) and Dan the drone pilot will fly there.'}
+// fly the drone to where that kind of animal lives, and show its story to read
+function goToAnimal(k){
+  const P=zoo.prog;if(!P)return;const o=zoo.animals.find(q=>q.an.k===k&&S.areas.includes(q.A.area));if(!o){toast('That animal is not out in a dome right now');return}
+  P.o=o;P.ang=Math.random()*6;const pay=P.viewers*5;P.earned+=pay;S.coins+=pay;save();coins();
+  for(const b of document.querySelectorAll('#tvPick button'))b.classList.toggle('on',b.dataset.go===k);
+  $('#tvSub').textContent=storyFor(o).join('\n')}
+// a name you said or typed: find the animal it means
+function animalNamed(text){const t=(text||'').toLowerCase();if(!zoo.prog)return null;
+  const hits=zoo.prog.list.map(o=>o.an.k).filter(k=>{const n=SP[k].n.toLowerCase();return t.includes(n)||n.split(' ').some(w=>w.length>3&&t.includes(w))||t.includes(n.replace(/s$/,''))});
+  return hits.sort((a,b)=>SP[b].n.length-SP[a].n.length)[0]||null}
 function stopProgramme(){const P=zoo.prog;if(!P)return;zoo.scene.remove(P.drone);zoo.prog=null;document.body.classList.remove('onAir');$('#tv').hidden=true;$('#tvSub').textContent='';
   try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}toast('📺 The Animal Programme is over! '+P.viewers.toLocaleString()+' people watched at home and you earned '+P.earned.toLocaleString()+' coins.',7000)}
 // say lines one after another out loud, with subtitles; fall back to timers if the browser cannot speak
-function sayLines(lines,done){const id=(sayLines.id=(sayLines.id||0)+1);let i=0;
+function sayLines(lines,done,voice){const id=(sayLines.id=(sayLines.id||0)+1);let i=0;
   const next=()=>{if(sayLines.id!==id)return;if(i>=lines.length){done&&done();return}const t=lines[i++];$('#tvSub').textContent=t;if(!$('#speaker').hidden)$('#speaker .say').textContent='📢 '+t;
-    let ok=false;try{if(window.speechSynthesis&&window.SpeechSynthesisUtterance){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1.05;u.onend=()=>setTimeout(next,350);u.onerror=()=>setTimeout(next,1500);speechSynthesis.speak(u);ok=true}}catch(e){}
-    if(!ok)setTimeout(next,1200+t.length*55)};
+    let ok=false;try{if(voice&&window.speechSynthesis&&window.SpeechSynthesisUtterance){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1.05;u.onend=()=>setTimeout(next,350);u.onerror=()=>setTimeout(next,1500);speechSynthesis.speak(u);ok=true}}catch(e){}
+    if(!ok)setTimeout(next,2500+t.length*70)};
   next()}
 function progCamera(dt,time){
   const P=zoo.prog,o=P.o,d=P.drone;for(const p of d.userData.props)p.rotation.y+=dt*40;
@@ -1357,7 +1361,8 @@ function progCamera(dt,time){
   const back=V(dp.x-lx,0,dp.z-lz).normalize();cam.position.lerp(V(dp.x+back.x*2.5,dp.y+1,dp.z+back.z*2.5),Math.min(1,dt*3));cam.lookAt(lx,ly,lz);
   zoo.cam.tx=dp.x;zoo.cam.tz=dp.z;
   P.viewers+=Math.floor(Math.random()*3);$('#tvViewers').textContent='👀 '+P.viewers.toLocaleString()+' watching at home'}
-$('#progOpen').onclick=startProgramme;$('#tvNext').onclick=()=>{if(zoo.prog){sayLines.id++;nextSegment()}};$('#tvStop').onclick=stopProgramme;
+$('#progOpen').onclick=startProgramme;$('#tvStop').onclick=stopProgramme;$('#tvType').onclick=()=>{$('#sayBox').hidden=false;$('#sayIn').focus()};
+$('#tvPick').addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b)goToAnimal(b.dataset.go)});
 
 /* ---------- 🎙️ your own voice through the zoo speakers ---------- */
 let talk=null;
@@ -1375,12 +1380,12 @@ function talkStop(){
     try{const ac=zoo.ac||(zoo.ac=new(window.AudioContext||window.webkitAudioContext)()),buf=await ac.decodeAudioData(await new Blob(t.chunks).arrayBuffer());
       const s=ac.createBufferSource();s.buffer=buf;const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=500;const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3500;
       const ws=ac.createWaveShaper(),cv=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;cv[i]=Math.tanh(x*2.5)}ws.curve=cv;const g=ac.createGain();g.gain.value=1.2;
-      s.connect(hp).connect(lp).connect(ws).connect(g).connect(ac.destination);s.start();showWords(t.words||'📢 (your voice)');if(zoo.show2)cheer()}catch(e){openSayBox()}};
+      s.connect(hp).connect(lp).connect(ws).connect(g).connect(ac.destination);s.start();const k=animalNamed(t.words);if(k)goToAnimal(k);else showWords(t.words||'📢 (your voice)');if(zoo.show2)cheer()}catch(e){openSayBox()}};
   t.rec.stop()}
 function showWords(w){$('#tvSub').textContent=w;if(!$('#speaker').hidden)$('#speaker .say').textContent='📢 '+w}
 // no microphone? type it and the speaker says it out loud
 function openSayBox(){$('#sayBox').hidden=false;$('#sayIn').focus();toast('🎙️ The microphone is not allowed here, so type what you want to say!')}
-function sayTyped(){const t=$('#sayIn').value.trim();if(!t)return;$('#sayIn').value='';$('#sayBox').hidden=true;sayLines([t],()=>{if(zoo.prog)setTimeout(nextSegment,1500)});if(zoo.show2)cheer()}
+function sayTyped(){const t=$('#sayIn').value.trim();if(!t)return;$('#sayIn').value='';$('#sayBox').hidden=true;const k=animalNamed(t);if(k){goToAnimal(k);return}sayLines([t],null,true);if(zoo.show2)cheer()}
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('.talkBtn');if(b){e.preventDefault();talkStart(b)}});
 document.addEventListener('pointerup',()=>talkStop());
 $('#sayGo').onclick=sayTyped;$('#sayIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')sayTyped()});

@@ -74,8 +74,9 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 #tv .live{background:#e0201a;padding:4px 10px;border-radius:8px;animation:liveBlink 1s steps(2) infinite}@keyframes liveBlink{50%{opacity:.55}}
 #tv #tvViewers{margin-left:auto;background:rgba(0,0,0,.55);padding:4px 10px;border-radius:8px}
 #tv .tvDrone{position:absolute;top:50px;left:14px;color:#fff;font-weight:700;font-size:14px;background:rgba(0,0,0,.45);padding:3px 8px;border-radius:6px}
-#tv .tvSub{position:absolute;left:50%;bottom:86px;transform:translateX(-50%);width:min(760px,90vw);text-align:center;color:#fff;font-weight:800;font-size:20px;line-height:1.35;background:rgba(0,0,0,.6);padding:10px 14px;border-radius:12px}
+#tv .tvSub{position:absolute;left:14px;bottom:80px;width:min(620px,calc(100vw - 250px));white-space:pre-line;text-align:left;text-align:center;color:#fff;font-weight:800;font-size:20px;line-height:1.35;background:rgba(0,0,0,.6);padding:10px 14px;border-radius:12px}
 #tv .tvSub:empty{display:none}
+#tv .tvPick{position:absolute;right:14px;top:84px;bottom:80px;width:190px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;pointer-events:auto}#tv .tvPick button{background:rgba(255,255,255,.92);color:#222;text-align:left;font-size:14px;padding:7px 10px}#tv .tvPick button.on{background:#ffcf3a}
 #tv .tvBtns{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}
 #tv button,#speaker .talkBtn,.sayBox button{border:0;border-radius:12px;padding:9px 13px;font-weight:800;font-size:15px;background:#ffcf3a;color:#3a1a00}
 .talkBtn{touch-action:none;user-select:none}.talkBtn.on{background:#e0201a!important;color:#fff!important}
@@ -306,7 +307,7 @@ body.onAir #zooSide,body.onAir .zooGo,body.onAir #zoo .hud,body.onAir #zoo .hint
 <div id="showPanel" hidden><div class="dnaBox"><h2>🎤 Feeding Show</h2><p>Visitors pay <b>600,000</b> coins to watch you feed an animal! Which animal?</p><div id="showList"></div><button class="act blue" id="showClose">Close</button></div></div>
 <div id="speaker" hidden><div class="mic">🎤</div><div class="say"></div><div class="btns"><button class="talkBtn">🎙️ Hold to talk</button><button id="showFeed">🍖 Throw food</button><button id="showEnd">End show</button></div></div>
 <div id="cheer"></div>
-<div id="tv" hidden><div class="tvTop"><span class="live">🔴 LIVE</span><span>📺 THE ANIMAL PROGRAMME</span><span id="tvViewers"></span></div><div class="tvDrone">🚁 Drone cam · flown by Dan the drone pilot</div><div class="tvSub" id="tvSub"></div><div class="tvBtns"><button class="talkBtn">🎙️ Hold to talk</button><button id="tvNext">⏭ Next animal</button><button id="tvStop">⏹ Stop</button></div></div>
+<div id="tv" hidden><div class="tvTop"><span class="live">🔴 LIVE</span><span>📺 THE ANIMAL PROGRAMME</span><span id="tvViewers"></span></div><div class="tvDrone">🚁 Drone cam · flown by Dan the drone pilot</div><div class="tvSub" id="tvSub"></div><div class="tvPick" id="tvPick"></div><div class="tvBtns"><button class="talkBtn">🎙️ Hold to talk</button><button id="tvType">⌨️ Type a name</button><button id="tvStop">⏹ Stop</button></div></div>
 <div class="sayBox" id="sayBox" hidden><input id="sayIn" placeholder="Type what you want to say…" maxlength="200"><button id="sayGo">📢 Say it</button></div>
 <div id="relPanel" hidden><div class="dnaBox"><h2>🔓 Release animals</h2><p id="relInfo"></p><div id="relList"></div><button class="act blue" id="relBack" hidden>⬅ Back</button> <button class="act blue" id="relClose">Close</button></div></div>
 <div id="shopPanel" hidden><div class="dnaBox"><h2>🛒 Zoo Shop</h2><p id="shopCoins"></p><div id="shopList"></div><button class="act blue" id="shopClose">Close</button></div></div>
