@@ -1346,7 +1346,7 @@ function stopProgramme(){const P=zoo.prog;if(!P)return;zoo.scene.remove(P.drone)
 // say lines one after another out loud, with subtitles; fall back to timers if the browser cannot speak
 function sayLines(lines,done,voice){const id=(sayLines.id=(sayLines.id||0)+1);let i=0;
   const next=()=>{if(sayLines.id!==id)return;if(i>=lines.length){done&&done();return}const t=lines[i++];$('#tvSub').textContent=t;if(!$('#speaker').hidden)$('#speaker .say').textContent='📢 '+t;
-    let ok=false;try{if(voice&&window.speechSynthesis&&window.SpeechSynthesisUtterance){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1.05;u.onend=()=>setTimeout(next,350);u.onerror=()=>setTimeout(next,1500);speechSynthesis.speak(u);ok=true}}catch(e){}
+    let ok=false;if(voice)ok=speakNow(t,()=>setTimeout(next,350));
     if(!ok)setTimeout(next,2500+t.length*70)};
   next()}
 function progCamera(dt,time){
@@ -1366,26 +1366,39 @@ $('#tvPick').addEventListener('click',e=>{const b=e.target.closest('[data-go]');
 
 /* ---------- 🎙️ your own voice through the zoo speakers ---------- */
 let talk=null;
+// say something out loud with the browser's voice; some browsers drop words said right after stopping, so wait a moment then
+function speakNow(text,done){const ss=window.speechSynthesis;if(!ss||!window.SpeechSynthesisUtterance){toast('🔇 This browser cannot read words out loud. Try Chrome, Edge or Safari.');return false}
+  const go=()=>{const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=1;u.volume=1;let fin=false;const end=()=>{if(!fin){fin=true;done&&done()}};u.onend=end;u.onerror=end;
+    try{ss.resume()}catch(e){}ss.speak(u);setTimeout(()=>{if(!ss.speaking&&!ss.pending&&!fin)toast('🔇 The speaker could not talk. Check your sound is turned up, and that the page is not muted.')},2500);setTimeout(end,4000+text.length*120)};
+  if(ss.speaking||ss.pending){ss.cancel();setTimeout(go,120)}else go();return true}
+// wake up the sound so it is allowed to play (browsers only allow sound after a tap)
+function wakeSound(){try{const ac=zoo.ac||(zoo.ac=new(window.AudioContext||window.webkitAudioContext)());if(ac.state==='suspended')ac.resume();return ac}catch(e){return null}}
 async function talkStart(btn){
-  if(talk)return;btn.classList.add('on');try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}
+  if(talk)return;btn.classList.add('on');wakeSound();try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){btn.classList.remove('on');openSayBox();return}
   try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(stream),chunks=[];rec.ondataavailable=e=>chunks.push(e.data);
-    talk={stream,rec,chunks,btn,words:''};rec.start();
+    talk={stream,rec,chunks,btn,words:'',t0:Date.now()};rec.start(100);
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const r=new SR();r.interimResults=true;r.onresult=e=>{talk&&(talk.words=[...e.results].map(x=>x[0].transcript).join(' '));showWords(talk.words)};try{r.start();talk.sr=r}catch(e){}}
     showWords('🎙️ Talking…')}
   catch(e){btn.classList.remove('on');talk=null;openSayBox()}}
+// play your recording loud and tinny like a loudspeaker; if that cannot work, just play it as it is
+async function playVoice(blob){
+  const ac=wakeSound();
+  try{const buf=await ac.decodeAudioData(await blob.arrayBuffer());const s=ac.createBufferSource();s.buffer=buf;const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=400;const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4000;
+    const ws=ac.createWaveShaper(),cv=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;cv[i]=Math.tanh(x*2.2)}ws.curve=cv;const g=ac.createGain();g.gain.value=1.6;s.connect(hp).connect(lp).connect(ws).connect(g).connect(ac.destination);s.start();return true}
+  catch(e){try{const a=new Audio(URL.createObjectURL(blob));a.volume=1;await a.play();return true}catch(e2){return false}}}
 function talkStop(){
   const t=talk;if(!t)return;talk=null;t.btn.classList.remove('on');try{t.sr&&t.sr.stop()}catch(e){}
   t.rec.onstop=async()=>{t.stream.getTracks().forEach(x=>x.stop());
-    // play it back through a loudspeaker: tinny, a little crunchy and loud
-    try{const ac=zoo.ac||(zoo.ac=new(window.AudioContext||window.webkitAudioContext)()),buf=await ac.decodeAudioData(await new Blob(t.chunks).arrayBuffer());
-      const s=ac.createBufferSource();s.buffer=buf;const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=500;const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3500;
-      const ws=ac.createWaveShaper(),cv=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;cv[i]=Math.tanh(x*2.5)}ws.curve=cv;const g=ac.createGain();g.gain.value=1.2;
-      s.connect(hp).connect(lp).connect(ws).connect(g).connect(ac.destination);s.start();const k=animalNamed(t.words);if(k)goToAnimal(k);else showWords(t.words||'📢 (your voice)');if(zoo.show2)cheer()}catch(e){openSayBox()}};
+    const blob=new Blob(t.chunks,{type:t.rec.mimeType||'audio/webm'});
+    if(Date.now()-t.t0<500||!blob.size){toast('🎙️ Hold the button down while you talk, then let go!');return}
+    const ok=await playVoice(blob);const k=animalNamed(t.words);if(k)goToAnimal(k);showWords('📢 '+(t.words||'(your voice)'));
+    if(!ok){toast('🔇 Your voice could not play here, so type what you want to say!');openSayBox()}else if(zoo.show2)cheer()};
   t.rec.stop()}
 function showWords(w){$('#tvSub').textContent=w;if(!$('#speaker').hidden)$('#speaker .say').textContent='📢 '+w}
 // no microphone? type it and the speaker says it out loud
 function openSayBox(){$('#sayBox').hidden=false;$('#sayIn').focus();toast('🎙️ The microphone is not allowed here, so type what you want to say!')}
-function sayTyped(){const t=$('#sayIn').value.trim();if(!t)return;$('#sayIn').value='';$('#sayBox').hidden=true;const k=animalNamed(t);if(k){goToAnimal(k);return}sayLines([t],null,true);if(zoo.show2)cheer()}
+function sayTyped(){const t=$('#sayIn').value.trim();if(!t)return;$('#sayIn').value='';$('#sayBox').hidden=true;wakeSound();const k=animalNamed(t);if(k)goToAnimal(k);sayLines([t],()=>{if(k&&zoo.prog&&zoo.prog.o)$('#tvSub').textContent=storyFor(zoo.prog.o).join('\n')},true);if(zoo.show2)cheer()}
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('.talkBtn');if(b){e.preventDefault();talkStart(b)}});
 document.addEventListener('pointerup',()=>talkStop());
 $('#sayGo').onclick=sayTyped;$('#sayIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')sayTyped()});
