@@ -241,6 +241,7 @@ function checkDream(){
 // a big alert in the middle of the screen with confetti
 function bigAlert(em,big,sm,ms=12000){const pz=$('#prize');if(!pz)return;pz.querySelector('.em').textContent=em;pz.querySelector('.big').textContent=big;pz.querySelector('.sm').innerHTML=sm;
   pz.hidden=false;clearTimeout(pz.t);pz.t=setTimeout(()=>pz.hidden=true,ms)}
+function hist(an,txt){if(!an)return;(an.h=an.h||[]).push([Date.now(),txt]);if(an.h.length>6)an.h.shift()}
 function smallUsed(){return S.cages.filter(c=>c.pen==null).length}
 function pensUsed(){return new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen)).size}
 function coins(){document.querySelectorAll('.coinTxt').forEach(e=>e.textContent='🪙 '+S.coins);const c=$('#cagesTxt');if(c)c.textContent='🧺 '+smallUsed()+'/'+CAGES+' cages · '+pensUsed()+'/'+PENS+' pens'}

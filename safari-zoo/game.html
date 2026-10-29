@@ -63,6 +63,19 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 @keyframes micBob{to{transform:translateY(-4px) rotate(-8deg)}}
 #cheer{position:fixed;inset:0;pointer-events:none;z-index:49;overflow:hidden}#cheer i{position:absolute;bottom:-60px;font-size:40px;font-style:normal;animation:cheerUp 2.2s ease-out forwards}
 @keyframes cheerUp{to{transform:translateY(-75vh) scale(1.3);opacity:0}}
+#tv{position:fixed;inset:0;z-index:48;pointer-events:none;border:10px solid #111;box-shadow:inset 0 0 60px rgba(0,0,0,.6)}
+#tv .tvTop{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:12px;align-items:center;color:#fff;font-weight:800;font-size:18px;text-shadow:0 2px 4px #000}
+#tv .live{background:#e0201a;padding:4px 10px;border-radius:8px;animation:liveBlink 1s steps(2) infinite}@keyframes liveBlink{50%{opacity:.55}}
+#tv #tvViewers{margin-left:auto;background:rgba(0,0,0,.55);padding:4px 10px;border-radius:8px}
+#tv .tvDrone{position:absolute;top:50px;left:14px;color:#fff;font-weight:700;font-size:14px;background:rgba(0,0,0,.45);padding:3px 8px;border-radius:6px}
+#tv .tvSub{position:absolute;left:50%;bottom:86px;transform:translateX(-50%);width:min(760px,90vw);text-align:center;color:#fff;font-weight:800;font-size:20px;line-height:1.35;background:rgba(0,0,0,.6);padding:10px 14px;border-radius:12px}
+#tv .tvSub:empty{display:none}
+#tv .tvBtns{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}
+#tv button,#speaker .talkBtn,.sayBox button{border:0;border-radius:12px;padding:9px 13px;font-weight:800;font-size:15px;background:#ffcf3a;color:#3a1a00}
+.talkBtn{touch-action:none;user-select:none}.talkBtn.on{background:#e0201a!important;color:#fff!important}
+.sayBox{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:60;display:flex;gap:8px;background:#2a1a3a;border:3px solid #ffcf3a;border-radius:16px;padding:10px;width:min(560px,92vw)}
+.sayBox input{flex:1;border:0;border-radius:10px;padding:8px 10px;font-size:16px;font-weight:700}
+body.onAir #zooSide,body.onAir .zooGo,body.onAir #zoo .hud,body.onAir #zoo .hint{display:none!important}
 #relPanel{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(40,25,10,.55)}
 #relPanel .dnaBox{background:var(--paper,#fdf3dc);color:var(--ink,#222);border-radius:22px;padding:18px 20px;width:min(560px,92vw);max-height:86vh;overflow:auto;text-align:center}
 #relList{display:flex;flex-direction:column;gap:8px;margin:12px 0}#relList button{display:flex;justify-content:space-between;align-items:center;border:3px solid #b8741a;background:#fff;border-radius:14px;padding:10px 14px;font-weight:800;font-size:17px}#relList button.all{background:#ffe9b8}
@@ -241,6 +254,7 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
     <button class="act green" id="driveZoo">🚙 Drive around the zoo</button>
     <button class="act" id="goEnc">Go into an enclosure</button>
     <button class="act blue" id="dinoTour">🚙 Give a tour · 600 each</button>
+    <button class="act" id="progOpen" style="background:#2a1a3a;box-shadow:0 5px 0 #000">📺 Animal Programme</button>
     <button class="act" id="showOpen" style="background:#d8442a;box-shadow:0 5px 0 #7a2010">🎤 Feeding Show</button>
     <button class="act" id="relOpen" style="background:#b8741a;box-shadow:0 5px 0 #6a4210">🔓 Release animals</button>
     <button class="act" id="shopOpen" style="background:#c2368a;box-shadow:0 5px 0 #6a1a4a">🛒 Shop</button>
@@ -284,8 +298,10 @@ kbd{font-family:var(--body);font-weight:900;background:rgba(255,255,255,.18);bor
 <div id="loading" hidden><div class="spinner"></div><span id="loadTxt">Loading…</span><small>Building the 3D world takes a few seconds</small></div>
 <div id="toast" hidden></div>
 <div id="showPanel" hidden><div class="dnaBox"><h2>🎤 Feeding Show</h2><p>Visitors pay <b>600,000</b> coins to watch you feed an animal! Which animal?</p><div id="showList"></div><button class="act blue" id="showClose">Close</button></div></div>
-<div id="speaker" hidden><div class="mic">🎤</div><div class="say"></div><div class="btns"><button id="showFeed">🍖 Throw food</button><button id="showEnd">End show</button></div></div>
+<div id="speaker" hidden><div class="mic">🎤</div><div class="say"></div><div class="btns"><button class="talkBtn">🎙️ Hold to talk</button><button id="showFeed">🍖 Throw food</button><button id="showEnd">End show</button></div></div>
 <div id="cheer"></div>
+<div id="tv" hidden><div class="tvTop"><span class="live">🔴 LIVE</span><span>📺 THE ANIMAL PROGRAMME</span><span id="tvViewers"></span></div><div class="tvDrone">🚁 Drone cam · flown by Dan the drone pilot</div><div class="tvSub" id="tvSub"></div><div class="tvBtns"><button class="talkBtn">🎙️ Hold to talk</button><button id="tvNext">⏭ Next animal</button><button id="tvStop">⏹ Stop</button></div></div>
+<div class="sayBox" id="sayBox" hidden><input id="sayIn" placeholder="Type what you want to say…" maxlength="200"><button id="sayGo">📢 Say it</button></div>
 <div id="relPanel" hidden><div class="dnaBox"><h2>🔓 Release animals</h2><p id="relInfo"></p><div id="relList"></div><button class="act blue" id="relBack" hidden>⬅ Back</button> <button class="act blue" id="relClose">Close</button></div></div>
 <div id="shopPanel" hidden><div class="dnaBox"><h2>🛒 Zoo Shop</h2><p id="shopCoins"></p><div id="shopList"></div><button class="act blue" id="shopClose">Close</button></div></div>
 <div id="dnaPanel" hidden><div class="dnaBox"><h2>🧬 DNA Lab</h2><p>Pick two kinds of DNA, then mix them to make a brand-new animal!</p>

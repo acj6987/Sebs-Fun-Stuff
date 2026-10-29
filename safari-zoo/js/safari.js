@@ -447,7 +447,7 @@ function trailerPos(){return car.trailer.localToWorld(V(0,0,0))}
 function cageIt(own=me){
   if(!own.pack.length)return;
   const names=[],caged=[];let coinsWon=0,fresh=false;
-  const store=(a,pen)=>{if(!S.dex[a.sp.k])fresh=true;S.dex[a.sp.k]=(S.dex[a.sp.k]||0)+1;S.cages.push(pen==null?{uid:S.uid++,k:a.sp.k}:{uid:S.uid++,k:a.sp.k,pen});
+  const store=(a,pen)=>{if(!S.dex[a.sp.k])fresh=true;S.dex[a.sp.k]=(S.dex[a.sp.k]||0)+1;S.cages.push(Object.assign(pen==null?{uid:S.uid++,k:a.sp.k}:{uid:S.uid++,k:a.sp.k,pen},{h:[[Date.now(),'was caught in the '+(world.c.place||world.c.name)]]}));
     coinsWon+=VALUE[a.sp.r];names.push(a.sp.n);caged.push(a)};
   // whole herds and packs go into a big pen together
   const groups=new Map();for(const a of own.pack)if(a.grp){if(!groups.has(a.grp))groups.set(a.grp,[]);groups.get(a.grp).push(a)}

@@ -282,7 +282,7 @@ function zooTick(dt,time){
   for(const w of zoo.waters){w.userData.water.offset.x+=dt*.015;w.userData.water.offset.y+=dt*.01}
 }
 function zooFrame(dt,time){
-  zooCamera(dt);zooTick(dt,time);
+  if(zoo.prog)progCamera(dt,time);else zooCamera(dt);zooTick(dt,time);
   zoo.grass.userData.update(V(zoo.cam.tx,0,zoo.cam.tz),time,zoo.scene.fog,zoo.sky.sunDir);
   zoo.sky.follow(zoo.cam.tx,0,zoo.cam.tz);
   R.render(zoo.scene,cam);
@@ -654,7 +654,7 @@ function breed(dt){
   // mums go into the animal house and have their babies there
   // (mums in a Family Pen have their babies right there in the pen)
   const homes=[...S.areas.map(a=>[a,zoo.areas.get(a.id)]),...(zoo.penAreas||[]).map(P=>[P.area,P])];
-  for(const[a,A]of homes)for(const an of a.animals.slice())if(an.preg&&now>=an.preg){const b={uid:S.uid++,k:babyKind(an),born:now,mum:an.uid};delete an.preg;a.animals.push(b);
+  for(const[a,A]of homes)for(const an of a.animals.slice())if(an.preg&&now>=an.preg){const b={uid:S.uid++,k:babyKind(an),born:now,mum:an.uid};hist(an,'had a baby');delete an.preg;a.animals.push(b);
     const mum=zoo.animals.find(o=>o.an===an);if(A){const p=mum?{x:mum.x+1.5,z:mum.z}:A.pen?{x:A.x,z:A.z}:houseSpot(A);addZooAnimal(b,A,p.x,p.z,Math.random()*6.28)}syncMumTags();
     save();if(curView==='zoo')renderZooUI();toast('🍼 A baby '+SP[b.k].n+' was born'+(A&&A.pen?' in Family Pen '+A.pen:' in the animal house')+'!')}
   zoo.breedT=(zoo.breedT??45)-dt;
@@ -887,7 +887,8 @@ function visitDoctor(){
   if(!S.cages.length){toast('🩺 Bring animals in your truck and the doctor will check them!');return true}
   const now=Date.now(),names=[];let babies=0;
   for(const c of S.cages.splice(0)){delete c.pen;names.push(SP[c.k].n);
-    if(c.preg){S.holding.push({uid:S.uid++,k:babyKind(c),born:now,mum:c.uid});delete c.preg;babies++}
+    hist(c,'had a check-up at the Animal Doctor');
+    if(c.preg){hist(c,'had a baby at the Animal Doctor');S.holding.push({uid:S.uid++,k:babyKind(c),born:now,mum:c.uid});delete c.preg;babies++}
     S.holding.push(c)}
   S.coins+=names.length*20;autoHome();save();coins();refreshCages();syncZooAnimals();if(curView==='zoo')renderZooUI();
   toast('🩺 The doctor checked your '+names.join(', ')+'. All healthy and happy! ❤️'+(babies?' And the doctor helped '+babies+' baby'+(babies>1?' babies':'')+' be born! 🍼':'')+' They went home to their domes. +'+names.length*20+' coins',8000);return true}
@@ -1222,7 +1223,7 @@ function lockAnimals(id,k){const a=S.areas.find(x=>x.id===id);if(!a)return;a.bar
   for(const an of back){a.animals.splice(a.animals.indexOf(an),1);a.barn.push(an)}save();syncZooAnimals();if(curView==='zoo')renderZooUI();toast('🔒 The '+SP[k].n+(back.length>1?'s went':' went')+' back into the animal house.')}
 function releaseAnimals(id,k){
   const a=S.areas.find(x=>x.id===id);if(!a||!a.barn)return;const out=a.barn.filter(an=>k==='*'||an.k===k);if(!out.length)return;
-  for(const an of out){a.barn.splice(a.barn.indexOf(an),1);a.animals.push(an)}
+  for(const an of out){a.barn.splice(a.barn.indexOf(an),1);a.animals.push(an);hist(an,'was released into the '+domeName(a))}
   save();syncZooAnimals();if(curView==='zoo')renderZooUI();
   // they come out of the animal house and run in through the dome's door
   const A=zoo.areas.get(id);if(A)for(const o of zoo.animals)if(out.includes(o.an)){o.x=A.door.x+(Math.random()-.5)*6;o.z=A.door.z+(Math.random()-.5)*6;o.dash=1}
@@ -1251,29 +1252,135 @@ function cheer(){
   try{const ac=zoo.ac||(zoo.ac=new(window.AudioContext||window.webkitAudioContext)()),n=ac.sampleRate*1.8,buf=ac.createBuffer(1,n,ac.sampleRate),d=buf.getChannelData(0);
     for(let i=0;i<n;i++){const t=i/n;d[i]=(Math.random()*2-1)*Math.min(1,t*8)*(1-t)*(.6+.4*Math.sin(i/ac.sampleRate*40))}
     const s=ac.createBufferSource();s.buffer=buf;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=1100;f.Q.value=.7;const g=ac.createGain();g.gain.value=.5;s.connect(f).connect(g).connect(ac.destination);s.start()}catch(e){}}
+// the feeding gate: bars across the dome's doorway, with the crowd outside and the food going through the bars
+function showSpot(A,lx,lz){const v=A.grp.localToWorld(V(lx,0,lz));return{x:v.x,z:v.z}}
 function startShow(k){
-  const o=zoo.animals.find(o=>o.an.k===k&&S.areas.includes(o.A.area));if(!o){toast('That animal is not out in its dome right now');return}
-  $('#showPanel').hidden=true;if(zoo.show2)endShow(true);
-  // a crowd gathers round to watch
-  const crowd=[];for(let i=0;i<12;i++){const a=-1.2+i*.22,r=11+(i%2)*2.5,inst=ANIMALS.make(personSp(i%LOOKS.length));const x=o.x+Math.sin(a+Math.PI)*r,z=o.z+Math.cos(a+Math.PI)*r;
-    inst.g.position.set(x,0,z);inst.g.rotation.y=Math.atan2(o.x-x,o.z-z);zoo.scene.add(inst.g);crowd.push({inst,x,z,ph:Math.random()*6})}
-  zoo.show2={k,A:o.A,o,crowd,t:0,cheerT:0};
+  const o=zoo.animals.find(o=>o.an.k===k&&S.areas.includes(o.A.area)&&o.A.grp);if(!o){toast('That animal is not out in its dome right now');return}
+  $('#showPanel').hidden=true;if(zoo.show2)endShow(true);const A=o.A,R0=A.R0,hw=doorAng(R0)*R0+1;
+  // bars across the doorway so nobody goes in
+  const gate=new T.Group(),iron=new T.MeshStandardMaterial({color:'#3a3d42',metalness:.7,roughness:.35}),bars=[];
+  for(let x=-hw;x<=hw;x+=.4){const g=new T.CylinderGeometry(.06,.06,4.6,6);g.translate(x,2.3,R0+.6);bars.push(g)}
+  for(const y of[.2,2.3,4.5]){const g=new T.BoxGeometry(hw*2,.14,.14);g.translate(0,y,R0+.6);bars.push(g)}
+  gate.add(new T.Mesh(NATURE.merge(bars),iron));const sg=new T.Mesh(new T.PlaneGeometry(7,1.8),new T.MeshStandardMaterial({map:signTexture(['🎤 FEEDING SHOW','Feed through the bars only!'],'#d8442a'),roughness:.7}));
+  sg.position.set(0,5.6,R0+.7);gate.add(sg);A.grp.add(gate);
+  // the crowd stands OUTSIDE, behind the bars
+  const inside=showSpot(A,0,R0-4),crowd=[];
+  for(let i=0;i<14;i++){const row=i%2,lx=-hw+1+(i>>1)*(2*hw-2)/6,lz=R0+2.8+row*2.2,p=showSpot(A,lx,lz),inst=ANIMALS.make(personSp(i%LOOKS.length));
+    inst.g.position.set(p.x,0,p.z);inst.g.rotation.y=Math.atan2(inside.x-p.x,inside.z-p.z);zoo.scene.add(inst.g);crowd.push({inst,x:p.x,z:p.z,ph:Math.random()*6})}
+  // the keeper calls the animals over to the gate
+  for(const q of zoo.animals)if(q.A===A&&q.an.k===k){const p=showSpot(A,(Math.random()-.5)*16,R0-22-Math.random()*10);q.x=q.tx=p.x;q.z=q.tz=p.z}
+  zoo.show2={k,A,o,crowd,gate,t:0,cheerT:0,look:showSpot(A,0,R0-3)};for(const an of A.area.animals)if(an.k===k)hist(an,'starred in a Feeding Show');
   S.coins+=SHOW_FEE;save();coins();
-  const w=zoo.cam.w;w.tx=o.x;w.tz=o.z;w.dist=22;w.pitch=.35;
+  const w=zoo.cam.w,dr=A.door;w.yaw=Math.atan2(dr.x-A.x,dr.z-A.z);w.tx=zoo.show2.look.x;w.tz=zoo.show2.look.z;w.dist=26;w.pitch=.3;
   $('#speaker').hidden=false;const n=SP[k].n;
-  showSay('Ladies and gentlemen, boys and girls! Welcome to the Feeding Show! Today we are feeding the '+n+'! Give a big cheer!');cheer();
+  showSay('Ladies and gentlemen, boys and girls! Welcome to the Feeding Show! Stay behind the bars, please! Today we are feeding the '+n+'! Give a big cheer!');cheer();
   setTimeout(()=>{if(zoo.show2&&zoo.show2.k===k)throwShowFood()},3500);
   toast('🎤 The visitors paid 600,000 coins to watch the '+n+' Feeding Show!',6000)}
 function throwShowFood(){
-  const sh=zoo.show2;if(!sh)return;const o=sh.o,type=eats(SP[sh.k])||'meat';
-  dropPile(sh.A,type,o.x+(Math.random()-.5)*4,o.z+(Math.random()-.5)*4);
+  const sh=zoo.show2;if(!sh)return;const R0=sh.A.R0,type=eats(SP[sh.k])||'meat';
+  // the food goes through the bars, just inside the gate
+  const p=showSpot(sh.A,(Math.random()-.5)*10,R0-4-Math.random()*4);dropPile(sh.A,type,p.x,p.z);
   for(const q of zoo.animals)if(q.A===sh.A&&q.an.k===sh.k){const s=nextSpot(q);q.tx=s.x;q.tz=s.z;q.pile=s.pile||null;q.t=0;q.dash=1}
   showSay(SHOW_LINES[Math.floor(Math.random()*SHOW_LINES.length)]);cheer()}
-function endShow(quiet){const sh=zoo.show2;if(!sh)return;for(const c of sh.crowd)zoo.scene.remove(c.inst.g);zoo.show2=null;$('#speaker').hidden=true;
+function endShow(quiet){const sh=zoo.show2;if(!sh)return;for(const c of sh.crowd)zoo.scene.remove(c.inst.g);if(sh.gate)sh.A.grp.remove(sh.gate);zoo.show2=null;$('#speaker').hidden=true;
   try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}if(!quiet)toast('🎤 What a show! The visitors loved it. Come back soon!')}
 function updateShow(dt,time){const sh=zoo.show2;if(!sh)return;sh.t+=dt;sh.cheerT-=dt;
   for(const c of sh.crowd){ANIMALS.animate(c.inst,dt,0,time,{});c.inst.g.position.y=sh.cheerT>0?Math.abs(Math.sin(time*9+c.ph))*.5:0}
-  if(curView==='zoo'){const w=zoo.cam.w;w.tx=lerp(w.tx,sh.o.x,dt*2);w.tz=lerp(w.tz,sh.o.z,dt*2)}}
+  }
 $('#showOpen').onclick=openShow;$('#showClose').onclick=()=>$('#showPanel').hidden=true;
 $('#showList').addEventListener('click',e=>{const b=e.target.closest('[data-show]');if(b)startShow(b.dataset.show)});
 $('#showFeed').onclick=throwShowFood;$('#showEnd').onclick=()=>endShow();
+
+/* ---------- 📺 The Animal Programme: people watch at home while a drone flies to each animal and the presenter tells its story ---------- */
+const FACTS={Zebra:'Every zebra has its own stripes, like a fingerprint. No two are the same!',Giraffe:'Giraffes are the tallest animals in the world. Their tongues are purple and very long.',
+  Elephant:'Elephants are the biggest land animals. They use their trunks to drink, smell and give hugs.',Hippo:'Hippos spend most of the day in the water to keep cool, and they can hold their breath for five minutes.',
+  Rhino:'Rhinos have thick skin like armour, and their horns are made of the same stuff as your fingernails.',Lion:'Lions live in families called prides, and a lion\'s roar can be heard eight kilometres away!',
+  Gorilla:'Gorillas are gentle giants. The biggest male is called a silverback because of the grey hair on his back.',Cheetah:'Cheetahs are the fastest animals on land. They can run as fast as a car on the motorway!',
+  Gazelle:'Gazelles can jump high into the air while they run. It is called pronking!',Wildebeest:'Every year millions of wildebeest walk across Africa looking for fresh grass. It is called the Great Migration.',
+  'Cape Buffalo':'Cape buffalo live in big herds and look after each other. Even lions are careful around them.',Warthog:'Warthogs kneel down on their front knees to eat grass, and they run with their tails straight up.',
+  Hyena:'Hyenas sound like they are laughing, and they have some of the strongest jaws of any animal.',Leopard:'Leopards are super strong. They can carry their food all the way up a tree.',
+  Impala:'Impalas can leap three metres high and ten metres long. Boing!',Ostrich:'Ostriches are the biggest birds in the world. They cannot fly, but they run really fast.',
+  'Nile Crocodile':'Crocodiles have been around since the time of the dinosaurs!',Meerkat:'Meerkats take turns standing on guard to look out for danger while the others play.',
+  Baboon:'Baboons live in big noisy troops and love to groom each other.',Chimpanzee:'Chimpanzees are very clever. They use sticks as tools to catch tasty termites.',
+  'Black Mamba':'The black mamba is one of the fastest snakes in the world. It is not black, it is grey. Its mouth is black inside!',
+  Vulture:'Vultures are nature\'s cleaners. They can spot food from high up in the sky.','Ring-tailed Lemur':'Ring-tailed lemurs live only on the island of Madagascar, and they hold their stripy tails up high like flags.',
+  Aardvark:'Aardvarks can eat fifty thousand ants and termites in one night with their long sticky tongues.',Pangolin:'Pangolins are covered in scales and roll up into a ball when they are scared.',
+  Penguin:'Penguins cannot fly in the air, but they fly through the water!','Polar Bear':'Polar bears have black skin under their white fur to soak up the sun.',Kangaroo:'Baby kangaroos are called joeys and they live in their mum\'s pouch.',
+  'Giant Panda':'Pandas eat bamboo for about twelve hours every day!',Tiger:'Tigers love swimming, and every tiger has different stripes.'};
+function ago(t){const s=(Date.now()-t)/1000,n=(v,w)=>{v=Math.round(v);return(v===1?'one '+w:v+' '+w+'s')+' ago'};return s<90?'just now':s<3600?n(s/60,'minute'):s<86400?n(s/3600,'hour'):n(s/86400,'day')}
+function storyFor(o){
+  const an=o.an,sp=SP[an.k],d=sp.def,n=sp.n,c=CONT.find(c=>c.id===sp.cont),A=o.A,lines=[];
+  lines.push('Our drone is flying over the '+(A.area?domeName(A.area):'zoo')+' to visit the '+n+'!');
+  lines.push(FACTS[n]||(d.hunts?'The '+n+' is a hunter. It loves to eat meat.':d.swim?'The '+n+' lives in the water.':d.fly?'The '+n+' can fly!':'The '+n+' loves to munch on plants.'));
+  if(an.born)lines.push('This one is a baby. It was born right here in our zoo'+(zoo.animals.some(q=>q.an.uid===an.mum)?', and its mum lives here too.':'!'));
+  else if(an.h&&an.h.length)for(const[t,txt]of an.h.slice(-3))lines.push(ago(t).replace(/^./,m=>m.toUpperCase())+', this '+n+' '+txt+'.');
+  else if(c&&c.place)lines.push('Animals like this one come from the '+c.place+' in '+c.name+'.');
+  const kids=zoo.animals.filter(q=>q.an.mum===an.uid).length;if(kids)lines.push('It has had '+kids+' '+(kids>1?'babies':'baby')+'. What a great parent!');
+  const all=S.areas.reduce((s,a)=>s+a.animals.filter(x=>x.k===an.k).length,0);if(all>1)lines.push('There are '+all+' '+n+'s in our zoo.');
+  return lines}
+function droneModel(){const g=new T.Group(),body=new T.MeshStandardMaterial({color:'#e8e8ec',metalness:.4,roughness:.3}),dark=new T.MeshStandardMaterial({color:'#222'}),red=new T.MeshBasicMaterial({color:'#ff2a2a'});
+  const b=new T.Mesh(new T.BoxGeometry(.5,.18,.5),body);g.add(b);g.userData.props=[];
+  for(const[x,z]of[[1,1],[1,-1],[-1,1],[-1,-1]]){const arm=new T.Mesh(new T.BoxGeometry(.06,.05,.55),dark);arm.position.set(x*.25,0,z*.25);arm.rotation.y=Math.atan2(x,z);g.add(arm);
+    const p=new T.Mesh(new T.BoxGeometry(.45,.01,.05),dark);p.position.set(x*.45,.08,z*.45);g.add(p);g.userData.props.push(p)}
+  const cam=new T.Mesh(new T.SphereGeometry(.08,10,8),dark);cam.position.set(0,-.12,.2);g.add(cam);const led=new T.Mesh(new T.SphereGeometry(.04,8,6),red);led.position.set(0,.1,-.25);g.add(led);return g}
+function startProgramme(){
+  const seen=new Set(),list=[];for(const o of zoo.animals)if(S.areas.includes(o.A.area)&&!seen.has(o.an.k)){seen.add(o.an.k);list.push(o)}
+  if(!list.length){toast('Release some animals into their domes first, then the drone can film them!');return}
+  if(zoo.show2)endShow(true);list.sort(()=>Math.random()-.5);
+  const d=droneModel();zoo.scene.add(d);const c=zoo.cam;d.position.set(c.tx,30,c.tz);
+  zoo.prog={list:list.slice(0,8),i:-1,drone:d,ang:0,viewers:800+Math.floor(Math.random()*400),earned:0,seg:0};
+  document.body.classList.add('onAir');$('#tv').hidden=false;cam.position.set(c.tx,40,c.tz);
+  sayLines(['Hello and welcome to The Animal Programme! Today our drone pilot Dan is flying us around the zoo to meet the animals. Let\'s go!'],()=>nextSegment())}
+function nextSegment(){
+  const P=zoo.prog;if(!P)return;P.i++;
+  if(P.i>=P.list.length){sayLines(['That\'s all for today! Thank you for watching The Animal Programme. See you next time!'],()=>stopProgramme());return}
+  const o=P.list[P.i];if(!zoo.animals.includes(o)){nextSegment();return}
+  P.o=o;P.ang=Math.random()*6;P.seg++;const pay=P.viewers*5;P.earned+=pay;S.coins+=pay;save();coins();
+  sayLines(storyFor(o),()=>{if(zoo.prog===P)setTimeout(()=>{if(zoo.prog===P&&P.o===o)nextSegment()},2500)})}
+function stopProgramme(){const P=zoo.prog;if(!P)return;zoo.scene.remove(P.drone);zoo.prog=null;document.body.classList.remove('onAir');$('#tv').hidden=true;$('#tvSub').textContent='';
+  try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}toast('📺 The Animal Programme is over! '+P.viewers.toLocaleString()+' people watched at home and you earned '+P.earned.toLocaleString()+' coins.',7000)}
+// say lines one after another out loud, with subtitles; fall back to timers if the browser cannot speak
+function sayLines(lines,done){const id=(sayLines.id=(sayLines.id||0)+1);let i=0;
+  const next=()=>{if(sayLines.id!==id)return;if(i>=lines.length){done&&done();return}const t=lines[i++];$('#tvSub').textContent=t;if(!$('#speaker').hidden)$('#speaker .say').textContent='📢 '+t;
+    let ok=false;try{if(window.speechSynthesis&&window.SpeechSynthesisUtterance){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.rate=1;u.pitch=1.05;u.onend=()=>setTimeout(next,350);u.onerror=()=>setTimeout(next,1500);speechSynthesis.speak(u);ok=true}}catch(e){}
+    if(!ok)setTimeout(next,1200+t.length*55)};
+  next()}
+function progCamera(dt,time){
+  const P=zoo.prog,o=P.o,d=P.drone;for(const p of d.userData.props)p.rotation.y+=dt*40;
+  let tx,ty,tz,lx,ly,lz;
+  if(o&&zoo.animals.includes(o)){const h=Math.max(1.5,o.inst.h),r=6+h*2.2;P.ang+=dt*.25;lx=o.x;ly=h*.6;lz=o.z;tx=o.x+Math.sin(P.ang)*r;tz=o.z+Math.cos(P.ang)*r;ty=2+h*1.1}
+  else{lx=zoo.cam.tx;ly=0;lz=zoo.cam.tz;tx=lx;ty=40;tz=lz+30}
+  const dp=d.position,dx=tx-dp.x,dy=ty-dp.y,dz=tz-dp.z,dist=Math.hypot(dx,dy,dz),sp=Math.min(dist,Math.max(4,dist*1.5)*dt);
+  if(dist>.01){dp.x+=dx/dist*sp;dp.y+=dy/dist*sp;dp.z+=dz/dist*sp}dp.y+=Math.sin(time*2)*.004;
+  d.rotation.set(0,Math.atan2(lx-dp.x,lz-dp.z),0);d.rotation.x=Math.min(.3,sp/dt*.01);
+  // the camera films from just behind the drone, so you can see it flying
+  const back=V(dp.x-lx,0,dp.z-lz).normalize();cam.position.lerp(V(dp.x+back.x*2.5,dp.y+1,dp.z+back.z*2.5),Math.min(1,dt*3));cam.lookAt(lx,ly,lz);
+  zoo.cam.tx=dp.x;zoo.cam.tz=dp.z;
+  P.viewers+=Math.floor(Math.random()*3);$('#tvViewers').textContent='👀 '+P.viewers.toLocaleString()+' watching at home'}
+$('#progOpen').onclick=startProgramme;$('#tvNext').onclick=()=>{if(zoo.prog){sayLines.id++;nextSegment()}};$('#tvStop').onclick=stopProgramme;
+
+/* ---------- 🎙️ your own voice through the zoo speakers ---------- */
+let talk=null;
+async function talkStart(btn){
+  if(talk)return;btn.classList.add('on');try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}
+  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(stream),chunks=[];rec.ondataavailable=e=>chunks.push(e.data);
+    talk={stream,rec,chunks,btn,words:''};rec.start();
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const r=new SR();r.interimResults=true;r.onresult=e=>{talk&&(talk.words=[...e.results].map(x=>x[0].transcript).join(' '));showWords(talk.words)};try{r.start();talk.sr=r}catch(e){}}
+    showWords('🎙️ Talking…')}
+  catch(e){btn.classList.remove('on');talk=null;openSayBox()}}
+function talkStop(){
+  const t=talk;if(!t)return;talk=null;t.btn.classList.remove('on');try{t.sr&&t.sr.stop()}catch(e){}
+  t.rec.onstop=async()=>{t.stream.getTracks().forEach(x=>x.stop());
+    // play it back through a loudspeaker: tinny, a little crunchy and loud
+    try{const ac=zoo.ac||(zoo.ac=new(window.AudioContext||window.webkitAudioContext)()),buf=await ac.decodeAudioData(await new Blob(t.chunks).arrayBuffer());
+      const s=ac.createBufferSource();s.buffer=buf;const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=500;const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3500;
+      const ws=ac.createWaveShaper(),cv=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;cv[i]=Math.tanh(x*2.5)}ws.curve=cv;const g=ac.createGain();g.gain.value=1.2;
+      s.connect(hp).connect(lp).connect(ws).connect(g).connect(ac.destination);s.start();showWords(t.words||'📢 (your voice)');if(zoo.show2)cheer()}catch(e){openSayBox()}};
+  t.rec.stop()}
+function showWords(w){$('#tvSub').textContent=w;if(!$('#speaker').hidden)$('#speaker .say').textContent='📢 '+w}
+// no microphone? type it and the speaker says it out loud
+function openSayBox(){$('#sayBox').hidden=false;$('#sayIn').focus();toast('🎙️ The microphone is not allowed here, so type what you want to say!')}
+function sayTyped(){const t=$('#sayIn').value.trim();if(!t)return;$('#sayIn').value='';$('#sayBox').hidden=true;sayLines([t],()=>{if(zoo.prog)setTimeout(nextSegment,1500)});if(zoo.show2)cheer()}
+document.addEventListener('pointerdown',e=>{const b=e.target.closest('.talkBtn');if(b){e.preventDefault();talkStart(b)}});
+document.addEventListener('pointerup',()=>talkStop());
+$('#sayGo').onclick=sayTyped;$('#sayIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')sayTyped()});
