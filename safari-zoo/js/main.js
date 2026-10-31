@@ -164,6 +164,8 @@ $('#jumpBtn').addEventListener('click',jump);
 function goMap(){if(me.pack.length)releaseLeash();show('map')}
 $('#back').onclick=goMap;
 $('#toZoo1').onclick=openZoo;
+$('#toKingdom').onclick=async()=>{const n=transferDinos();if(!(S.park||[]).length){toast('🦖 Your Dino Kingdom is ready, but it has no dinosaurs yet! Catch some in the Dino Zone first.',6000)}
+  await startSafari(KINGDOM);if(n)toast('🦖 '+n+' dinosaur'+(n>1?'s':'')+' moved out of your zoo and into your Dino Kingdom!',6000)};
 $('#toZoo2').onclick=()=>{if(me.pack.length)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
 $('#zooMap').onclick=()=>show('map');
 function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages.map(c=>(delete c.pen,c.wait=1,c)));S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They are waiting in the animal house next to their dome. Press 🔓 Release animals to let them out.',7000),50)}

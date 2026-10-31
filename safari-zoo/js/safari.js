@@ -66,14 +66,15 @@ async function buildSafari(c,progress){
   buildCar(scene);buildFootRig();scene.add(cam);buildHelpers(scene);
   sub.on=false;sub.g=null;plane.on=false;plane.g=null;plane.star=0;
   // build each animal shape once, showing progress
-  const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]));
+  const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]),c.kingdom?[...new Set((S.park||[]).map(an=>an.k))].map(k=>SP[k]):[]);
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
   // pterodactyls circling high in the sky over Dino Zone
-  buildDNA(scene,c);
+  if(!c.kingdom)buildDNA(scene,c);else world.dnaVials=[];
   if(c.hab==='dino'){const fl=makeFlyers(scene,SP['dino:3'],10,{x:0,z:0},[60,240],[35,80],1.6),smoke=world.tick;world.flyers=fl;
     world.tick=(dt,time)=>{if(smoke)smoke(dt,time);updateFlyers(fl,dt,time,H)}}
   refreshCages();
   // one group of every kind of animal first, then extra ones
+  if(c.kingdom){buildKingdom(scene);return}
   c.animals.forEach((x,i)=>spawnAnimal(true,SP[c.id+':'+i]));
   while(world.animals.length<world.maxAn)spawnAnimal(true);
 }
@@ -291,6 +292,7 @@ function removeAnimal(a){world.scene.remove(a.m.g);world.animals.splice(world.an
   if(a.grp){a.grp.members=a.grp.members.filter(m=>m!==a)}world.respawn.push(10)}
 // hunters chase their prey; if they catch it, it falls over and is gone
 function startHunt(){
+  if(world.c.kingdom)return;
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   const preds=world.animals.filter(a=>a.sp.def.hunts&&a.state==='wander').sort(()=>Math.random()-.5);
   for(const p of preds){
@@ -368,6 +370,7 @@ function updateAnimals(dt,time){
           if(a.sp.def.mate&&Math.random()<.6){const T=30+Math.random()*40;for(const m of G?G.members:[a]){m.state='sleep';m.sleepT=T;m.vx=m.vz=0;m.soar=0}}}}}}
     if(Math.abs(a.x)>LIMIT-5)a.vx=-Math.sign(a.x)*Math.abs(a.vx||1);
     if(Math.abs(a.z)>LIMIT-5)a.vz=-Math.sign(a.z)*Math.abs(a.vz||1);
+    if(world.c.kingdom&&a.z>GATE_Z-6)a.vz=-Math.abs(a.vz||1);
     a.x+=a.vx*dt;a.z+=a.vz*dt;
     if(world.sea&&a.state!=='netted'&&!(a.sp.def.fly&&a.alt>1.5)){const d=a.sp.def,h=H(a.x,a.z);
       if(d.swim?h>-1.3:!d.amph&&h<-.3){a.x-=a.vx*dt;a.z-=a.vz*dt;a.vx=-a.vx;a.vz=-a.vz;a.t=Math.min(a.t,.6)}}
@@ -398,7 +401,7 @@ function updateAnimals(dt,time){
     const ic=a.icon;if(a.state==='flee'||a.state==='chased'){ic.visible=true;ic.material.map=ICON.run}else if(a.state==='tired'||a.state==='sleep'){ic.visible=true;ic.material.map=ICON.tired}else ic.visible=false;
     if(a.net){a.net.position.set(a.x,g.position.y+a.m.h*.45,a.z);const s=Math.max(a.m.rad,a.m.h*.6)*1.15;a.net.scale.set(s,s,s)}
   }
-  world.respawn=world.respawn.map(t=>t-dt).filter(t=>t>0||(world.animals.length<world.maxAn-2&&spawnAnimal(false),false));
+  if(!world.c.kingdom)world.respawn=world.respawn.map(t=>t-dt).filter(t=>t>0||(world.animals.length<world.maxAn-2&&spawnAnimal(false),false));
 }
 
 /* ---------- catching ---------- */
@@ -411,6 +414,7 @@ function aimTarget(){
 function toggleNet(){me.noNet=!me.noNet;if(netRig)netRig.visible=!me.noNet&&mode==='foot';setDriveUI();toast(me.noNet?'🎣 You put your net away. Press N to get it out again.':'🎣 You got your net out!')}
 function throwNet(){
   if(!safari.running)return;if(me.noNet&&mode==='foot'&&!(world.zoo&&inLab())){toast('Your net is put away! Press N (or the NET button) to get it out.');return}if(mode==='plane'){planeCatch();return}
+  if(world.c.kingdom){toast('🦖 These are your own dinosaurs! They live free here in your Dino Kingdom.');return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){if(!labAction())zooCatch();return}
   if(grabDNA(8))return;
@@ -840,4 +844,51 @@ function updateHelpers(){
     for(let j=t.length-1;j>0;j--){d+=Math.hypot(t[j].x-t[j-1].x,t[j].z-t[j-1].z);if(d>=want){p=t[j-1];break}}
     if(!p){const b=V(Math.sin(car.yaw),0,Math.cos(car.yaw));p={x:car.x+b.x*want,z:car.z+b.z*want,yaw:car.yaw}}
     h.g.position.set(p.x,HW(p.x,p.z),p.z);h.g.rotation.y=p.yaw;h.g.visible=mode!=='plane'||true});
+}
+
+/* ---------- 🦖 Dino Kingdom: your own giant dinosaur park next door, with giant gates ---------- */
+const KINGDOM={id:'kingdom',name:'🦖 Dino Kingdom',place:'Your own giant dinosaur park',hab:'dino',kingdom:1,deco:['🦖','🌋','🦕'],animals:[]};
+// every dinosaur you own moves out of the zoo and into the Kingdom
+function transferDinos(){
+  S.park=S.park||[];let n=0;const isDino=an=>SP[an.k]&&SP[an.k].cont==='dino';
+  for(const list of[S.cages,S.holding,...S.areas.map(a=>a.animals),...S.areas.map(a=>a.barn||[])])for(const an of list.slice())if(isDino(an)){list.splice(list.indexOf(an),1);delete an.pen;S.park.push(an);n++}
+  save();return n}
+const GATE_Z=LIMIT-45;
+function buildKingdom(scene){
+  const wood=NATURE.barkMat(false),stone=NATURE.rockMat('#6a6458'),iron=new T.MeshStandardMaterial({color:'#2a2c30',metalness:.6,roughness:.4});
+  const add=(geo,m,x,y,z,ry=0)=>{const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.rotation.y=ry;o.castShadow=o.receiveShadow=true;scene.add(o);return o};
+  const y0=H(0,GATE_Z),gw=10,Ht=24;
+  // two giant log pillars with burning torches, a beam and a big sign
+  for(const sd of[-1,1]){add(new T.CylinderGeometry(1.6,2,Ht+4,14),wood,sd*(gw+2),y0+(Ht+4)/2-1,GATE_Z);
+    const fire=add(new T.ConeGeometry(.9,2.6,10),new T.MeshBasicMaterial({color:'#ff8a1a'}),sd*(gw+2),y0+Ht+4,GATE_Z);fire.userData.fire=1;(world.fires=world.fires||[]).push(fire);
+    const pl=new T.PointLight('#ff9a3a',2,40);pl.position.set(sd*(gw+2),y0+Ht+3,GATE_Z+2);scene.add(pl)}
+  add(new T.BoxGeometry(gw*2+8,2.2,2.2),wood,0,y0+Ht-1,GATE_Z);
+  const [c,g]=NATURE.canvas(1024,256);g.fillStyle='#3a1a0a';g.fillRect(0,0,1024,256);g.strokeStyle='#ffb43a';g.lineWidth=14;g.strokeRect(14,14,996,228);
+  g.fillStyle='#ffcf5a';g.textAlign='center';g.textBaseline='middle';g.font='bold 130px "Lilita One","Arial Black",sans-serif';g.fillText('🦖 DINO KINGDOM',512,128);
+  const sign=add(new T.PlaneGeometry(gw*2+4,6),new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.7}),0,y0+Ht+3.2,GATE_Z+1.2);
+  const back=sign.clone();back.rotation.y=Math.PI;back.position.z=GATE_Z-1.2;scene.add(back);
+  // the giant doors swing open when you drive up
+  world.gateDoors=[-1,1].map(sd=>{const pv=new T.Group();pv.position.set(sd*gw,y0,GATE_Z);scene.add(pv);
+    const d=new T.Mesh(new T.BoxGeometry(gw,Ht-3,.8),wood);d.position.set(-sd*gw/2,(Ht-3)/2,0);d.castShadow=true;pv.add(d);
+    for(const y of[3,Ht/2,Ht-6]){const b=new T.Mesh(new T.BoxGeometry(gw,.6,1),iron);b.position.set(-sd*gw/2,y,0);pv.add(b)}pv.userData.sd=sd;return pv});
+  // a tall wall right across the park, with the gate in the middle
+  const walls=[],posts=[];for(let x=-LIMIT-20;x<=LIMIT+20;x+=6){if(Math.abs(x)<gw+4)continue;const h=H(x,GATE_Z);const gm=new T.BoxGeometry(6.2,16,2.4);gm.translate(x,h+7,GATE_Z);walls.push(gm);addCol({x,z:GATE_Z,r:3.2})}
+  add(NATURE.merge(walls),stone,0,0,0);
+  // an electric fence all the way round: tall posts and humming wires
+  const wires=[];const ring=LIMIT-2;for(const[ax,az,bx,bz]of[[-ring,-ring,ring,-ring],[ring,-ring,ring,ring],[ring,ring,-ring,ring],[-ring,ring,-ring,-ring]]){
+    const L=Math.hypot(bx-ax,bz-az);for(let t=0;t<=L;t+=10){const x=ax+(bx-ax)*t/L,z=az+(bz-az)*t/L,h=H(x,z);const pg=new T.BoxGeometry(.6,13,.6);pg.translate(x,h+6.5,z);posts.push(pg)}
+    for(let t=0;t<L;t+=10){const x0=ax+(bx-ax)*t/L,z0=az+(bz-az)*t/L,x1=ax+(bx-ax)*Math.min(L,t+10)/L,z1=az+(bz-az)*Math.min(L,t+10)/L,ln=Math.hypot(x1-x0,z1-z0),hh=(H(x0,z0)+H(x1,z1))/2;
+      for(let y=2;y<=12;y+=2.5){const wg=new T.BoxGeometry(ln,.07,.07);wg.rotateY(-Math.atan2(z1-z0,x1-x0));wg.translate((x0+x1)/2,hh+y,(z0+z1)/2);wires.push(wg)}}}
+  add(NATURE.merge(posts),iron,0,0,0);add(NATURE.merge(wires),new T.MeshStandardMaterial({color:'#c8ccd0',metalness:.8,roughness:.3,emissive:'#3a6aff',emissiveIntensity:.25}),0,0,0);
+  // you start just outside the gates
+  car.x=0;car.z=LIMIT-15;car.yaw=0;me.x=car.x;me.z=car.z;
+  // your dinosaurs roam free inside
+  const r=rng(77);for(const an of(S.park||[]).slice(0,140)){const sp=SP[an.k];if(!sp)continue;let x,z,t=0;
+    do{x=(r()-.5)*2*(LIMIT-25);z=-LIMIT+25+r()*(GATE_Z-30+LIMIT-25);t++}while(t<40&&inPond(x,z));
+    const m=ANIMALS.make(sp);scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
+    world.animals.push({sp,own:an,x,z,ox:0,oz:0,vx:0,vz:0,yaw:r()*6.3,t:r()*3,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp:null})}
+  const tick0=world.tick;world.tick=(dt,time)=>{if(tick0)tick0(dt,time);
+    const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,near=Math.hypot(px,pz-GATE_Z)<45;
+    for(const d of world.gateDoors){const want=near?d.userData.sd*1.35:0;d.rotation.y+=(want-d.rotation.y)*Math.min(1,dt*1.2)}
+    for(const f of world.fires||[])f.scale.set(1+Math.sin(time*13+f.position.x)*.15,1+Math.sin(time*17)*.2,1)};
 }
