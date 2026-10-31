@@ -281,10 +281,17 @@
       c.width = media.videoWidth || media.naturalWidth || 1280;
       c.height = media.videoHeight || media.naturalHeight || 720;
       c.getContext('2d').drawImage(media, 0, 0, c.width, c.height);
-      const a = document.createElement('a');
-      a.download = `${name}-${Date.now()}.png`;
-      a.href = c.toDataURL('image/png'); a.click();
-      log(`📸 Photo taken: ${name}`);
+      const filename = `${name}-${Date.now()}.png`;
+      c.toBlob(async (blob) => {
+        const dl = window.claude?.use ? await window.claude.use('downloads') : null;
+        if (dl) {
+          try { await dl.save({ filename, data: blob }); log(`📸 Photo saved: ${name}`); } catch {}
+        } else {
+          const a = document.createElement('a');
+          a.download = filename; a.href = URL.createObjectURL(blob); a.click();
+          log(`📸 Photo taken: ${name}`);
+        }
+      }, 'image/png');
     } catch {
       alert('This camera doesn’t allow photos from the website. Use your camera’s own app.');
     }
