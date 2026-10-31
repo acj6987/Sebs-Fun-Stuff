@@ -331,7 +331,10 @@ function zooDriveWorld(){
 function autoHome(){
   const moving=S.holding.splice(0),made=[];
   for(const a of S.areas)for(const an of a.animals.slice())if(SP[an.k].hab!==a.hab){a.animals.splice(a.animals.indexOf(an),1);moving.push(an)}
-  for(const an of moving){const hab=SP[an.k].hab;let d=S.areas.find(a=>a.hab===hab);
+  for(const an of moving){const hab=SP[an.k].hab;
+    // the famous film dinosaurs go straight to their own paddock in your Dino Kingdom
+    if(SP[an.k].def.unique){delete an.wait;(S.park=S.park||[]).push(an);setTimeout(()=>toast('🦖 '+SP[an.k].n+' went straight to '+(SP[an.k].n==='Blue'?'her':'its')+' own paddock in your Dino Kingdom!',7000),300);continue}
+    let d=S.areas.find(a=>a.hab===hab);
     if(!d){d={id:S.aid++,type:'dome',hab,animals:[],eggs:[]};S.areas.push(d);made.push(hab)}
     const wait=an.wait&&!SP[an.k].def.mate;delete an.wait;(wait?(d.barn=d.barn||[]):d.animals).push(an)}
   // the Mummy Dream megadome is always ready for them at the front of the zoo

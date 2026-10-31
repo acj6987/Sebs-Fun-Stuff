@@ -264,9 +264,11 @@ function makeIcon(){if(!ICON.run){ICON.run=iconTex('!','#d4602f');ICON.tired=ico
 let grpId=1;
 function spawnAnimal(initial,force){
   const c=world.c,list=c.animals.map((a,i)=>SP[c.id+':'+i]);
-  const w=list.map(s=>s.def.mate||s.def.bornOnly?0:[0,7,3,1.2][s.r]),tot=w.reduce((a,b)=>a+b);
+  const w=list.map(s=>s.def.mate||s.def.bornOnly?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
   if(force&&force.def.bornOnly)return;
+  if(sp0Unique(force))return;
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
+  if(sp0Unique(sp))return;
   // the two Mummy Dreams only ever appear together, and never again once they are yours
   let kinds=null;
   if(sp.def.mate){if(sp.def.male)return;kinds=[sp,SP[sp.def.mate]].filter(s=>!owns(s.k)&&!world.animals.some(a=>a.sp===s));if(!kinds.length)return}
@@ -370,7 +372,9 @@ function updateAnimals(dt,time){
           if(a.sp.def.mate&&Math.random()<.6){const T=30+Math.random()*40;for(const m of G?G.members:[a]){m.state='sleep';m.sleepT=T;m.vx=m.vz=0;m.soar=0}}}}}}
     if(Math.abs(a.x)>LIMIT-5)a.vx=-Math.sign(a.x)*Math.abs(a.vx||1);
     if(Math.abs(a.z)>LIMIT-5)a.vz=-Math.sign(a.z)*Math.abs(a.vz||1);
-    if(world.c.kingdom&&a.z>GATE_Z-6)a.vz=-Math.abs(a.vz||1);
+    if(world.c.kingdom){if(a.z>GATE_Z-6)a.vz=-Math.abs(a.vz||1);
+      if(a.pen){const q=a.pen,h=q.s/2-4;if(Math.abs(a.x-q.x)>h)a.vx=-Math.sign(a.x-q.x)*Math.abs(a.vx||1);if(Math.abs(a.z-q.z)>h)a.vz=-Math.sign(a.z-q.z)*Math.abs(a.vz||1);a.x=clamp(a.x,q.x-h-1,q.x+h+1);a.z=clamp(a.z,q.z-h-1,q.z+h+1)}
+      else for(const q of world.paddocks||[])if(inPaddock(q,a.x,a.z,3)){const dx=a.x-q.x,dz=a.z-q.z;if(Math.abs(dx)>Math.abs(dz))a.vx=Math.sign(dx)*Math.abs(a.vx||2);else a.vz=Math.sign(dz)*Math.abs(a.vz||2)}}
     a.x+=a.vx*dt;a.z+=a.vz*dt;
     if(world.sea&&a.state!=='netted'&&!(a.sp.def.fly&&a.alt>1.5)){const d=a.sp.def,h=H(a.x,a.z);
       if(d.swim?h>-1.3:!d.amph&&h<-.3){a.x-=a.vx*dt;a.z-=a.vz*dt;a.vx=-a.vx;a.vz=-a.vz;a.t=Math.min(a.t,.6)}}
@@ -846,6 +850,8 @@ function updateHelpers(){
     h.g.position.set(p.x,HW(p.x,p.z),p.z);h.g.rotation.y=p.yaw;h.g.visible=mode!=='plane'||true});
 }
 
+function sp0Unique(sp){return!!(sp&&sp.def.unique&&(owns(sp.k)||world.animals.some(a=>a.sp===sp)))}
+
 /* ---------- 🦖 Dino Kingdom: your own giant dinosaur park next door, with giant gates ---------- */
 const KINGDOM={id:'kingdom',name:'🦖 Dino Kingdom',place:'Your own giant dinosaur park',hab:'dino',kingdom:1,deco:['🦖','🌋','🦕'],animals:[]};
 // every dinosaur you own moves out of the zoo and into the Kingdom
@@ -880,15 +886,51 @@ function buildKingdom(scene){
     for(let t=0;t<L;t+=10){const x0=ax+(bx-ax)*t/L,z0=az+(bz-az)*t/L,x1=ax+(bx-ax)*Math.min(L,t+10)/L,z1=az+(bz-az)*Math.min(L,t+10)/L,ln=Math.hypot(x1-x0,z1-z0),hh=(H(x0,z0)+H(x1,z1))/2;
       for(let y=2;y<=12;y+=2.5){const wg=new T.BoxGeometry(ln,.07,.07);wg.rotateY(-Math.atan2(z1-z0,x1-x0));wg.translate((x0+x1)/2,hh+y,(z0+z1)/2);wires.push(wg)}}}
   add(NATURE.merge(posts),iron,0,0,0);add(NATURE.merge(wires),new T.MeshStandardMaterial({color:'#c8ccd0',metalness:.8,roughness:.3,emissive:'#3a6aff',emissiveIntensity:.25}),0,0,0);
+  buildPaddocks(scene);
   // you start just outside the gates
   car.x=0;car.z=LIMIT-15;car.yaw=0;me.x=car.x;me.z=car.z;
   // your dinosaurs roam free inside
   const r=rng(77);for(const an of(S.park||[]).slice(0,140)){const sp=SP[an.k];if(!sp)continue;let x,z,t=0;
     do{x=(r()-.5)*2*(LIMIT-25);z=-LIMIT+25+r()*(GATE_Z-30+LIMIT-25);t++}while(t<40&&inPond(x,z));
     const m=ANIMALS.make(sp);scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
-    world.animals.push({sp,own:an,x,z,ox:0,oz:0,vx:0,vz:0,yaw:r()*6.3,t:r()*3,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp:null})}
+    const pen=world.paddocks.find(q=>q.n===sp.n);if(pen){x=pen.x+(r()-.5)*pen.s*.5;z=pen.z+(r()-.5)*pen.s*.5}else while(world.paddocks.some(q=>inPaddock(q,x,z,6))){x=(r()-.5)*2*(LIMIT-25);z=-LIMIT+25+r()*(GATE_Z-30+LIMIT-25)}
+    world.animals.push({sp,own:an,pen,x,z,ox:0,oz:0,vx:0,vz:0,yaw:r()*6.3,t:r()*3,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp:null})}
   const tick0=world.tick;world.tick=(dt,time)=>{if(tick0)tick0(dt,time);
     const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,near=Math.hypot(px,pz-GATE_Z)<45;
     for(const d of world.gateDoors){const want=near?d.userData.sd*1.35:0;d.rotation.y+=(want-d.rotation.y)*Math.min(1,dt*1.2)}
     for(const f of world.fires||[])f.scale.set(1+Math.sin(time*13+f.position.x)*.15,1+Math.sin(time*17)*.2,1)};
+}
+
+// each famous dinosaur's own paddock, built like the ones in the films
+const PADDOCKS=[{n:'Blue',x:-170,z:-170,s:46,kind:'raptor',title:'RAPTOR PADDOCK',sub:'Home of Blue'},
+  {n:'Rexy',x:150,z:-160,s:84,kind:'rex',title:'T-REX PADDOCK',sub:'Danger! 10,000 volts'},
+  {n:'Indominus Rex',x:-160,z:40,s:92,kind:'wall',title:'INDOMINUS REX',sub:'Paddock 11 · Keep out'},
+  {n:'Indoraptor',x:170,z:60,s:46,kind:'cage',title:'INDORAPTOR',sub:'Top secret cage'}];
+function inPaddock(q,x,z,m=0){return Math.abs(x-q.x)<q.s/2+m&&Math.abs(z-q.z)<q.s/2+m}
+function buildPaddocks(scene){
+  world.paddocks=[];const owned=new Set((S.park||[]).map(an=>SP[an.k]&&SP[an.k].n));
+  const concrete=new T.MeshStandardMaterial({color:'#8a8a84',roughness:.9}),iron=new T.MeshStandardMaterial({color:'#2a2c30',metalness:.6,roughness:.4}),yellow=new T.MeshStandardMaterial({color:'#e8b820',roughness:.6});
+  const wire=new T.MeshStandardMaterial({color:'#c8ccd0',metalness:.8,roughness:.3,emissive:'#3a6aff',emissiveIntensity:.3}),glass=new T.MeshPhysicalMaterial({color:'#a8d0e0',roughness:.05,transparent:true,opacity:.35});
+  for(const q of PADDOCKS){if(!owned.has(q.n))continue;world.paddocks.push(q);const h=q.s/2,lists={c:[],i:[],w:[],y:[]};
+    const bx=(L,a,b,c,x,y,z,ry=0)=>{const g=new T.BoxGeometry(a,b,c);if(ry)g.rotateY(ry);g.translate(x,y,z);L.push(g)};
+    const Ht=q.kind==='wall'?16:q.kind==='raptor'?9:q.kind==='cage'?11:13;
+    const sides=[[q.x-h,q.z-h,q.x+h,q.z-h],[q.x+h,q.z-h,q.x+h,q.z+h],[q.x+h,q.z+h,q.x-h,q.z+h],[q.x-h,q.z+h,q.x-h,q.z-h]];
+    for(const[ax,az,bxx,bz]of sides){const L=Math.hypot(bxx-ax,bz-az),ry=-Math.atan2(bz-az,bxx-ax),gy=H((ax+bxx)/2,(az+bz)/2);
+      for(let t=0;t<=L;t+=3)addCol({x:ax+(bxx-ax)*t/L,z:az+(bz-az)*t/L,r:1.8});
+      if(q.kind==='rex'){for(let t=0;t<=L;t+=8){const x=ax+(bxx-ax)*t/L,z=az+(bz-az)*t/L;bx(lists.i,.8,Ht,.8,x,H(x,z)+Ht/2,z)}
+        for(let y=2;y<=Ht-1;y+=2)bx(lists.w,L,.12,.12,(ax+bxx)/2,gy+y,(az+bz)/2,ry)}
+      else if(q.kind==='cage'){bx(lists.c,L,1.2,1,(ax+bxx)/2,gy+.6,(az+bz)/2,ry);for(let t=0;t<=L;t+=.9){const x=ax+(bxx-ax)*t/L,z=az+(bz-az)*t/L;bx(lists.i,.14,Ht,.14,x,H(x,z)+Ht/2,z)}}
+      else{bx(lists.c,L+1.6,Ht,1.6,(ax+bxx)/2,gy+Ht/2,(az+bz)/2,ry);
+        // a walkway with yellow railings along the top, so keepers can watch from above
+        if(q.kind==='raptor'){const nx=Math.sin(-ry)*0,o=V(-(bz-az),0,bxx-ax).normalize().multiplyScalar(-1.6);bx(lists.c,L+3,.3,2.2,(ax+bxx)/2+o.x,gy+Ht-1.5,(az+bz)/2+o.z,ry);bx(lists.y,L+3,.1,.1,(ax+bxx)/2+o.x*1.6,gy+Ht-.4,(az+bz)/2+o.z*1.6,ry)}
+        // the Indominus paddock has a glass viewing room on top
+        if(q.kind==='wall'&&az===q.z+h)bx(lists.y,L*.3,3,4,(ax+bxx)/2,gy+Ht+1.5,(az+bz)/2,ry)}}
+    if(q.kind==='cage'){const gy=H(q.x,q.z);bx(lists.i,q.s,.3,q.s,q.x,gy+Ht,q.z);for(let t=-h;t<=h;t+=3)bx(lists.i,q.s,.18,.18,q.x,gy+Ht+.1,q.z+t)}
+    // big doors on the side facing the gate, with a sign above
+    const gz=q.z+h,gy=H(q.x,gz),gw=q.kind==='raptor'||q.kind==='cage'?8:16;bx(lists.i,gw,Ht-1,1.2,q.x,gy+(Ht-1)/2,gz+1);for(const y of[2,Ht/2,Ht-3])bx(lists.y,gw,.5,1.3,q.x,gy+y,gz+1);
+    for(const[L,m]of[[lists.c,concrete],[lists.i,iron],[lists.w,wire],[lists.y,yellow]])if(L.length){const o=new T.Mesh(NATURE.merge(L),m);o.castShadow=o.receiveShadow=true;scene.add(o)}
+    if(q.kind==='wall'){const gw2=new T.Mesh(new T.BoxGeometry(q.s*.3-.4,2.6,3.6),glass);gw2.position.set(q.x,H(q.x,gz)+Ht+1.6,gz);scene.add(gw2)}
+    const [c,g]=NATURE.canvas(1024,256);g.fillStyle=q.kind==='rex'||q.kind==='wall'?'#7a1a10':'#1a1a20';g.fillRect(0,0,1024,256);g.strokeStyle='#e8b820';g.lineWidth=14;g.strokeRect(12,12,1000,232);
+    g.fillStyle='#ffcf5a';g.textAlign='center';g.textBaseline='middle';g.font='bold 96px "Lilita One","Arial Black",sans-serif';g.fillText(q.title,512,100);g.font='bold 52px Nunito,sans-serif';g.fillStyle='#fff';g.fillText(q.sub,512,190);
+    const sm=new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.7}),sg=new T.Mesh(new T.PlaneGeometry(14,3.5),sm);sg.position.set(q.x,gy+Ht+(q.kind==='wall'?5:2.5),gz+1.8);scene.add(sg)}
 }

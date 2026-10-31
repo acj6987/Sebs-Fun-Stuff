@@ -126,6 +126,13 @@ const CONT=[
 ];
 // the Sub Ninja: tiger body, lion face, elephant trunk and eagle wings - the only one that flies
 CONT.find(c=>c.id==='africa').animals.push(['Sub Ninja (boy)','🦅',3,2.6,{home:'dream',male:1,mate:'africa:9',monthly:1,soar:1,fly:1,eagle:1,L:1.9,W:.62,Hb:.78,leg:.78,legW:.1,neck:.35,neckW:.26,neckAng:1.05,headL:.48,headW:.42,headH:.42,col:'#e07a2a',tex:'stripes',col2:'#151515',freq:15,thin:.15,belly:'#f6eee0',lionMane:'#7a4a1a',snout:'#e8c49a',nose:'#5a3a2a',cheeks:1,trunk:1,ears:'round',tail:'long',tl:.9,paws:1}]);
+// the famous film dinosaurs: only one of each in the world, and each has its own paddock in your Dino Kingdom
+{const dz=CONT.find(c=>c.id==='dino').animals,raptor=dz[0][4],rex=dz[9][4],only=['Blue','Rexy','Indominus Rex','Indoraptor'];
+ dz.push(['Blue','🦖',3,2.8,Object.assign({},raptor,{unique:1,herd:null,col:'#7c858e',back:'#5e6670',col2:'#16328a',freq:5,thin:.55,belly:'#dcdcd4'})],
+  ['Rexy','🦖',3,2.3,Object.assign({},rex,{unique:1,sz:1.15,col:'#6c5c46',back:'#4a3c2c',thin:.8})],
+  ['Indominus Rex','🦖',3,2.2,Object.assign({},rex,{unique:1,hip:3.4,L:5,W:1.8,Hb:2.1,neck:1.1,neckW:.6,headL:1.7,headW:.8,headH:.9,tail:6,arm:1.5,legW:.5,col:'#e6e4dc',back:'#c8c4ba',col2:'#a8a49a',belly:'#f2f0ea',tex:'stripes',freq:3,thin:.75,sz:1.2})],
+  ['Indoraptor','🦖',3,3,Object.assign({},raptor,{unique:1,herd:null,hip:1.6,L:2.6,W:.55,Hb:.8,neck:.8,neckW:.2,headL:.65,headW:.25,headH:.28,tail:3,arm:1.05,legW:.2,col:'#1c1c20',back:'#141416',col2:'#d8a020',belly:'#2a2a2e',freq:6,thin:.6})]);
+ for(const d of dz)if(d[4].hunts&&!d[4].unique)for(const n of only)d[4].hunts=d[4].hunts.filter(x=>x!==n)}
 // there are only two Sub Ninjas in the world: the boy and the girl
 {const af=CONT.find(c=>c.id==='africa').animals,boy=af[8];af.push(['Sub Ninja (girl)','🦅',3,2.6,Object.assign({},boy[4],{male:0,female:1,mate:'africa:8',col:'#f2a64a',col2:'#2a1020',lionMane:'#b0487a',belly:'#fff4ee'})])}
 // Thomson's gazelle: small and fast, with a black stripe along its side and curvy ringed horns
