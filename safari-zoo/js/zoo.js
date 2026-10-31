@@ -270,7 +270,7 @@ function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
-  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);updateShow(dt,time);updateLaunchShow(dt);
+  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);workersFeed(dt);updateShow(dt,time);updateLaunchShow(dt);
   for(const p of zoo.skyPlanes||[]){p.a+=p.spd/p.r*dt;const x=p.cx+Math.cos(p.a)*p.r,z=p.cz+Math.sin(p.a)*p.r,d=Math.sign(p.spd);p.g.position.set(x,p.h,z);p.g.rotation.set(0,Math.atan2(-Math.sin(p.a)*d,Math.cos(p.a)*d),-d*.25,'YXZ');p.g.userData.prop.rotation.z+=dt*40}
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
@@ -382,11 +382,11 @@ function syncVisitors(){
     const v={inst,from,to:from.nb[Math.floor(Math.random()*from.nb.length)],off:(Math.random()-.5)*4.5,spd:1.1+Math.random()*.6,wait:Math.random()*3,x:from.x,z:from.z,yaw:0};
     zoo.people.push(v)}
   // zoo workers you bought in the shop walk around too
-  for(let i=0;i<(S.shop.workers||0);i++){const inst=ANIMALS.make(personSp('staff'));zoo.scene.add(inst.g);const g=zoo.graph,from=g.nodes[Math.floor(Math.random()*g.nodes.length)];
+  for(let i=0;i<Math.min(40,S.shop.workers||0);i++){const inst=ANIMALS.make(personSp(i%3?'staff':'security'));zoo.scene.add(inst.g);const g=zoo.graph,from=g.nodes[Math.floor(Math.random()*g.nodes.length)];
     zoo.people.push({inst,from,to:from.nb[Math.floor(Math.random()*from.nb.length)],off:(Math.random()-.5)*4.5,spd:1.2+Math.random()*.5,wait:Math.random()*3,x:from.x,z:from.z,yaw:0})}
   for(const g of zoo.guards||[])zoo.scene.remove(g.g);zoo.guards=[];
   S.areas.forEach(a=>{const A=zoo.areas.get(a.id);if(!A)return;const ox=A.door.x-A.x,oz=A.door.z-A.z,l=Math.hypot(ox,oz),nx=ox/l,nz=oz/l;
-    for(const sd of[-1,1]){const g=ANIMALS.make(personSp('staff'));const x=A.door.x+nx*3-nz*sd*11,z=A.door.z+nz*3+nx*sd*11;g.g.position.set(x,.04,z);g.g.rotation.y=Math.atan2(nx,nz);zoo.scene.add(g.g);zoo.guards.push(g)}});
+    for(const sd of[-1,1]){const g=ANIMALS.make(personSp((S.shop.workers||0)>0?'security':'staff'));const x=A.door.x+nx*3-nz*sd*11,z=A.door.z+nz*3+nx*sd*11;g.g.position.set(x,.04,z);g.g.rotation.y=Math.atan2(nx,nz);zoo.scene.add(g.g);zoo.guards.push(g)}});
   const el=$('#visitors');if(el)el.textContent='👥 '+(S.dreamBonus?(6e6+n).toLocaleString():n)+' visitors';
 }
 function updateVisitors(dt,time){
@@ -439,11 +439,11 @@ function tourRoute(){
 function syncTours(){
   for(const t of zoo.tours||[])zoo.scene.remove(t.g);zoo.tours=[];
   const n=(S.dreamBonus?6:2)+(S.shop.shuttles||0),L=zooLayout(),route=[{x:-3,z:120},{x:-3,z:60},{x:-3,z:20},{x:-3,z:L.end+40},{x:3,z:L.end+40},{x:3,z:20},{x:3,z:60},{x:3,z:120},{x:30,z:140},{x:-30,z:140}];
-  for(let i=0;i<n;i++){const g=tourCarModel();zoo.scene.add(g);
+  for(let i=0;i<Math.min(n,30);i++){const g=tourCarModel();zoo.scene.add(g);
     const driver=ANIMALS.make(personSp('staff'));seat(driver);driver.g.position.set(-.45,.23,-1.2);g.add(driver.g);
     const riders=[];[[-.5,-.1],[.5,-.1],[-.5,1.1],[.5,1.1]].forEach(([x,z],j)=>{const r=ANIMALS.make(personSp((i*4+j)%LOOKS.length));seat(r);r.g.position.set(x,.23,z);g.add(r.g);riders.push(r)});
-    const k=Math.floor(i*route.length/n);zoo.tours.push({g,route,k,x:route[k].x,z:route[k].z,yaw:0,riders,driver})}
-  const el=$('#tours');if(el){el.textContent='🚐 '+n+' shuttles';el.hidden=!n}
+    const k=Math.floor(i*route.length/Math.min(n,30));zoo.tours.push({g,route,k,x:route[k].x,z:route[k].z,yaw:0,riders,driver})}
+  const el=$('#tours');if(el){el.textContent='🚐 '+n.toLocaleString()+' shuttles';el.hidden=!n}
 }
 function updateTours(dt,time){
   if(!zoo.tours)return;
@@ -771,7 +771,7 @@ function nearStore(){return Math.abs(car.x-FOOD.x)<FOOD.D/2+12&&Math.abs(car.z-F
 function domeAt(x,z){return[...zoo.areas.values()].find(a=>Math.hypot(x-a.x,z-a.z)<a.R0-3)||null}
 // G: load food at the store, or drop food in the dome you are in
 function foodAction(){
-  if(world&&!world.zoo){callDreams();return}
+  if(world&&!world.zoo){if(world.c.kingdom&&paddockDrop())return;callDreams();return}
   if(!(world&&world.zoo))return;
   // use where YOU are: in the truck or walking about
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
@@ -1037,7 +1037,7 @@ const SHOP=[
   ...[['#c4843a','Sandy'],['#d8251f','Red'],['#2a5bd7','Blue'],['#ff5fae','Pink'],['#2f9a4a','Green'],['#1d1d22','Black'],['#ffd23a','Yellow']].map(([c,n])=>({id:'paint'+c,e:'🎨',n:n+' truck paint',cost:300,col:c,buy(){S.shop.paint=c;return'Your truck is painted '+n.toLowerCase()+'! You will see it next time you drive.'}}))];
 function openShop(){renderShop();$('#shopPanel').hidden=false}
 function renderShop(){
-  $('#shopCoins').textContent='🪙 '+S.coins.toLocaleString()+' coins · '+(S.shop.workers||0)+' workers · '+((S.dreamBonus?6:2)+(S.shop.shuttles||0))+' safari cars';
+  $('#shopCoins').textContent='🪙 '+S.coins.toLocaleString()+' coins · '+(S.shop.workers||0).toLocaleString()+' workers · '+((S.dreamBonus?6:2)+(S.shop.shuttles||0)).toLocaleString()+' safari cars';
   const done=it=>it.once&&S.shop.hayTruck||it.max&&(S.shop.helpers||0)>=it.max;
   $('#shopList').innerHTML=SHOP.map(it=>`<button data-buy="${it.id}" ${S.coins<it.cost||done(it)?'disabled':''}>${it.col?`<i style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${it.col}"></i> `:it.e+' '}${it.n}<small>🪙 ${it.cost}</small></button>`).join('');
 }
@@ -1405,3 +1405,11 @@ function sayTyped(){const t=$('#sayIn').value.trim();if(!t)return;$('#sayIn').va
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('.talkBtn');if(b){e.preventDefault();talkStart(b)}});
 document.addEventListener('pointerup',()=>talkStop());
 $('#sayGo').onclick=sayTyped;$('#sayIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')sayTyped()});
+
+// 👷 your workers really work: every so often they bring food to a dome that needs it
+function workersFeed(dt){
+  const w=S.shop.workers||0;if(!w)return;zoo.feedT=(zoo.feedT??20)-dt*Math.min(4,1+w/1000);if(zoo.feedT>0)return;zoo.feedT=45;
+  for(const a of S.areas){const A=zoo.areas.get(a.id);if(!A||!a.animals.length)continue;const need=[...new Set(a.animals.map(an=>eats(SP[an.k])))].filter(Boolean).find(t=>!A.food.some(p=>p.type===t));if(!need)continue;
+    const p=A.inside;dropPile(A,need,p.x+(Math.random()-.5)*8,p.z+(Math.random()-.5)*8);
+    for(const o of zoo.animals)if(o.A===A&&!o.an.preg&&eats(SP[o.an.k])===need){const s=nextSpot(o);o.tx=s.x;o.tz=s.z;o.pile=s.pile||null;o.t=0}
+    zoo.fedN=(zoo.fedN||0)+1;if(zoo.fedN%4===1)toast('👷 Your zoo workers brought '+(need==='meat'?'🥩 meat':'🌾 hay')+' to the '+domeName(a)+'!');break}}

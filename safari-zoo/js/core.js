@@ -226,7 +226,9 @@ function mixDef(da,db){
 }
 function mixName(a,b){const x=a.n.replace(/\s*\(.*\)/,'').split(' ').pop(),y=b.n.replace(/\s*\(.*\)/,'').split(' ').pop();return x.slice(0,Math.ceil(x.length/2))+y.slice(Math.floor(y.length/2)).toLowerCase()}
 function addMix(m,i){const a=SP[m.a],b=SP[m.b];if(!a||!b)return;const k='mix:'+i;SP[k]={k,n:m.n,e:'🧬',r:3,s:(a.s+b.s)/2,def:mixDef(a.def,b.def),cont:'mix',hab:'dream'}} // made-up animals all live in the Mummy Dream Dome
-S.shop=S.shop||{shuttles:0,workers:0,paint:null};updateCaps();
+S.shop=S.shop||{shuttles:0,workers:0,paint:null};
+if(!S.gift50){S.gift50=1;S.shop.helpers=Math.min(16,(S.shop.helpers||0)+2);S.shop.crew=(S.shop.crew||0)+50}
+updateCaps();
 S.mixes=S.mixes||[];S.mixes.forEach(addMix);S.dna=S.dna||{};
 {const ok=x=>SP[x.k];S.holding=S.holding.filter(ok);S.cages=S.cages.filter(ok);S.areas.forEach(a=>a.animals=a.animals.filter(ok));
  for(const k in S.dex)if(!SP[k])delete S.dex[k]}

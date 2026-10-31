@@ -168,7 +168,8 @@ $('#toKingdom').onclick=async()=>{const n=transferDinos();if(!(S.park||[]).lengt
   await startSafari(KINGDOM);if(n)toast('🦖 '+n+' dinosaur'+(n>1?'s':'')+' moved out of your zoo and into your Dino Kingdom!',6000)};
 $('#toZoo2').onclick=()=>{if(me.pack.length)releaseLeash();if(world&&world.zoo){show('zoo');zoo.running=true;renderZooUI();return}deliver();openZoo()};
 $('#zooMap').onclick=()=>show('map');
-function deliver(){if(!S.cages.length)return;const n=S.cages.length;S.holding.push(...S.cages.map(c=>(delete c.pen,c.wait=1,c)));S.cages=[];save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They are waiting in the animal house next to their dome. Press 🔓 Release animals to let them out.',7000),50)}
+function deliver(){const keep=S.cages.filter(c=>SP[c.k].def.unique);if(keep.length)setTimeout(()=>toast('🦖 '+keep.map(c=>SP[c.k].n).join(' and ')+' stayed in your truck. Drive to your Dino Kingdom and into '+(keep.length>1?'their paddocks':'the paddock')+', then press G!',8000),900);
+  const go=S.cages.filter(c=>!SP[c.k].def.unique);if(!go.length)return;const n=go.length;S.holding.push(...go.map(c=>(delete c.pen,c.wait=1,c)));S.cages=keep;save();setTimeout(()=>toast('You brought '+n+' animal'+(n>1?'s':'')+' to your zoo! They are waiting in the animal house next to their dome. Press 🔓 Release animals to let them out.',7000),50)}
 
 /* ---------- zoo panel ---------- */
 let selected=null;
@@ -218,7 +219,7 @@ $('#acList').addEventListener('click',e=>{const area=S.areas.find(a=>a.id===zoo.
   if(fr){if(fr.dataset.sure!=='1'){fr.dataset.sure='1';fr.textContent='Tap again to set free';setTimeout(()=>{if(fr.isConnected){fr.dataset.sure='';fr.textContent='🌿 Set free'}},3000);return}
     const u=+fr.dataset.free,i=area.animals.findIndex(x=>x.uid===u),an=area.animals.splice(i,1)[0];save();syncZooAnimals();renderZooUI();
     toast('Bye bye '+SP[an.k].n+'! It went back to the wild.')}});
-$('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;S.holding.push(...S.cages.splice(0).map(c=>(delete c.pen,c.wait=1,c)));const made=autoHome();
+$('#truckInfo').addEventListener('click',e=>{if(!e.target.closest('#unload'))return;{const go=S.cages.filter(c=>!SP[c.k].def.unique);S.cages=S.cages.filter(c=>SP[c.k].def.unique);S.holding.push(...go.map(c=>(delete c.pen,c.wait=1,c)))}const made=autoHome();
   [...new Set(S.areas.map(a=>a.id))].forEach((id,i)=>{if(!zoo.areas.has(id)){buildArea(S.areas[i],i);syncVisitors()}});if(made.length)rebuildPaths();syncZooAnimals();renderZooUI();toast('Your animals are waiting in the animal houses next to their domes. Press 🔓 Release animals to let them out!',6000)});
 $('#acClose').onclick=()=>{zoo.sel=null;renderAreaCard();const w=zoo.cam.w;w.dist=700;w.tx=0;w.tz=-400};
 $('#sideToggle').onclick=()=>$('#zooSide').classList.toggle('min');

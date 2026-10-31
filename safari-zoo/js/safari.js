@@ -456,7 +456,9 @@ function cageIt(own=me){
   if(!own.pack.length)return;
   const names=[],caged=[];let coinsWon=0,fresh=false;
   const store=(a,pen)=>{if(!S.dex[a.sp.k])fresh=true;S.dex[a.sp.k]=(S.dex[a.sp.k]||0)+1;S.cages.push(Object.assign(pen==null?{uid:S.uid++,k:a.sp.k}:{uid:S.uid++,k:a.sp.k,pen},{h:[[Date.now(),'was caught in the '+(world.c.place||world.c.name)]]}));
-    coinsWon+=VALUE[a.sp.r];names.push(a.sp.n);caged.push(a)};
+    coinsWon+=VALUE[a.sp.r];names.push(a.sp.n);caged.push(a);
+    if(a.sp.n==='Blue'&&!S.blueBonus){S.blueBonus=1;S.coins+=1e10;S.shop.shuttles=(S.shop.shuttles||0)+800000;S.shop.workers=(S.shop.workers||0)+80000;
+      setTimeout(()=>{coins();bigAlert('🦖💙','£10,000,000,000!','You caught <b>BLUE</b>!<br>+ 800,000 safari cars for visitors · + 80,000 zoo workers who guard and feed your animals',15000)},400)}};
   // whole herds and packs go into a big pen together
   const groups=new Map();for(const a of own.pack)if(a.grp){if(!groups.has(a.grp))groups.set(a.grp,[]);groups.get(a.grp).push(a)}
   for(const[g,list]of groups){if(list.length<2)continue;const used=new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen));
@@ -630,6 +632,7 @@ function hud(){
   if(mode==='plane'&&plane.star)msg=plane.launchT>0?'🚀 Countdown… hold on tight!':plane.homing?'🛬 Autopilot: flying home to the Launch Room…':'🚀 <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up to space · <b>Shift</b> down · <b>P</b> fly home · '+Math.round(plane.y)+' m high';
   else if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
   else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
+  else if(paddockHint())msg=paddockHint();
   else if(world.zoo)msg=labHint()||barnHint()||foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
@@ -824,7 +827,7 @@ function updateDNA(time){
 }
 
 /* ---------- worker trucks from the shop that follow you in a line ---------- */
-function helperTruck(col){
+function helperTruck(col,riders=0){
   const g=new T.Group(),paint=new T.MeshPhysicalMaterial({color:col,roughness:.35,clearcoat:.6}),dark=new T.MeshStandardMaterial({color:'#222',roughness:.8}),glass=new T.MeshStandardMaterial({color:'#2a3a48',roughness:.1,metalness:.4});
   const hay=new T.MeshStandardMaterial({color:'#e2c870',roughness:1}),slat=new T.MeshStandardMaterial({color:'#9a6a3a',roughness:.8});
   const B=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o};
@@ -833,12 +836,14 @@ function helperTruck(col){
   for(const[x,z]of[[-1.2,-2.5],[1.2,-2.5],[-1.2,2],[1.2,2]]){const w=new T.Mesh(new T.CylinderGeometry(.5,.5,.35,14),dark);w.rotation.z=Math.PI/2;w.position.set(x,.5,z);g.add(w)}
   const holds=[];for(let r=0;r<2;r++)for(const x of[-.55,.55]){const h=new T.Group();h.position.set(x,1,-.3+r*1.6);g.add(h);holds.push(h)}
   const d=ANIMALS.make(personSp('staff'));seat(d);d.g.position.set(-.5,1.25-.95*STAFF.s,-2.6);g.add(d.g);
+  // workers riding along on the hay, ready to help
+  for(let i=0;i<riders;i++){const w=ANIMALS.make(personSp(i%2?'security':'staff'));seat(w);w.g.position.set(i%2?.95:-.95,.95,-1+Math.floor(i/2)*1.4);w.g.rotation.y=i%2?-Math.PI/2:Math.PI/2;g.add(w.g)}
   g.scale.setScalar(TS*.85);return{g,holds};
 }
 function buildHelpers(scene){
   car.helpers=[];car.helperHolds=[];car.trail=[];const n=Math.min(16,S.shop.helpers||0);if(!n)return;
   const cols=['#2f9a4a','#2a5bd7','#d8251f','#ff9a2a','#8a4ad8','#1aa8a8','#ff5fae','#c4843a'];
-  for(let i=0;i<n;i++){const h=helperTruck(cols[i%cols.length]);scene.add(h.g);car.helpers.push(h);car.helperHolds.push(...h.holds)}
+  const crew=S.shop.crew||0;for(let i=0;i<n;i++){const h=helperTruck(cols[i%cols.length],Math.min(6,Math.ceil(crew/n)));scene.add(h.g);car.helpers.push(h);car.helperHolds.push(...h.holds)}
   refreshCages();
 }
 function updateHelpers(){
@@ -857,7 +862,7 @@ const KINGDOM={id:'kingdom',name:'🦖 Dino Kingdom',place:'Your own giant dinos
 // every dinosaur you own moves out of the zoo and into the Kingdom
 function transferDinos(){
   S.park=S.park||[];let n=0;const isDino=an=>SP[an.k]&&SP[an.k].cont==='dino';
-  for(const list of[S.cages,S.holding,...S.areas.map(a=>a.animals),...S.areas.map(a=>a.barn||[])])for(const an of list.slice())if(isDino(an)){list.splice(list.indexOf(an),1);delete an.pen;S.park.push(an);n++}
+  for(const list of[S.cages,S.holding,...S.areas.map(a=>a.animals),...S.areas.map(a=>a.barn||[])])for(const an of list.slice())if(isDino(an)&&!(list===S.cages&&SP[an.k].def.unique)){list.splice(list.indexOf(an),1);delete an.pen;S.park.push(an);n++}
   save();return n}
 const GATE_Z=LIMIT-45;
 function buildKingdom(scene){
@@ -887,6 +892,9 @@ function buildKingdom(scene){
       for(let y=2;y<=12;y+=2.5){const wg=new T.BoxGeometry(ln,.07,.07);wg.rotateY(-Math.atan2(z1-z0,x1-x0));wg.translate((x0+x1)/2,hh+y,(z0+z1)/2);wires.push(wg)}}}
   add(NATURE.merge(posts),iron,0,0,0);add(NATURE.merge(wires),new T.MeshStandardMaterial({color:'#c8ccd0',metalness:.8,roughness:.3,emissive:'#3a6aff',emissiveIntensity:.25}),0,0,0);
   buildPaddocks(scene);
+  // security guards stand at the gate and at every paddock door
+  world.guards=[];if((S.shop.workers||0)>0||(S.shop.crew||0)>0){const spots=[[-gw-5,GATE_Z+5],[gw+5,GATE_Z+5],...world.paddocks.flatMap(q=>[[q.x-8,q.z+q.s/2+5],[q.x+8,q.z+q.s/2+5]])];
+    for(const[x,z]of spots){const gd=ANIMALS.make(personSp('security'));gd.g.position.set(x,H(x,z),z);gd.g.rotation.y=0;scene.add(gd.g);world.guards.push(gd)}}
   // you start just outside the gates
   car.x=0;car.z=LIMIT-15;car.yaw=0;me.x=car.x;me.z=car.z;
   // your dinosaurs roam free inside
@@ -898,6 +906,8 @@ function buildKingdom(scene){
   const tick0=world.tick;world.tick=(dt,time)=>{if(tick0)tick0(dt,time);
     const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,near=Math.hypot(px,pz-GATE_Z)<45;
     for(const d of world.gateDoors){const want=near?d.userData.sd*1.35:0;d.rotation.y+=(want-d.rotation.y)*Math.min(1,dt*1.2)}
+    for(const gd of world.guards||[])ANIMALS.animate(gd,dt,0,time,{});
+    for(const d of world.padDoors||[]){const near=Math.hypot(px-d.x0,pz-(d.q.z+d.q.s/2))<30||inPaddock(d.q,px,pz,0);d.open+=((near?1:0)-d.open)*Math.min(1,dt*1.5);d.g.position.x=d.x0+d.open*(d.gw+1)}
     for(const f of world.fires||[])f.scale.set(1+Math.sin(time*13+f.position.x)*.15,1+Math.sin(time*17)*.2,1)};
 }
 
@@ -908,15 +918,15 @@ const PADDOCKS=[{n:'Blue',x:-170,z:-170,s:46,kind:'raptor',title:'RAPTOR PADDOCK
   {n:'Indoraptor',x:170,z:60,s:46,kind:'cage',title:'INDORAPTOR',sub:'Top secret cage'}];
 function inPaddock(q,x,z,m=0){return Math.abs(x-q.x)<q.s/2+m&&Math.abs(z-q.z)<q.s/2+m}
 function buildPaddocks(scene){
-  world.paddocks=[];const owned=new Set((S.park||[]).map(an=>SP[an.k]&&SP[an.k].n));
+  world.paddocks=[];world.padDoors=[];const owned=new Set((S.park||[]).map(an=>SP[an.k]&&SP[an.k].n));
   const concrete=new T.MeshStandardMaterial({color:'#8a8a84',roughness:.9}),iron=new T.MeshStandardMaterial({color:'#2a2c30',metalness:.6,roughness:.4}),yellow=new T.MeshStandardMaterial({color:'#e8b820',roughness:.6});
   const wire=new T.MeshStandardMaterial({color:'#c8ccd0',metalness:.8,roughness:.3,emissive:'#3a6aff',emissiveIntensity:.3}),glass=new T.MeshPhysicalMaterial({color:'#a8d0e0',roughness:.05,transparent:true,opacity:.35});
-  for(const q of PADDOCKS){if(!owned.has(q.n))continue;world.paddocks.push(q);const h=q.s/2,lists={c:[],i:[],w:[],y:[]};
+  for(const q of PADDOCKS){world.paddocks.push(q);const h=q.s/2,lists={c:[],i:[],w:[],y:[]};
     const bx=(L,a,b,c,x,y,z,ry=0)=>{const g=new T.BoxGeometry(a,b,c);if(ry)g.rotateY(ry);g.translate(x,y,z);L.push(g)};
     const Ht=q.kind==='wall'?16:q.kind==='raptor'?9:q.kind==='cage'?11:13;
     const sides=[[q.x-h,q.z-h,q.x+h,q.z-h],[q.x+h,q.z-h,q.x+h,q.z+h],[q.x+h,q.z+h,q.x-h,q.z+h],[q.x-h,q.z+h,q.x-h,q.z-h]];
     for(const[ax,az,bxx,bz]of sides){const L=Math.hypot(bxx-ax,bz-az),ry=-Math.atan2(bz-az,bxx-ax),gy=H((ax+bxx)/2,(az+bz)/2);
-      for(let t=0;t<=L;t+=3)addCol({x:ax+(bxx-ax)*t/L,z:az+(bz-az)*t/L,r:1.8});
+      const gwd=q.kind==='raptor'||q.kind==='cage'?10:18;for(let t=0;t<=L;t+=3){const x=ax+(bxx-ax)*t/L,z=az+(bz-az)*t/L;if(Math.abs(z-(q.z+h))<1&&Math.abs(x-q.x)<gwd/2+1)continue;addCol({x,z,r:1.8})}
       if(q.kind==='rex'){for(let t=0;t<=L;t+=8){const x=ax+(bxx-ax)*t/L,z=az+(bz-az)*t/L;bx(lists.i,.8,Ht,.8,x,H(x,z)+Ht/2,z)}
         for(let y=2;y<=Ht-1;y+=2)bx(lists.w,L,.12,.12,(ax+bxx)/2,gy+y,(az+bz)/2,ry)}
       else if(q.kind==='cage'){bx(lists.c,L,1.2,1,(ax+bxx)/2,gy+.6,(az+bz)/2,ry);for(let t=0;t<=L;t+=.9){const x=ax+(bxx-ax)*t/L,z=az+(bz-az)*t/L;bx(lists.i,.14,Ht,.14,x,H(x,z)+Ht/2,z)}}
@@ -927,10 +937,26 @@ function buildPaddocks(scene){
         if(q.kind==='wall'&&az===q.z+h)bx(lists.y,L*.3,3,4,(ax+bxx)/2,gy+Ht+1.5,(az+bz)/2,ry)}}
     if(q.kind==='cage'){const gy=H(q.x,q.z);bx(lists.i,q.s,.3,q.s,q.x,gy+Ht,q.z);for(let t=-h;t<=h;t+=3)bx(lists.i,q.s,.18,.18,q.x,gy+Ht+.1,q.z+t)}
     // big doors on the side facing the gate, with a sign above
-    const gz=q.z+h,gy=H(q.x,gz),gw=q.kind==='raptor'||q.kind==='cage'?8:16;bx(lists.i,gw,Ht-1,1.2,q.x,gy+(Ht-1)/2,gz+1);for(const y of[2,Ht/2,Ht-3])bx(lists.y,gw,.5,1.3,q.x,gy+y,gz+1);
+    const gz=q.z+h,gy=H(q.x,gz),gw=q.kind==='raptor'||q.kind==='cage'?10:18;
+    // a big sliding door: it slides open when you drive up to it
+    {const dg=new T.Group();dg.position.set(q.x,gy,gz+1);scene.add(dg);const dm=new T.Mesh(new T.BoxGeometry(gw,Ht-1,1.2),iron);dm.position.y=(Ht-1)/2;dm.castShadow=true;dg.add(dm);
+      for(const y of[2,Ht/2,Ht-3]){const st=new T.Mesh(new T.BoxGeometry(gw,.5,1.3),yellow);st.position.y=y;dg.add(st)}world.padDoors.push({g:dg,q,x0:q.x,gw,open:0})}
     for(const[L,m]of[[lists.c,concrete],[lists.i,iron],[lists.w,wire],[lists.y,yellow]])if(L.length){const o=new T.Mesh(NATURE.merge(L),m);o.castShadow=o.receiveShadow=true;scene.add(o)}
     if(q.kind==='wall'){const gw2=new T.Mesh(new T.BoxGeometry(q.s*.3-.4,2.6,3.6),glass);gw2.position.set(q.x,H(q.x,gz)+Ht+1.6,gz);scene.add(gw2)}
     const [c,g]=NATURE.canvas(1024,256);g.fillStyle=q.kind==='rex'||q.kind==='wall'?'#7a1a10':'#1a1a20';g.fillRect(0,0,1024,256);g.strokeStyle='#e8b820';g.lineWidth=14;g.strokeRect(12,12,1000,232);
-    g.fillStyle='#ffcf5a';g.textAlign='center';g.textBaseline='middle';g.font='bold 96px "Lilita One","Arial Black",sans-serif';g.fillText(q.title,512,100);g.font='bold 52px Nunito,sans-serif';g.fillStyle='#fff';g.fillText(q.sub,512,190);
+    g.fillStyle='#ffcf5a';g.textAlign='center';g.textBaseline='middle';g.font='bold 96px "Lilita One","Arial Black",sans-serif';g.fillText(q.title,512,100);g.font='bold 52px Nunito,sans-serif';g.fillStyle='#fff';g.fillText(owned.has(q.n)?q.sub:'Empty · bring '+q.n+' here!',512,190);
     const sm=new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.7}),sg=new T.Mesh(new T.PlaneGeometry(14,3.5),sm);sg.position.set(q.x,gy+Ht+(q.kind==='wall'?5:2.5),gz+1.8);scene.add(sg)}
 }
+
+// drive Blue (or another famous dinosaur) into its own paddock and press G to let it out
+function paddockAt(x,z){return(world.paddocks||[]).find(q=>inPaddock(q,x,z,10))}
+function paddockDrop(){
+  const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,q=paddockAt(px,pz);if(!q)return false;
+  const c=S.cages.find(c=>SP[c.k].n===q.n);
+  if(!c){toast(world.animals.some(a=>a.sp.n===q.n)?'🦖 '+q.n+' already lives here!':'🦖 This is '+q.n+"'s paddock. Catch "+q.n+' in the Dino Zone and bring '+(q.n==='Blue'?'her':'it')+' here in your truck!',6000);return true}
+  S.cages.splice(S.cages.indexOf(c),1);delete c.pen;(S.park=S.park||[]).push(c);save();refreshCages();
+  const sp=SP[c.k];if(!ANIMALS.isBuilt(sp))ANIMALS.species(sp);const m=ANIMALS.make(sp);world.scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
+  world.animals.push({sp,own:c,pen:q,x:q.x,z:q.z-q.s*.2,ox:0,oz:0,vx:0,vz:0,yaw:0,t:1,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp:null});
+  bigAlert('🦖','Welcome home, '+q.n+'!',q.n+' is in the '+q.title.toLowerCase().replace(/^./,m=>m.toUpperCase())+' now.',7000);return true}
+function paddockHint(){if(!world||!world.c.kingdom)return'';const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,q=paddockAt(px,pz);if(!q)return'';
+  return S.cages.some(c=>SP[c.k].n===q.n)?'Press <b>G</b> to let '+q.n+' out into '+(q.n==='Blue'?'her':'its')+' paddock':'🦖 '+q.title+(world.animals.some(a=>a.sp.n===q.n)?'':' · bring '+q.n+' here in your truck')}
