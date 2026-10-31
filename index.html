@@ -8,15 +8,50 @@
   :root {
     --bg: #0d1117; --panel: #161b22; --line: #30363d; --text: #e6edf3;
     --muted: #8b949e; --accent: #2f81f7; --live: #f85149; --ok: #3fb950;
+    --car: #a371f7; --home: #2f81f7; --warn: #d29922;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
-           justify-content: space-between; padding: 14px 16px;
+         font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  button, input { font: inherit; color: var(--text); background: #21262d;
+         border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .big { font-size: 17px; font-weight: 700; padding: 14px 18px; border: 0; color: #fff; }
+  .blue { background: var(--home); } .purple { background: var(--car); }
+  .green { background: var(--ok); color: #04170a; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row input { flex: 1 1 200px; min-width: 0; }
+  .row input[type=checkbox] { flex: none; width: 20px; height: 20px; }
+  label.row { gap: 6px; }
+
+  /* ---------- LOCK SCREEN ---------- */
+  #lock { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
+          padding: 16px; background: radial-gradient(circle at 50% 20%, #1f2a44, var(--bg) 70%); }
+  .lockbox { width: min(340px, 100%); text-align: center; }
+  .lockbox h1 { margin: 0 0 4px; font-size: 26px; }
+  .dots { display: flex; justify-content: center; gap: 14px; margin: 22px 0; }
+  .dots span { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); }
+  .dots span.on { background: var(--c, var(--accent)); border-color: var(--c, var(--accent)); }
+  .dots.shake { animation: shake .4s; }
+  @keyframes shake { 25% { transform: translateX(-10px);} 75% { transform: translateX(10px);} }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .pad button { aspect-ratio: 1; font-size: 26px; font-weight: 700; border-radius: 50%;
+                color: #fff; border: 0; }
+  .pad button:nth-child(1), .pad button:nth-child(5), .pad button:nth-child(9) { background: #e5534b; }
+  .pad button:nth-child(2), .pad button:nth-child(6), .pad button:nth-child(7) { background: #2f81f7; }
+  .pad button:nth-child(3), .pad button:nth-child(4), .pad button:nth-child(8) { background: #3fb950; }
+  .pad button:nth-child(11) { background: #d29922; }
+  .pad .plain { background: transparent !important; font-size: 18px; }
+  #lockMsg { min-height: 24px; }
+
+  /* ---------- APP ---------- */
+  header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+           justify-content: space-between; padding: 12px 16px;
            border-bottom: 1px solid var(--line); background: var(--panel); }
-  h1 { margin: 0; font-size: 20px; }
-  h2 { font-size: 16px; margin: 0 0 10px; }
+  header h1 { margin: 0; font-size: 20px; }
   .clock { font-variant-numeric: tabular-nums; color: var(--muted); }
   .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
            font-weight: 700; padding: 3px 8px; border-radius: 99px; background: #0003; }
@@ -24,19 +59,20 @@
          animation: blink 1.2s infinite; }
   @keyframes blink { 50% { opacity: .25; } }
   main { padding: 16px; max-width: 1400px; margin: 0 auto; }
-  section { margin-bottom: 22px; }
-  .panel { background: var(--panel); border: 1px solid var(--line);
-           border-radius: 10px; padding: 14px; }
-  button, input, select { font: inherit; color: var(--text); background: #21262d;
-           border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; }
-  button { cursor: pointer; }
-  button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .row input { flex: 1 1 180px; min-width: 0; }
-  .grid { display: grid; gap: 14px;
+  section { margin-bottom: 22px; border-radius: 14px; padding: 16px;
+            background: var(--panel); border: 1px solid var(--line); }
+  section > h2 { margin: 0 0 12px; font-size: 20px; }
+  section.car { border-top: 5px solid var(--car); }
+  section.home { border-top: 5px solid var(--home); }
+  .plate { display: inline-block; background: #ffd400; color: #111; font-weight: 800;
+           letter-spacing: 2px; padding: 4px 12px; border-radius: 4px;
+           border: 2px solid #111; font-family: ui-monospace, monospace; font-size: 20px; }
+  .grid { display: grid; gap: 14px; margin-top: 14px;
           grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
-  .cam { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  .empty { color: var(--muted); border: 2px dashed var(--line); border-radius: 10px;
+           padding: 18px; text-align: center; margin-top: 14px; }
+
+  .cam { background: #0d1117; border: 1px solid var(--line); border-radius: 10px;
          overflow: hidden; display: flex; flex-direction: column; }
   .cam.motion { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
   .screen { position: relative; aspect-ratio: 16/9; background: #000; overflow: hidden; }
@@ -50,92 +86,123 @@
          color: var(--muted); text-align: center; padding: 20px; }
   .cam-foot { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
   .cam-title { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-  .cam-title b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .controls { display: flex; flex-wrap: wrap; gap: 6px; }
-  .controls button { padding: 5px 9px; }
-  .plate { display: inline-block; background: #ffd400; color: #111; font-weight: 800;
-           letter-spacing: 2px; padding: 4px 10px; border-radius: 4px;
-           border: 2px solid #111; font-family: ui-monospace, monospace; }
-  .car-card { display: grid; gap: 12px; grid-template-columns: 1fr; }
-  @media (min-width: 760px) { .car-card { grid-template-columns: 320px 1fr; } }
-  .muted { color: var(--muted); font-size: 13px; }
-  .log { max-height: 160px; overflow: auto; font: 12px/1.5 ui-monospace, monospace;
-         color: var(--muted); margin: 0; padding: 0; list-style: none; }
+  .controls button { padding: 6px 10px; }
   .cam:fullscreen .screen { aspect-ratio: auto; height: 100%; }
+
+  /* ---------- POP-UP ---------- */
+  dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--panel);
+           color: var(--text); width: min(480px, calc(100% - 32px)); padding: 20px; }
+  dialog::backdrop { background: #000a; }
+  dialog h3 { margin: 0 0 12px; font-size: 20px; }
+  .choice { display: grid; gap: 10px; }
+  .choice button { text-align: left; padding: 14px; }
+  .choice b { display: block; font-size: 17px; }
+  .help { background: #2d2207; border: 1px solid var(--warn); border-radius: 10px;
+          padding: 12px 14px; margin-top: 12px; }
+  .help ol { margin: 6px 0 0; padding-left: 20px; }
+  .log { max-height: 160px; overflow: auto; font: 13px/1.5 ui-monospace, monospace;
+         color: var(--muted); margin: 0; padding: 0; list-style: none; }
 </style>
 </head>
 <body>
+
+<!-- ================= LOCK SCREEN ================= -->
+<div id="lock">
+  <div class="lockbox">
+    <h1>🔒 Seb's Camera HQ</h1>
+    <div id="lockTitle" class="muted">Type your secret code</div>
+    <div class="dots" id="dots"><span></span><span></span><span></span><span></span></div>
+    <div class="pad" id="pad">
+      <button>1</button><button>2</button><button>3</button>
+      <button>4</button><button>5</button><button>6</button>
+      <button>7</button><button>8</button><button>9</button>
+      <button class="plain" data-k="clear">⌫</button><button>0</button>
+      <button class="plain" data-k="forgot" title="Forgot code">❓</button>
+    </div>
+    <p id="lockMsg" class="muted"></p>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" hidden>
 <header>
   <h1>📹 Seb's Camera HQ</h1>
   <div class="row">
     <span class="badge"><span class="dot"></span> LIVE 24/7</span>
     <span class="clock" id="clock"></span>
+    <button id="lockBtn">🔒 Lock</button>
   </div>
 </header>
 
 <main>
-  <!-- ===== MY CAR ===== -->
-  <section>
-    <h2>🚗 My Car</h2>
-    <div class="panel car-card">
-      <div>
-        <div class="row" style="margin-bottom:10px">
-          <span class="plate" id="plateShow">LB74 YUJ</span>
-          <b id="carNameShow">My Car</b>
-        </div>
-        <div class="row" style="margin-bottom:8px">
-          <input id="carName" placeholder="Car name (e.g. Dad's car)">
-        </div>
-        <div class="row" style="margin-bottom:8px">
-          <input id="carPlate" placeholder="Number plate" style="text-transform:uppercase">
-          <button id="saveCar">Save</button>
-        </div>
-        <p class="muted">Add your car's camera below and pick “My Car” as its place —
-          it will show up here.</p>
-      </div>
-      <div class="grid" id="carCams"></div>
-    </div>
-  </section>
-
-  <!-- ===== ADD CAMERA ===== -->
-  <section class="panel">
-    <h2>➕ Add a camera</h2>
-    <div class="row" style="margin-bottom:8px">
-      <button class="primary" id="addDevice">Use this phone / computer's camera</button>
-      <span class="muted">Turn an old phone into a security camera!</span>
-    </div>
+  <!-- ===== CAR ===== -->
+  <section class="car">
+    <h2>🚗 My Car <span class="plate" id="plateShow">LB74 YUJ</span></h2>
     <div class="row">
-      <input id="camName" placeholder="Camera name (e.g. Front door)">
-      <input id="camUrl" placeholder="Stream link from your camera app (http://...)">
-      <select id="camType" title="What kind of link is it?">
-        <option value="img">MJPEG / picture link</option>
-        <option value="video">Video link (.mp4 / .m3u8)</option>
-        <option value="page">Web page / embed link</option>
-      </select>
-      <select id="camPlace">
-        <option value="home">Home</option>
-        <option value="car">My Car</option>
-      </select>
-      <button id="addUrl">Add</button>
+      <button class="big purple" data-add="car">➕ Add a car camera</button>
+      <span class="muted">Tip: put a phone on the dashboard facing you to see inside the car.</span>
     </div>
-    <p class="muted">Only add cameras that belong to you or your family. Your camera's app
-      or manual tells you its stream link.</p>
+    <div class="grid" id="carCams"></div>
+    <div class="empty" id="carEmpty">No car cameras yet. Press <b>Add a car camera</b>.</div>
   </section>
 
-  <!-- ===== ALL CAMERAS ===== -->
-  <section>
-    <div class="row" style="justify-content:space-between;margin-bottom:10px">
-      <h2 style="margin:0">🏠 Home Cameras</h2>
-      <label class="row muted"><input type="checkbox" id="motionOn" checked> Motion alerts</label>
+  <!-- ===== HOME ===== -->
+  <section class="home">
+    <h2>🏠 Home Cameras</h2>
+    <div class="row">
+      <button class="big blue" data-add="home">➕ Add a home camera</button>
+      <label class="row muted"><input type="checkbox" id="motionOn" checked> 🚨 Alert me when something moves</label>
     </div>
     <div class="grid" id="homeCams"></div>
+    <div class="empty" id="homeEmpty">No home cameras yet. Press <b>Add a home camera</b>.</div>
   </section>
 
-  <section class="panel">
-    <h2>📝 Activity log</h2>
+  <section>
+    <h2>📝 What happened</h2>
     <ul class="log" id="log"></ul>
   </section>
 </main>
+</div>
+
+<!-- ================= ADD CAMERA POP-UP ================= -->
+<dialog id="addDlg">
+  <!-- step 1 -->
+  <div id="step1">
+    <h3 id="addTitle">Add a camera</h3>
+    <p class="muted" style="margin-top:0">Which camera do you want to use?</p>
+    <div class="choice">
+      <button id="pickFront"><b>🤳 This phone — camera facing me</b>
+        <span class="muted">Good for seeing yourself in the car</span></button>
+      <button id="pickBack"><b>📷 This phone — camera on the back</b>
+        <span class="muted">Good for watching the road or a room</span></button>
+      <button id="pickLink"><b>🔗 A camera that has its own app</b>
+        <span class="muted">Like a dashcam or a doorbell camera</span></button>
+    </div>
+    <div class="help" id="camHelp" hidden></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px">
+      <button id="cancel1">Cancel</button>
+    </div>
+  </div>
+  <!-- step 2 (link camera) -->
+  <div id="step2" hidden>
+    <h3>🔗 Camera with its own app</h3>
+    <ol class="muted" style="padding-left:20px;margin-top:0">
+      <li>Open your camera's app.</li>
+      <li>Look for <b>Share</b>, <b>Live link</b> or <b>Web view</b> and copy the link.</li>
+      <li>Paste it here.</li>
+    </ol>
+    <div class="choice">
+      <input id="linkName" placeholder="Give it a name (e.g. Dashcam)">
+      <input id="linkUrl" placeholder="Paste the link here (http://...)">
+    </div>
+    <p id="linkErr" style="color:var(--live);min-height:20px;margin:8px 0 0"></p>
+    <div class="row" style="justify-content:flex-end">
+      <button id="back2">Back</button>
+      <button class="big green" id="addLink">Add camera</button>
+    </div>
+  </div>
+</dialog>
 
 <template id="camTpl">
   <div class="cam">
@@ -146,7 +213,7 @@
     <div class="cam-foot">
       <div class="cam-title">
         <b class="t-name"></b>
-        <span class="badge"><span class="dot"></span> REC</span>
+        <span class="badge"><span class="dot"></span> LIVE</span>
       </div>
       <div class="controls">
         <button data-a="up" title="Look up">⬆️</button>
@@ -155,7 +222,8 @@
         <button data-a="right" title="Look right">➡️</button>
         <button data-a="zin" title="Zoom in">🔍+</button>
         <button data-a="zout" title="Zoom out">🔍−</button>
-        <button data-a="reset" title="Reset view">⟲</button>
+        <button data-a="reset" title="Back to normal">⟲</button>
+        <button data-a="flip" title="Switch front/back camera" hidden>🔄</button>
         <button data-a="snap" title="Take a photo">📸</button>
         <button data-a="full" title="Full screen">⛶</button>
         <button data-a="remove" title="Remove camera">🗑️</button>
@@ -169,10 +237,75 @@
   const $ = (id) => document.getElementById(id);
   const store = {
     get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} }
   };
 
-  // ---------- clock ----------
+  // ================= LOCK SCREEN =================
+  let typed = '', firstTry = null;
+  const colors = ['#e5534b', '#2f81f7', '#3fb950', '#d29922'];
+  const hasCode = () => !!store.get('code', null);
+
+  function setLockText() {
+    if (!hasCode()) $('lockTitle').textContent = firstTry ? 'Type it again to check' : 'Make your own 4-number secret code';
+    else $('lockTitle').textContent = 'Type your secret code to get in';
+  }
+  function drawDots() {
+    [...$('dots').children].forEach((s, i) => {
+      s.classList.toggle('on', i < typed.length);
+      s.style.setProperty('--c', colors[i]);
+    });
+  }
+  function wrong(text) {
+    $('lockMsg').textContent = text;
+    $('dots').classList.remove('shake'); void $('dots').offsetWidth; $('dots').classList.add('shake');
+    typed = ''; drawDots();
+  }
+  function unlock() {
+    $('lock').hidden = true; $('app').hidden = false;
+    $('lockMsg').textContent = ''; typed = ''; drawDots();
+    startApp();
+  }
+  function enterDigit(d) {
+    if (typed.length >= 4) return;
+    typed += d; drawDots();
+    if (typed.length < 4) return;
+    setTimeout(() => {
+      if (!hasCode()) {
+        if (!firstTry) { firstTry = typed; typed = ''; drawDots(); $('lockMsg').textContent = ''; setLockText(); }
+        else if (firstTry === typed) { store.set('code', typed); firstTry = null; setLockText(); unlock(); }
+        else { firstTry = null; setLockText(); wrong('Those didn’t match. Start again.'); }
+      } else if (store.get('code') === typed) unlock();
+      else wrong('Wrong code. Try again!');
+    }, 150);
+  }
+  $('pad').onclick = (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.k === 'clear') { typed = typed.slice(0, -1); drawDots(); return; }
+    if (b.dataset.k === 'forgot') {
+      if (hasCode() && confirm('Forgot your code? This makes a new code and removes your saved cameras.')) {
+        store.del('code'); store.del('cams3'); location.reload();
+      } else if (!hasCode()) alert('Pick any 4 numbers you will remember. Don’t tell anyone!');
+      return;
+    }
+    enterDigit(b.textContent.trim());
+  };
+  document.addEventListener('keydown', (e) => {
+    if ($('lock').hidden) return;
+    if (/^[0-9]$/.test(e.key)) enterDigit(e.key);
+    if (e.key === 'Backspace') { typed = typed.slice(0, -1); drawDots(); }
+  });
+  $('lockBtn').onclick = () => { $('app').hidden = true; $('lock').hidden = false; setLockText(); };
+  setLockText(); drawDots();
+
+  // ================= APP =================
+  let started = false;
+  function startApp() {
+    if (started) return; started = true;
+    cams.forEach(makeCard); refreshEmpty(); tick();
+    log('Camera HQ opened');
+  }
+
   const tick = () => {
     const now = new Date().toLocaleString();
     $('clock').textContent = now;
@@ -180,31 +313,83 @@
   };
   setInterval(tick, 1000);
 
-  // ---------- log ----------
   function log(text) {
     const li = document.createElement('li');
     li.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
     $('log').prepend(li);
     while ($('log').children.length > 100) $('log').lastChild.remove();
   }
-
-  // ---------- car ----------
-  let car = store.get('car2', { name: 'My Car', plate: 'LB74 YUJ' });
-  function showCar() {
-    $('carNameShow').textContent = car.name || 'My Car';
-    $('plateShow').textContent = (car.plate || '—').toUpperCase();
-    $('carName').value = car.name; $('carPlate').value = car.plate;
+  function refreshEmpty() {
+    $('carEmpty').hidden = $('carCams').children.length > 0;
+    $('homeEmpty').hidden = $('homeCams').children.length > 0;
   }
-  $('saveCar').onclick = () => {
-    car = { name: $('carName').value.trim(), plate: $('carPlate').value.trim().toUpperCase() };
-    store.set('car2', car); showCar(); log(`Car saved: ${car.name} (${car.plate})`);
+
+  let cams = store.get('cams3', []);    // saved link cameras
+  const save = () => store.set('cams3', cams);
+
+  // ---------- Add camera pop-up ----------
+  let addPlace = 'home';
+  function openAdd(place) {
+    addPlace = place;
+    $('addTitle').textContent = place === 'car' ? '🚗 Add a car camera' : '🏠 Add a home camera';
+    $('step1').hidden = false; $('step2').hidden = true; $('camHelp').hidden = true;
+    $('linkErr').textContent = ''; $('linkName').value = ''; $('linkUrl').value = '';
+    $('addDlg').showModal();
+  }
+  document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => openAdd(b.dataset.add));
+  $('cancel1').onclick = () => $('addDlg').close();
+  $('pickLink').onclick = () => { $('step1').hidden = true; $('step2').hidden = false; $('linkName').focus(); };
+  $('back2').onclick = () => { $('step2').hidden = true; $('step1').hidden = false; };
+  $('pickFront').onclick = () => addDeviceCam('user');
+  $('pickBack').onclick = () => addDeviceCam('environment');
+
+  function showCamHelp(html) { $('camHelp').innerHTML = html; $('camHelp').hidden = false; }
+
+  async function getStream(facing) {
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+  }
+
+  async function addDeviceCam(facing) {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      showCamHelp(`<b>⚠️ This page can’t use the camera here.</b>
+        <ol><li>Open the page straight in <b>Chrome</b> or <b>Safari</b> (not inside another app).</li>
+        <li>The web address must start with <b>https://</b>.</li></ol>`);
+      return;
+    }
+    try {
+      const stream = await getStream(facing);
+      const name = addPlace === 'car'
+        ? (facing === 'user' ? 'Inside my car' : 'Car – road view')
+        : (facing === 'user' ? 'Phone camera (front)' : 'Phone camera (back)');
+      makeCard({ type: 'device', stream, facing, name, place: addPlace });
+      $('addDlg').close(); refreshEmpty(); log(`✅ Camera connected: ${name}`);
+    } catch (e) {
+      if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+        showCamHelp(`<b>🔒 The camera wasn’t allowed.</b> Here’s how to fix it:
+          <ol><li>Tap the <b>🔒 lock</b> or <b>ⓘ</b> next to the web address at the top.</li>
+          <li>Find <b>Camera</b> and pick <b>Allow</b>.</li>
+          <li>Come back and press the button again.</li></ol>
+          <span class="muted">Still not working? Open the page straight in Chrome or Safari.</span>`);
+      } else if (e && e.name === 'NotFoundError') {
+        showCamHelp(`<b>📷 No camera found on this device.</b> Try a phone or a laptop with a camera.`);
+      } else {
+        showCamHelp(`<b>⚠️ The camera is busy or not working.</b>
+          <ol><li>Close other apps that use the camera (like FaceTime or Zoom).</li>
+          <li>Try again.</li></ol>`);
+      }
+    }
+  }
+
+  $('addLink').onclick = () => {
+    const url = $('linkUrl').value.trim();
+    if (!/^https?:\/\//i.test(url)) { $('linkErr').textContent = 'The link needs to start with http:// or https://'; return; }
+    const type = /\.(mp4|webm|m3u8)(\?|$)/i.test(url) ? 'video' : 'img';
+    const cam = { type, url, name: $('linkName').value.trim() || (addPlace === 'car' ? 'Car camera' : 'Home camera'), place: addPlace };
+    cams.push(cam); save(); makeCard(cam); refreshEmpty();
+    $('addDlg').close(); log(`✅ Camera added: ${cam.name}`);
   };
-  showCar();
 
-  // ---------- cameras ----------
-  let cams = store.get('cams', []);       // saved link cameras
-  const save = () => store.set('cams', cams);
-
+  // ---------- Camera cards ----------
   function makeCard(cam) {
     const node = $('camTpl').content.firstElementChild.cloneNode(true);
     node.querySelector('.t-name').textContent = cam.name;
@@ -214,39 +399,45 @@
     const view = { x: 0, y: 0, z: 1 };
     let media;
 
-    if (cam.type === 'device') {
-      media = document.createElement('video');
-      media.autoplay = media.muted = media.playsInline = true;
-      media.srcObject = cam.stream;
-      msg.remove();
-      watchMotion(media, node, cam);
-    } else if (cam.type === 'video') {
-      media = document.createElement('video');
-      media.autoplay = media.muted = media.playsInline = true; media.loop = true;
-      media.src = cam.url;
-      media.onplaying = () => msg.remove();
-      media.onerror = () => msg.textContent = 'Can’t reach this camera. Check the link.';
-    } else if (cam.type === 'page') {
-      media = document.createElement('iframe');
-      media.src = cam.url; media.allow = 'autoplay; fullscreen';
-      media.onload = () => msg.remove();
-    } else {
-      media = document.createElement('img');
-      media.alt = cam.name;
-      media.src = cam.url;
-      media.onload = () => msg.remove();
-      media.onerror = () => {
-        msg.textContent = 'Can’t reach this camera — retrying…';
-        setTimeout(() => media.src = cam.url + (cam.url.includes('?') ? '&' : '?') + 't=' + Date.now(), 5000);
-      };
-    }
-    screen.prepend(media);
+    const setMedia = (el) => { media?.remove(); media = el; screen.prepend(el); };
 
-    const apply = () => media.style.transform =
-      `scale(${view.z}) translate(${view.x}%, ${view.y}%)`;
+    if (cam.type === 'device') {
+      const v = document.createElement('video');
+      v.autoplay = v.muted = v.playsInline = true;
+      v.srcObject = cam.stream;
+      setMedia(v); msg.remove();
+      node.querySelector('[data-a="flip"]').hidden = false;
+      watchMotion(() => media, node, cam);
+    } else if (cam.type === 'video') {
+      const v = document.createElement('video');
+      v.autoplay = v.muted = v.playsInline = true; v.loop = true; v.src = cam.url;
+      v.onplaying = () => msg.remove();
+      v.onerror = () => msg.textContent = '⚠️ Can’t reach this camera. Check the link in the camera’s app.';
+      setMedia(v);
+    } else if (cam.type === 'page') {
+      const f = document.createElement('iframe');
+      f.src = cam.url; f.allow = 'autoplay; fullscreen';
+      f.onload = () => msg.remove();
+      setMedia(f);
+    } else {
+      // Try it as a picture/MJPEG stream first; if that fails, show it as a web page.
+      const i = document.createElement('img');
+      i.alt = cam.name; i.src = cam.url;
+      i.onload = () => msg.remove();
+      i.onerror = () => {
+        cam.type = 'page'; save();
+        const f = document.createElement('iframe');
+        f.src = cam.url; f.allow = 'autoplay; fullscreen';
+        f.onload = () => msg.remove();
+        setMedia(f);
+      };
+      setMedia(i);
+    }
+
+    const apply = () => media.style.transform = `scale(${view.z}) translate(${view.x}%, ${view.y}%)`;
     const step = () => 8 / view.z;
 
-    node.querySelector('.controls').onclick = (e) => {
+    node.querySelector('.controls').onclick = async (e) => {
       const a = e.target.closest('button')?.dataset.a;
       if (!a) return;
       if (a === 'up') view.y += step();
@@ -258,11 +449,20 @@
       if (a === 'reset') { view.x = view.y = 0; view.z = 1; }
       if (a === 'full') (document.fullscreenElement ? document.exitFullscreen() : node.requestFullscreen?.());
       if (a === 'snap') snapshot(media, cam.name);
+      if (a === 'flip') {
+        try {
+          const facing = cam.facing === 'user' ? 'environment' : 'user';
+          const s = await getStream(facing);
+          cam.stream.getTracks().forEach(t => t.stop());
+          cam.stream = s; cam.facing = facing; media.srcObject = s;
+          log(`🔄 Switched camera: ${cam.name}`);
+        } catch { alert('This device only has one camera.'); }
+      }
       if (a === 'remove') {
         if (!confirm(`Remove “${cam.name}”?`)) return;
         cam.stream?.getTracks().forEach(t => t.stop());
         cams = cams.filter(c => c !== cam); save();
-        node.remove(); log(`Removed camera: ${cam.name}`); return;
+        node.remove(); refreshEmpty(); log(`Removed camera: ${cam.name}`); return;
       }
       const lim = 50 * (1 - 1 / view.z);
       view.x = Math.max(-lim, Math.min(lim, view.x));
@@ -275,7 +475,7 @@
   }
 
   function snapshot(media, name) {
-    if (media.tagName === 'IFRAME') { alert('Photos don’t work for web-page cameras.'); return; }
+    if (media.tagName === 'IFRAME') { alert('Photos don’t work for this camera. Use the camera’s own app.'); return; }
     try {
       const c = document.createElement('canvas');
       c.width = media.videoWidth || media.naturalWidth || 1280;
@@ -283,6 +483,7 @@
       c.getContext('2d').drawImage(media, 0, 0, c.width, c.height);
       const filename = `${name}-${Date.now()}.png`;
       c.toBlob(async (blob) => {
+        if (!blob) { alert('This camera doesn’t allow photos from the website.'); return; }
         const dl = window.claude?.use ? await window.claude.use('downloads') : null;
         if (dl) {
           try { await dl.save({ filename, data: blob }); log(`📸 Photo saved: ${name}`); } catch {}
@@ -293,62 +494,30 @@
         }
       }, 'image/png');
     } catch {
-      alert('This camera doesn’t allow photos from the website. Use your camera’s own app.');
+      alert('This camera doesn’t allow photos from the website. Use the camera’s own app.');
     }
   }
 
-  // Simple motion detection on device cameras
-  function watchMotion(video, node, cam) {
+  function watchMotion(getVideo, node, cam) {
     const c = document.createElement('canvas'); c.width = 64; c.height = 36;
     const ctx = c.getContext('2d', { willReadFrequently: true });
     let prev = null, last = 0;
     const loop = setInterval(() => {
       if (!node.isConnected) return clearInterval(loop);
+      const video = getVideo();
       if (!video.videoWidth) return;
       ctx.drawImage(video, 0, 0, 64, 36);
       const d = ctx.getImageData(0, 0, 64, 36).data;
       if (prev) {
         let diff = 0;
         for (let i = 0; i < d.length; i += 4) diff += Math.abs(d[i] - prev[i]);
-        const moving = diff / (d.length / 4) > 18;
-        node.classList.toggle('motion', moving && $('motionOn').checked);
-        if (moving && $('motionOn').checked && Date.now() - last > 10000) {
-          last = Date.now(); log(`🚨 Motion seen on ${cam.name}`);
-        }
+        const moving = diff / (d.length / 4) > 18 && $('motionOn').checked;
+        node.classList.toggle('motion', moving);
+        if (moving && Date.now() - last > 10000) { last = Date.now(); log(`🚨 Movement seen on ${cam.name}`); }
       }
       prev = d;
     }, 500);
   }
-
-  $('addDevice').onclick = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      alert('This browser can’t use the camera. Try Chrome or Safari.'); return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      const cam = { type: 'device', stream,
-        name: $('camName').value.trim() || 'This device',
-        place: $('camPlace').value };
-      makeCard(cam); log(`Camera connected: ${cam.name}`);
-    } catch (e) {
-      alert('Camera permission was blocked. Allow the camera and try again.');
-    }
-  };
-
-  $('addUrl').onclick = () => {
-    const url = $('camUrl').value.trim();
-    if (!/^https?:\/\//i.test(url)) { alert('Paste a link starting with http:// or https://'); return; }
-    const cam = { type: $('camType').value, url,
-      name: $('camName').value.trim() || `Camera ${cams.length + 1}`,
-      place: $('camPlace').value };
-    cams.push(cam); save(); makeCard(cam);
-    $('camUrl').value = $('camName').value = '';
-    log(`Camera added: ${cam.name}`);
-  };
-
-  cams.forEach(makeCard);
-  tick();
-  log('Camera HQ started');
 })();
 </script>
 </body>
