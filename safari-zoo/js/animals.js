@@ -551,6 +551,10 @@ function mats(){
   const skinN=normalTexture(256,(g,S)=>{for(let i=0;i<2600;i++){let x=r()*S,y=r()*S;g.strokeStyle=r()<.5?'rgba(0,0,0,.5)':'rgba(0,0,0,.3)';g.lineWidth=1+r();g.beginPath();g.moveTo(x,y);
       for(let j=0;j<5;j++){x+=(r()-.5)*14;y+=(r()-.5)*5+3;g.lineTo(x,y)}g.stroke()}},3.2,5);
   MATS={
+    scales:photoSkin('scales_c.jpg',5,.55,{roughness:.62,clearcoat:.15,clearcoatRoughness:.5}),
+    wrinkle:photoSkin('wrinkle_c.jpg',4,.6,{roughness:.9}),
+    sharkSkin:photoSkin('scales_c.jpg',2.5,.35,{roughness:.42,clearcoat:.25,clearcoatRoughness:.4}),
+    scaleSmall:photoSkin('scales_c.jpg',2,.5,{roughness:.55,clearcoat:.2,clearcoatRoughness:.5}),
     skin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.92,normalMap:skinN,normalScale:new T.Vector2(2.4,2.4)}),
     wetSkin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.6,clearcoat:.15,clearcoatRoughness:.45,normalMap:skinN,normalScale:new T.Vector2(1,1)}),
     fur:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.9,sheen:.35,sheenRoughness:.6,sheenColor:new T.Color(.18,.17,.15),normalMap:furN,normalScale:new T.Vector2(.7,.7)}),
@@ -582,14 +586,29 @@ const glossM={};
 function gloss(col){return glossM[col]||(glossM[col]=new T.MeshPhysicalMaterial({color:col,roughness:.06,clearcoat:1,clearcoatRoughness:.02,sheen:.5,sheenColor:new T.Color('#ffffff')}))}
 function rngA(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
 let glamBody=null;
+// real skin detail from photo-scanned textures (scales for reptiles, creases for big grey animals),
+// wrapped round the body from three sides so it never stretches, and lit as bumps
+const skinTex={};
+function photoSkin(file,tile,bump,opts){
+  const t=skinTex[file]||(skinTex[file]=new T.TextureLoader().load('tex/'+file));t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=4;
+  const m=new T.MeshPhysicalMaterial(Object.assign({vertexColors:true},opts));
+  m.onBeforeCompile=sh=>{sh.uniforms.skinTex={value:t};sh.uniforms.skinTile={value:1/tile};sh.uniforms.skinBump={value:bump};
+    sh.vertexShader='varying vec3 vSkP;varying vec3 vSkN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSkP=position;vSkN=normal;');
+    sh.fragmentShader='uniform sampler2D skinTex;uniform float skinTile;uniform float skinBump;varying vec3 vSkP;varying vec3 vSkN;\n'+
+      'float skinH(){vec3 w=pow(abs(normalize(vSkN)),vec3(4.));w/=w.x+w.y+w.z;vec3 p=vSkP*skinTile;return texture2D(skinTex,p.yz).r*w.x+texture2D(skinTex,p.xz).r*w.y+texture2D(skinTex,p.xy).r*w.z;}\n'+
+      sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\nfloat skH=skinH();diffuseColor.rgb*=mix(1.,skH*1.1,.3);')
+        .replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\n{vec3 vSigmaX=dFdx(-vViewPosition),vSigmaY=dFdy(-vViewPosition),vN=normal,R1=cross(vSigmaY,vN),R2=cross(vN,vSigmaX);float fDet=dot(vSigmaX,R1)*faceDirection;vec2 dH=vec2(dFdx(skH),dFdy(skH))*skinBump;vec3 vGrad=sign(fDet)*(dH.x*R1+dH.y*R2);normal=normalize(abs(fDet)*vN-vGrad);}')};
+  m.customProgramCacheKey=()=>'skin'+file+tile+bump;return m}
 function matFor(p){const plan=p.plan||'quad',m=mats();
   if(p.glow)return new T.MeshPhysicalMaterial({vertexColors:true,roughness:.15,clearcoat:1,transparent:true,opacity:.72,emissive:p.glow,emissiveIntensity:.35});
   if(p.glam||p.sparkle)return glamBody||(glamBody=addSparkle(new T.MeshPhysicalMaterial({vertexColors:true,roughness:.45,clearcoat:.6,clearcoatRoughness:.2,iridescence:.6,iridescenceIOR:1.4,sheen:.8,sheenColor:new T.Color('#ffb0e0'),normalMap:m.fur.normalMap,normalScale:new T.Vector2(.3,.3)}),50,2.6));
-  if(p.skin)return p.skin==='wet'?m.wetSkin:m.skin;
+  if(p.gw)return m.sharkSkin;
+  if(p.skin&&(plan==='theropod'||p.scaly))return m.scales;
+  if(p.skin)return p.skin==='wet'?m.wetSkin:m.wrinkle;
   if(plan==='fish')return m.wet;
   if(plan==='person')return m.cloth;
-  if(plan==='theropod'||p.scaly)return m.scale;
-  if(plan==='bird')return m.feather;if(plan==='lizard'||plan==='snake')return m.scale;if(plan==='frog'||plan==='seal')return m.wet;return m.fur}
+  if(plan==='theropod'||p.scaly)return m.scales;
+  if(plan==='bird')return m.feather;if(plan==='lizard'||plan==='snake')return(p.s||1)>1.5?m.scales:m.scaleSmall;if(plan==='frog'||plan==='seal')return m.wet;return m.fur}
 
 /* ---------- extras (thin parts attached to bones) ---------- */
 const xm={};
