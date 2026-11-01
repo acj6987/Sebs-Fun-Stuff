@@ -133,6 +133,12 @@ CONT.find(c=>c.id==='africa').animals.push(['Sub Ninja (boy)','🦅',3,2.6,{home
   ['Indominus Rex','🦖',3,2.2,Object.assign({},rex,{unique:1,hip:3.4,L:5,W:1.8,Hb:2.1,neck:1.1,neckW:.6,headL:1.7,headW:.8,headH:.9,tail:6,arm:1.5,legW:.5,col:'#e6e4dc',back:'#c8c4ba',col2:'#a8a49a',belly:'#f2f0ea',tex:'stripes',freq:3,thin:.75,sz:1.2})],
   ['Indoraptor','🦖',3,3,Object.assign({},raptor,{unique:1,herd:null,hip:1.6,L:2.6,W:.55,Hb:.8,neck:.8,neckW:.2,headL:.65,headW:.25,headH:.28,tail:3,arm:1.05,legW:.2,col:'#1c1c20',back:'#141416',col2:'#d8a020',belly:'#2a2a2e',freq:6,thin:.6})]);
  for(const d of dz)if(d[4].hunts&&!d[4].unique)for(const n of only)d[4].hunts=d[4].hunts.filter(x=>x!==n)}
+// sea reptiles and the giant shark: they live in the Lagoon in your Dino Kingdom
+CONT.find(c=>c.id==='dino').animals.push(
+ ['Mosasaurus','🌊',3,1.6,{lagoon:1,swim:1,unique:1,len:17,plan:'lizard',croc:1,s:5,col:'#56677a',col2:'#3a4654',tex:'spots',belly:'#dfe3e8'}],
+ ['Megalodon','🦈',3,1.8,{lagoon:1,swim:1,unique:1,len:18,plan:'fish',s:4,tall:.22,wide:.13,col:'#6e7a86',belly:'#eef2f4',dorsalS:.13,fin2:1.2,fin:'#5e6a76'}],
+ ['Shastasaurus','🐬',3,1.4,{lagoon:1,swim:1,unique:1,len:21,plan:'fish',s:4,tall:.18,wide:.11,col:'#5e7086',belly:'#e8eef2',beak:1,flukes:1,dorsalS:.1,fin2:1.3,fin:'#4a5a6e'}],
+ ['Ichthyotitan severnensis','🐋',3,1.3,{lagoon:1,swim:1,unique:1,len:25,plan:'fish',s:4,tall:.2,wide:.12,col:'#46586a',belly:'#dfe6ec',beak:1,flukes:1,dorsalS:.12,fin2:1.4,fin:'#36485a'}]);
 // there are only two Sub Ninjas in the world: the boy and the girl
 {const af=CONT.find(c=>c.id==='africa').animals,boy=af[8];af.push(['Sub Ninja (girl)','🦅',3,2.6,Object.assign({},boy[4],{male:0,female:1,mate:'africa:8',col:'#f2a64a',col2:'#2a1020',lionMane:'#b0487a',belly:'#fff4ee'})])}
 // Thomson's gazelle: small and fast, with a black stripe along its side and curvy ringed horns

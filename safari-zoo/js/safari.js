@@ -13,9 +13,9 @@ function seaH(x,z){let h=-7+baseH(x,z)*.5;
   return h}
 // where you stand or drive: on the sea floor in shallow water, floating or swimming in deep water
 function HW(x,z){const h=H(x,z);return world.sea?Math.max(h,-1.15):h}
-function H(x,z){if(world.flat)return 0;if(world.sea)return seaH(x,z);let h=baseH(x,z);
+function H(x,z){if(world.flat)return 0;if(world.sea)return seaH(x,z);const W=world.walk;if(W&&(Math.abs(x-W.x)<W.w&&z>W.z0&&z<W.z1||Math.hypot(x-W.cx,z-W.cz)<W.cr))return W.y;let h=baseH(x,z);
   const d=Math.max(Math.abs(x),Math.abs(z));if(d>HALF-60)h+=world.c.hab==='savanna'?Math.min(38,Math.pow(d-(HALF-60),1.25)*.2):Math.pow(d-(HALF-60),1.5)*.09;
-  for(const p of world.ponds){const dd=Math.hypot(x-p.x,z-p.z);if(dd<p.r*1.4){const t=sm(p.r*.75,p.r*1.4,dd);h=h*t+(p.lvl-.9)*(1-t)}}
+  for(const p of world.ponds){const dd=Math.hypot(x-p.x,z-p.z);if(dd<p.r*1.4){const t=p.lagoon?sm(p.r*.9,p.r*1.06,dd):sm(p.r*.75,p.r*1.4,dd);h=h*t+(p.lvl-(p.depth||.9))*(1-t)}}
   return h}
 function inPond(x,z){return world.ponds.some(p=>Math.hypot(x-p.x,z-p.z)<p.r*.95)}
 function addCol(c){const k=Math.floor(c.x/20)+','+Math.floor(c.z/20);if(!world.cols.has(k))world.cols.set(k,[]);world.cols.get(k).push(c)}
@@ -36,6 +36,7 @@ async function buildSafari(c,progress){
     for(let t=0;t<400&&world.islands.length<8;t++){const I={x:(r()-.5)*(WS-150),z:(r()-.5)*(WS-150),r:32+r()*45,hill:r()*9};
       if(world.islands.every(J=>Math.hypot(I.x-J.x,I.z-J.z)>(I.r+J.r)*1.55+20))world.islands.push(I)}}
   const np=c.sea?0:c.hab==='polar'?7:c.hab==='outback'?3:5;
+  if(c.kingdom)world.ponds.push({x:0,z:-70,r:98,lvl:baseH(0,-70)-.35,depth:16,lagoon:1});
   for(let i=0;i<np;i++){const x=(r()-.5)*(WS-160),z=(r()-.5)*(WS-160);if(Math.hypot(x,z)<60){i--;continue}const rr=14+r()*22;world.ponds.push({x,z,r:rr,lvl:baseH(x,z)-.35})}
   progress('Shaping the land…');await nextFrame();
   // terrain
@@ -264,8 +265,9 @@ function makeIcon(){if(!ICON.run){ICON.run=iconTex('!','#d4602f');ICON.tired=ico
 let grpId=1;
 function spawnAnimal(initial,force){
   const c=world.c,list=c.animals.map((a,i)=>SP[c.id+':'+i]);
-  const w=list.map(s=>s.def.mate||s.def.bornOnly?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
+  const w=list.map(s=>s.def.mate||s.def.bornOnly||s.def.lagoon?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
   if(force&&force.def.bornOnly)return;
+  if(force&&force.def.lagoon)return;
   if(sp0Unique(force))return;
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
   if(sp0Unique(sp))return;
@@ -374,7 +376,8 @@ function updateAnimals(dt,time){
     if(Math.abs(a.z)>LIMIT-5)a.vz=-Math.sign(a.z)*Math.abs(a.vz||1);
     if(world.c.kingdom){if(a.z>GATE_Z-6)a.vz=-Math.abs(a.vz||1);
       if(a.pen){const q=a.pen,h=q.s/2-4;if(Math.abs(a.x-q.x)>h)a.vx=-Math.sign(a.x-q.x)*Math.abs(a.vx||1);if(Math.abs(a.z-q.z)>h)a.vz=-Math.sign(a.z-q.z)*Math.abs(a.vz||1);a.x=clamp(a.x,q.x-h-1,q.x+h+1);a.z=clamp(a.z,q.z-h-1,q.z+h+1)}
-      else for(const q of world.paddocks||[])if(inPaddock(q,a.x,a.z,3)){const dx=a.x-q.x,dz=a.z-q.z;if(Math.abs(dx)>Math.abs(dz))a.vx=Math.sign(dx)*Math.abs(a.vx||2);else a.vz=Math.sign(dz)*Math.abs(a.vz||2)}}
+      if(!a.sp.def.swim)for(const p of world.ponds)if(p.lagoon&&Math.hypot(a.x-p.x,a.z-p.z)<p.r+3){const dx=a.x-p.x,dz=a.z-p.z,d=Math.hypot(dx,dz)||1;a.vx=dx/d*3;a.vz=dz/d*3}
+      if(!a.pen)for(const q of world.paddocks||[])if(inPaddock(q,a.x,a.z,3)){const dx=a.x-q.x,dz=a.z-q.z;if(Math.abs(dx)>Math.abs(dz))a.vx=Math.sign(dx)*Math.abs(a.vx||2);else a.vz=Math.sign(dz)*Math.abs(a.vz||2)}}
     a.x+=a.vx*dt;a.z+=a.vz*dt;
     if(world.sea&&a.state!=='netted'&&!(a.sp.def.fly&&a.alt>1.5)){const d=a.sp.def,h=H(a.x,a.z);
       if(d.swim?h>-1.3:!d.amph&&h<-.3){a.x-=a.vx*dt;a.z-=a.vz*dt;a.vx=-a.vx;a.vz=-a.vz;a.t=Math.min(a.t,.6)}}
@@ -395,7 +398,12 @@ function updateAnimals(dt,time){
         if(d.jump&&a.state!=='netted'){a.jt=(a.jt||0)-dt;if(a.jt<-8&&spd>.4&&Math.random()<dt*.15)a.jt=1.3;if(a.jt>0){const q=(1.3-a.jt)/1.3;y+=Math.sin(q*Math.PI)*3.4;pitch=-Math.cos(q*Math.PI)*.7}}
         a.alt=Math.max(h,y)-h}
       else if(h<-a.m.h*.45&&a.alt<1)a.alt=Math.max(a.alt,-a.m.h*.45-h)}
-    else if(a.sp.def.swim&&a.state!=='netted'){const p=world.ponds.find(p=>Math.hypot(a.x-p.x,a.z-p.z)<p.r*1.3);if(p)a.alt=(p.lvl-a.m.h*.7)-H(a.x,a.z)}
+    else if(a.sp.def.swim&&a.state!=='netted'){const p=world.ponds.find(p=>Math.hypot(a.x-p.x,a.z-p.z)<p.r*1.3);
+      if(p&&p.lagoon){const D=world.lagoonDome,W=world.walk,dd=Math.hypot(a.x-D.x,a.z-D.z),top=Math.sqrt(Math.max(0,D.R*D.R-dd*dd))*.85-a.m.h,low=p.lvl-14;
+        if(a.swimY==null||Math.random()<dt*.08)a.swimY=low+Math.random()*Math.max(1,top-low);
+        let want=clamp(a.swimY,low,Math.max(low,top));if(W&&(Math.abs(a.x-W.x)<W.w+a.m.rad+3&&a.z>W.z0-14&&a.z<W.z1||Math.hypot(a.x-W.cx,a.z-W.cz)<W.cr+a.m.rad+3))want=Math.max(want,W.y+16);
+        a.sy=a.sy==null?want:lerp(a.sy,want,Math.min(1,dt*.4));pitch=clamp((want-a.sy)*-.05,-.4,.4);a.alt=a.sy-H(a.x,a.z)}
+      else if(p)a.alt=(p.lvl-a.m.h*.7)-H(a.x,a.z)}
     a.m.inner.rotation.x=pitch;
     // far animals: simpler model, very far: hidden
     const vis=d<260;a.m.g.visible=vis;if(!vis)continue;
@@ -599,6 +607,7 @@ function placeCamera(){
   const fx=mode==='car'?car.x:me.x,fz=mode==='car'?car.z:me.z;world.sky.follow(fx,H(fx,fz),fz);
   if(mode!=='sub')underwater();
   if(world.zoo)spaceSky();
+  const LD=world.lagoonDome;if(LD){const d=Math.hypot(cam.position.x-LD.x,cam.position.z-LD.z);if(d<LD.R-1&&cam.position.y<Math.sqrt(Math.max(0,LD.R*LD.R-d*d))+(world.ponds.find(p=>p.lagoon)||{lvl:0}).lvl){const f=world.scene.fog;f.color.set('#1e78b8');f.near=4;f.far=170;world.scene.background.set('#1e78b8')}}
 }
 const safari={running:false,
   frame(dt,time){
@@ -891,7 +900,9 @@ function buildKingdom(scene){
     for(let t=0;t<L;t+=10){const x0=ax+(bx-ax)*t/L,z0=az+(bz-az)*t/L,x1=ax+(bx-ax)*Math.min(L,t+10)/L,z1=az+(bz-az)*Math.min(L,t+10)/L,ln=Math.hypot(x1-x0,z1-z0),hh=(H(x0,z0)+H(x1,z1))/2;
       for(let y=2;y<=12;y+=2.5){const wg=new T.BoxGeometry(ln,.07,.07);wg.rotateY(-Math.atan2(z1-z0,x1-x0));wg.translate((x0+x1)/2,hh+y,(z0+z1)/2);wires.push(wg)}}}
   add(NATURE.merge(posts),iron,0,0,0);add(NATURE.merge(wires),new T.MeshStandardMaterial({color:'#c8ccd0',metalness:.8,roughness:.3,emissive:'#3a6aff',emissiveIntensity:.25}),0,0,0);
-  buildPaddocks(scene);
+  buildPaddocks(scene);buildLagoon(scene);
+  // visitors stand outside every paddock to see Blue and the others
+  world.visitors=world.visitors||[];let vi=0;for(const q of world.paddocks)for(let i=0;i<6;i++){const x=q.x-15+i*6,z=q.z+q.s/2+10+(i%2)*2,v=ANIMALS.make(personSp(vi++%LOOKS.length));v.g.position.set(x,H(x,z),z);v.g.rotation.y=Math.PI;scene.add(v.g);world.visitors.push({inst:v,y:H(x,z),ph:Math.random()*6})}
   // security guards stand at the gate and at every paddock door
   world.guards=[];if((S.shop.workers||0)>0||(S.shop.crew||0)>0){const spots=[[-gw-5,GATE_Z+5],[gw+5,GATE_Z+5],...world.paddocks.flatMap(q=>[[q.x-8,q.z+q.s/2+5],[q.x+8,q.z+q.s/2+5]])];
     for(const[x,z]of spots){const gd=ANIMALS.make(personSp('security'));gd.g.position.set(x,H(x,z),z);gd.g.rotation.y=0;scene.add(gd.g);world.guards.push(gd)}}
@@ -907,6 +918,8 @@ function buildKingdom(scene){
     const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,near=Math.hypot(px,pz-GATE_Z)<45;
     for(const d of world.gateDoors){const want=near?d.userData.sd*1.35:0;d.rotation.y+=(want-d.rotation.y)*Math.min(1,dt*1.2)}
     for(const gd of world.guards||[])ANIMALS.animate(gd,dt,0,time,{});
+    for(const v of world.visitors||[])ANIMALS.animate(v.inst,dt,0,time,{});updateWalkers(dt,time);
+    const LD=world.lagoonDome;if(LD){const nr=Math.hypot(px-LD.x,pz-(LD.z+LD.R))<28;LD.open+=((nr?1:0)-LD.open)*Math.min(1,dt*2.5);for(const d of LD.doors){const{sd,w}=d.userData;d.position.x=sd*(w/2+LD.open*w*.95)}}
     for(const d of world.padDoors||[]){const near=Math.hypot(px-d.x0,pz-(d.q.z+d.q.s/2))<30||inPaddock(d.q,px,pz,0);d.open+=((near?1:0)-d.open)*Math.min(1,dt*1.5);d.g.position.x=d.x0+d.open*(d.gw+1)}
     for(const f of world.fires||[])f.scale.set(1+Math.sin(time*13+f.position.x)*.15,1+Math.sin(time*17)*.2,1)};
 }
@@ -960,3 +973,38 @@ function paddockDrop(){
   bigAlert('🦖','Welcome home, '+q.n+'!',q.n+' is in the '+q.title.toLowerCase().replace(/^./,m=>m.toUpperCase())+' now.',7000);return true}
 function paddockHint(){if(!world||!world.c.kingdom)return'';const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,q=paddockAt(px,pz);if(!q)return'';
   return S.cages.some(c=>SP[c.k].n===q.n)?'Press <b>G</b> to let '+q.n+' out into '+(q.n==='Blue'?'her':'its')+' paddock':'🦖 '+q.title+(world.animals.some(a=>a.sp.n===q.n)?'':' · bring '+q.n+' here in your truck')}
+
+// 🌊 the Sea Dome: a giant glass dome full of pure water, with a walkway into the middle to watch the sea giants
+function buildLagoon(scene){
+  const L=world.ponds.find(p=>p.lagoon);if(!L)return;const R=L.r+4;
+  for(const w of world.waters)if(Math.abs(w.position.x-L.x)<1&&Math.abs(w.position.z-L.z)<1)w.visible=false;
+  const wm=new T.MeshPhysicalMaterial({color:'#1a8ad8',transparent:true,opacity:.3,roughness:.1,side:T.DoubleSide,depthWrite:false});
+  const bubble=new T.Mesh(new T.SphereGeometry(R-.6,48,24,0,Math.PI*2,0,Math.PI/2),wm);bubble.position.set(L.x,L.lvl,L.z);bubble.renderOrder=1;scene.add(bubble);
+  const pit=new T.Mesh(new T.CylinderGeometry(R-.6,R-.6,16,48,1,true),wm);pit.position.set(L.x,L.lvl-8,L.z);pit.renderOrder=1;scene.add(pit);
+  const floor=new T.Mesh(new T.CircleGeometry(R,48),new T.MeshStandardMaterial({color:'#3aa0b8',roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.set(L.x,L.lvl-15.5,L.z);scene.add(floor);
+  const dg=new T.Group();dg.position.set(L.x,L.lvl,L.z);scene.add(dg);world.lagoonDome={doors:buildDome(dg,R),x:L.x,z:L.z,R,open:0};
+  const da=doorAng(R);for(let a=0;a<Math.PI*2;a+=1.8/R){const d=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(d)<da)continue;addCol({x:L.x+Math.sin(a)*R,z:L.z+Math.cos(a)*R,r:1})}
+  // the walkway: from the door to a round viewing platform in the middle, with glass sides
+  const deckY=L.lvl+.6,wood=new T.MeshStandardMaterial({color:'#b8a07a',roughness:.85}),glass=new T.MeshPhysicalMaterial({color:'#cfefff',roughness:.05,transparent:true,opacity:.25,side:T.DoubleSide});
+  const z0=L.z+12,z1=L.z+R+2,wW=7;world.walk={x:L.x,z0:L.z,z1,w:wW/2+.2,cx:L.x,cz:L.z,cr:13,y:deckY};
+  const deck=new T.Mesh(new T.BoxGeometry(wW,.5,z1-z0),wood);deck.position.set(L.x,deckY-.25,(z0+z1)/2);deck.receiveShadow=true;scene.add(deck);
+  const plat=new T.Mesh(new T.CylinderGeometry(13,13,.5,40),wood);plat.position.set(L.x,deckY-.25,L.z);plat.receiveShadow=true;scene.add(plat);
+  const tg=new T.CylinderGeometry(wW/2+.3,wW/2+.3,z1-z0,32,1,true,-Math.PI/2,Math.PI);tg.rotateX(Math.PI/2);const tun=new T.Mesh(tg,glass);tun.position.set(L.x,deckY,(z0+z1)/2);tun.renderOrder=4;scene.add(tun);
+  const view=new T.Mesh(new T.SphereGeometry(13.2,40,20,0,Math.PI*2,0,Math.PI/2),glass);view.position.set(L.x,deckY,L.z);view.renderOrder=4;scene.add(view);
+  const rib=new T.MeshStandardMaterial({color:'#d8dde2',metalness:.6,roughness:.3});for(let z=z0;z<=z1;z+=6){const rg=new T.TorusGeometry(wW/2+.35,.12,6,24,Math.PI);const rb=new T.Mesh(rg,rib);rb.position.set(L.x,deckY,z);scene.add(rb)}
+  // a sign above the door
+  const [c,g]=NATURE.canvas(1024,256);g.fillStyle='#0a3a6a';g.fillRect(0,0,1024,256);g.strokeStyle='#ffcf3a';g.lineWidth=14;g.strokeRect(12,12,1000,232);
+  g.fillStyle='#ffcf3a';g.textAlign='center';g.textBaseline='middle';g.font='bold 104px "Lilita One","Arial Black",sans-serif';g.fillText('🌊 THE SEA DOME',512,100);g.font='bold 50px Nunito,sans-serif';g.fillStyle='#fff';g.fillText('The biggest sea giants that ever lived!',512,192);
+  const sg=new T.Mesh(new T.PlaneGeometry(22,5.5),new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.7}));sg.position.set(L.x,deckY+20,L.z+R+.5);scene.add(sg);
+  // visitors walking along the walkway and looking at the sea giants
+  world.walkers=[];for(let i=0;i<18;i++){const v=ANIMALS.make(personSp(i%LOOKS.length));scene.add(v.g);world.walkers.push({inst:v,t:Math.random(),dir:Math.random()<.5?1:-1,side:(Math.random()-.5)*4,spd:.02+Math.random()*.02,stop:0})}
+  // the sea giants
+  const r=rng(31);for(const k of Object.keys(SP).filter(k=>SP[k].def.lagoon)){const sp=SP[k],n=sp.def.herd?sp.def.herd[0]:1;if(!ANIMALS.isBuilt(sp))ANIMALS.species(sp);
+    for(let i=0;i<n;i++){const a2=r()*6.28,d=25+r()*(L.r*.55),x=L.x+Math.sin(a2)*d,z=L.z+Math.cos(a2)*d,m=ANIMALS.make(sp);scene.add(m.g);
+      if(sp.def.len&&m.len){const f=sp.def.len/m.len;m.inner.scale.multiplyScalar(f);m.h*=f;m.len*=f;m.rad*=f}
+      const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
+      world.animals.push({sp,x,z,ox:0,oz:0,vx:0,vz:0,yaw:r()*6.3,t:r()*3,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp:null,lagoon:1})}}
+}
+function updateWalkers(dt,time){const W=world.walk;if(!W)return;
+  for(const v of world.walkers||[]){if(v.stop>0){v.stop-=dt;ANIMALS.animate(v.inst,dt,0,time,{look:1})}else{v.t+=v.dir*v.spd*dt;if(v.t>1||v.t<0){v.dir*=-1;v.t=clamp(v.t,0,1)}if(Math.random()<dt*.15)v.stop=2+Math.random()*4;ANIMALS.animate(v.inst,dt,1.2,time,{})}
+    const z=W.z1-2-(W.z1-2-W.z0)*v.t,x=W.x+v.side*(z<W.cz+W.cr?2.5:1);v.inst.g.position.set(x,W.y,z);v.inst.g.rotation.y=v.stop>0?Math.PI/2*Math.sign(v.side||1):v.dir>0?Math.PI:0}}
