@@ -147,6 +147,31 @@ function quad(p){
   if(p.eagle)for(const sx of[-1,1]){const wn='wing'+(sx>0?'R':'L'),q=[sx*W*.3,by+Hb*.42,L*.12];k.bone(wn,'root',q);k.extra(wn,'ewing',q,{s:sx,size:L*1.25})}
   return k;
 }
+/* ---------- giant pterosaurs: huge leathery wings, a long neck and a big toothy beak ---------- */
+function ptero(p){
+  const k=kit(),s=p.s,by=s*.42;
+  k.bone('root',null,[0,by,0]);
+  k.ell([0,by,0],[s*.075,s*.085,s*.21],'root',{k:s*.04,col:p.body});
+  k.ell([0,by+s*.03,s*.12],[s*.09,s*.08,s*.09],'root',{k:s*.04,col:p.body});
+  const nb=[0,by+s*.05,s*.18],ne=[0,by+s*.22,s*.44];k.bone('neck','root',nb);k.bone('head','neck',ne);
+  k.cap(nb,ne,s*.045,s*.032,'neck',{k:s*.03,col:p.body});
+  const hx=(f,u,x=0)=>[x,ne[1]+u,ne[2]+f];
+  k.ell(hx(s*.03,s*.025),[s*.045,s*.055,s*.085],'head',{k:s*.03,col:p.head});
+  // a long upper jaw and an open lower jaw, both lined with needle teeth
+  k.cap(hx(s*.07,s*.035),hx(s*.46,-s*.005),s*.036,s*.005,'head',{k:s*.012,col:p.beak});
+  k.cap(hx(s*.07,-s*.02),hx(s*.4,-s*.08),s*.027,s*.005,'head',{k:s*.012,col:p.beak});
+  k.ell(hx(s*.16,-s*.005),[s*.02,s*.018,s*.1],'head',{k:s*.01,col:'#4a1418',detail:1});
+  for(const sx of[-1,1]){k.extra('head','teeth',hx(s*.1,s*.012,sx*s*.016),{s:sx,len:s*.28,size:s*.028,n:12});
+    k.extra('head','teeth',hx(s*.1,-s*.03,sx*s*.013),{s:sx,len:s*.22,size:s*.024,n:10,up:1});
+    k.extra('head','eye',hx(s*.035,s*.045,sx*s*.042),{r:s*.013});
+    k.ell(hx(s*.04,s*.062,sx*s*.035),[s*.02,s*.008,s*.03],'head',{k:s*.006,col:p.head,rot:[0,0,sx*.4],detail:1})}
+  // a tall bony crest sweeping back
+  k.cap(hx(s*.0,s*.06),hx(-s*.26,s*.2),s*.03,s*.008,'head',{k:s*.015,col:p.crestCol||p.head});
+  for(const sx of[-1,1]){const wn='wing'+(sx>0?'R':'L'),sh=[sx*s*.07,by+s*.05,s*.1];k.bone(wn,'root',sh);k.extra(wn,'membrane',sh,{s:sx,span:s,col:p.wing,spar:p.body});
+    const li='leg'+(sx>0?0:1);k.bone(li,'root',[sx*s*.05,by-s*.05,-s*.14]);k.extra(li,'birdleg',[sx*s*.05,by-s*.05,-s*.14],{len:by-s*.05,r:s*.014,col:p.legCol||'#3a2e26',s:sx})}
+  k.bone('tail','root',[0,by,-s*.21]);k.cap([0,by,-s*.2],[0,by-s*.02,-s*.3],s*.02,s*.006,'tail',{k:s*.01,col:p.body});
+  k.anim={kind:'bird',stride:.35,fly:1,ptero:1};return k}
+
 /* ---------- the Sparkle Zebraffe: zebra + giraffe + jaguar, with arms, wings, make-up and a handbag ---------- */
 function glam(k,p,{by,at,nb,nd,na,hl,hw,hh}){
   const {L,W,Hb}=p;
@@ -488,7 +513,7 @@ function mermaid(p){
   k.extra('tail','flukes',[0,y,-s*.5],{size:s*.15,col:p.fin});
   k.anim={kind:'fish',stride:s*.5,flukes:1};return k;
 }
-const PLANS={quad,bird,ape,hopper,frog,snake,lizard,seal,hedgehog,person,theropod,fish,seahorse,jelly,octo,star,mermaid};
+const PLANS={quad,bird,ptero,ape,hopper,frog,snake,lizard,seal,hedgehog,person,theropod,fish,seahorse,jelly,octo,star,mermaid};
 
 /* ---------- coat colours ---------- */
 const colCache={};
@@ -551,10 +576,6 @@ function mats(){
   const skinN=normalTexture(256,(g,S)=>{for(let i=0;i<2600;i++){let x=r()*S,y=r()*S;g.strokeStyle=r()<.5?'rgba(0,0,0,.5)':'rgba(0,0,0,.3)';g.lineWidth=1+r();g.beginPath();g.moveTo(x,y);
       for(let j=0;j<5;j++){x+=(r()-.5)*14;y+=(r()-.5)*5+3;g.lineTo(x,y)}g.stroke()}},3.2,5);
   MATS={
-    scales:photoSkin('scales_c.jpg',5,.55,{roughness:.62,clearcoat:.15,clearcoatRoughness:.5}),
-    wrinkle:photoSkin('wrinkle_c.jpg',4,.6,{roughness:.9}),
-    sharkSkin:photoSkin('scales_c.jpg',2.5,.35,{roughness:.42,clearcoat:.25,clearcoatRoughness:.4}),
-    scaleSmall:photoSkin('scales_c.jpg',2,.5,{roughness:.55,clearcoat:.2,clearcoatRoughness:.5}),
     skin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.92,normalMap:skinN,normalScale:new T.Vector2(2.4,2.4)}),
     wetSkin:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.6,clearcoat:.15,clearcoatRoughness:.45,normalMap:skinN,normalScale:new T.Vector2(1,1)}),
     fur:new T.MeshPhysicalMaterial({vertexColors:true,roughness:.9,sheen:.35,sheenRoughness:.6,sheenColor:new T.Color(.18,.17,.15),normalMap:furN,normalScale:new T.Vector2(.7,.7)}),
@@ -586,19 +607,6 @@ const glossM={};
 function gloss(col){return glossM[col]||(glossM[col]=new T.MeshPhysicalMaterial({color:col,roughness:.06,clearcoat:1,clearcoatRoughness:.02,sheen:.5,sheenColor:new T.Color('#ffffff')}))}
 function rngA(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
 let glamBody=null;
-// real skin detail from photo-scanned textures (scales for reptiles, creases for big grey animals),
-// wrapped round the body from three sides so it never stretches, and lit as bumps
-const skinTex={};
-function photoSkin(file,tile,bump,opts){
-  const t=skinTex[file]||(skinTex[file]=new T.TextureLoader().load('tex/'+file));t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=4;
-  const m=new T.MeshPhysicalMaterial(Object.assign({vertexColors:true},opts));
-  m.onBeforeCompile=sh=>{sh.uniforms.skinTex={value:t};sh.uniforms.skinTile={value:1/tile};sh.uniforms.skinBump={value:bump};
-    sh.vertexShader='varying vec3 vSkP;varying vec3 vSkN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSkP=position;vSkN=normal;');
-    sh.fragmentShader='uniform sampler2D skinTex;uniform float skinTile;uniform float skinBump;varying vec3 vSkP;varying vec3 vSkN;\n'+
-      'float skinH(){vec3 w=pow(abs(normalize(vSkN)),vec3(4.));w/=w.x+w.y+w.z;vec3 p=vSkP*skinTile;return texture2D(skinTex,p.yz).r*w.x+texture2D(skinTex,p.xz).r*w.y+texture2D(skinTex,p.xy).r*w.z;}\n'+
-      sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\nfloat skH=skinH();diffuseColor.rgb*=mix(1.,skH*1.1,.3);')
-        .replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\n{vec3 vSigmaX=dFdx(-vViewPosition),vSigmaY=dFdy(-vViewPosition),vN=normal,R1=cross(vSigmaY,vN),R2=cross(vN,vSigmaX);float fDet=dot(vSigmaX,R1)*faceDirection;vec2 dH=vec2(dFdx(skH),dFdy(skH))*skinBump;vec3 vGrad=sign(fDet)*(dH.x*R1+dH.y*R2);normal=normalize(abs(fDet)*vN-vGrad);}')};
-  m.customProgramCacheKey=()=>'skin'+file+tile+bump;return m}
 function matFor(p){const plan=p.plan||'quad',m=mats();
   if(p.glow)return new T.MeshPhysicalMaterial({vertexColors:true,roughness:.15,clearcoat:1,transparent:true,opacity:.72,emissive:p.glow,emissiveIntensity:.35});
   if(p.glam||p.sparkle)return glamBody||(glamBody=addSparkle(new T.MeshPhysicalMaterial({vertexColors:true,roughness:.45,clearcoat:.6,clearcoatRoughness:.2,iridescence:.6,iridescenceIOR:1.4,sheen:.8,sheenColor:new T.Color('#ffb0e0'),normalMap:m.fur.normalMap,normalScale:new T.Vector2(.3,.3)}),50,2.6));
@@ -696,6 +704,14 @@ function extraMesh(e,p){
     case'tutu':{const geo=new T.CylinderGeometry(1,1.35,1,60,4,true),pp=geo.attributes.position;for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i),a=Math.atan2(z,x),k2=1+Math.sin(a*22)*.05*(pp.getY(i)+.5);pp.setX(i,x*k2);pp.setZ(i,z*k2)}
       geo.computeVertexNormals();geo.rotateX(Math.PI/2);const o=add(geo,glitterMat(e.col,{side:T.DoubleSide,transparent:true,opacity:.85}),null,null,[e.rx,e.ry,e.len]);o.castShadow=false;break}
     // big brown feathered eagle wings
+    case'membrane':{const z=e.span,sx=e.s,pos=[],idx=[];
+      const pts=[[0,0,0],[z*.35,z*.05,z*.04],[z*.7,z*.08,-z*.02],[z,z*.06,-z*.14],[z*.62,0,-z*.2],[z*.3,-z*.02,-z*.3],[0,-z*.04,-z*.32]];
+      for(const q of pts)pos.push(sx*q[0],q[1],q[2]);for(let i=1;i<pts.length-1;i++)idx.push(0,i,i+1);
+      const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pos,3));geo.setIndex(idx);geo.computeVertexNormals();
+      add(geo,smat(e.col,{side:T.DoubleSide,roughness:.75,transparent:true,opacity:.93}));
+      for(let i=0;i<3;i++){const a=pts[i],b=pts[i+1],v=V3(sx*(b[0]-a[0]),b[1]-a[1],b[2]-a[2]),L=v.length(),g=new T.CylinderGeometry(z*.012*(1-i*.25),z*.012*(1-(i+1)*.25),L,6);g.translate(0,L/2,0);
+        const o=add(g,smat(e.spar,{roughness:.7}),[sx*a[0],a[1],a[2]]);o.quaternion.setFromUnitVectors(V3(0,1,0),v.normalize())}
+      break}
     case'ewing':{const z=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.bezierCurveTo(z*.4,-z*.18,z*.85,-z*.12,z*1.05,z*.05);
       for(let i=0;i<7;i++){const t=i/6,x=z*(1.05-t*.95),y=z*(.05+.45*Math.sin(t*1.4));sh.lineTo(x+z*.06,y+z*.12);sh.lineTo(x,y)}sh.lineTo(0,z*.25);sh.lineTo(0,0);
       const geo=new T.ShapeGeometry(sh,12);if(e.s<0)geo.scale(-1,1,1);geo.rotateX(Math.PI/2);
@@ -777,7 +793,7 @@ function animate(a,dt,spd,time,o={}){
   else if(A.kind==='bird'){
     for(let i=0;i<2;i++){const l=B['leg'+i];if(l)l.rotation.x=Math.sin(ph+i*Math.PI)*amp*1.2}
     const fl=o.alt>.4;
-    for(const s of['L','R']){const w=B['wing'+s],sg=s==='R'?1:-1;w.rotation.z=fl?sg*Math.sin(time*13)*.9:A.penguin?sg*(.25+Math.sin(ph)*.15*Math.min(1,spd)):0;w.rotation.y=fl?-sg*.2:0}
+    for(const s of['L','R']){const w=B['wing'+s],sg=s==='R'?1:-1;w.rotation.z=fl?sg*Math.sin(time*(A.ptero?2.6:13))*(A.ptero?.55:.9):A.ptero?-sg*.9:A.penguin?sg*(.25+Math.sin(ph)*.15*Math.min(1,spd)):0;w.rotation.y=fl?-sg*.2:0}
     if(B.neck)B.neck.rotation.x=Math.sin(ph*2)*amp*.25+(o.graze?.7:0);
     if(A.penguin)a.inner.rotation.z=Math.sin(ph)*.12*Math.min(1,spd);
     if(B.head)B.head.rotation.y=Math.sin(time*.9+sd)*.4*(spd<.2?1:.2);
