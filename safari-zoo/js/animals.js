@@ -354,10 +354,16 @@ function theropod(p){
   const hl=p.headL*s,hw=p.headW*s,hh=p.headH*s,at=(f,u,x=0)=>[ne[0]+x,ne[1]+u,ne[2]+f];
   k.ell(at(hl*.2,hh*.08),[hw*.5,hh*.5,hl*.34],'head',{k:hh*.3,pat:1});
   k.cap(at(hl*.35,hh*.05),at(hl*.95,-hh*.05),hh*.36,hh*.24,'head',{k:hh*.25,pat:1});
-  k.cap(at(hl*.25,-hh*.3),at(hl*.85,-hh*.32),hh*.24,hh*.14,'head',{k:hh*.15,pat:1,col:p.belly||null});
+  const gape=p.real?hh*.22:0;
+  k.cap(at(hl*.25,-hh*.3-gape*.5),at(hl*.85,-hh*.32-gape),hh*.24,hh*.14,'head',{k:hh*.15,pat:1,col:p.belly||null});
+  if(p.real)k.ell(at(hl*.55,-hh*.24-gape*.5),[hw*.3,hh*.16+gape*.3,hl*.3],'head',{k:hh*.05,col:'#4a1418',detail:1});
   for(const sx of[-1,1]){
     k.extra('head','eye',at(hl*.3,hh*.22,sx*hw*.4),{r:Math.max(.03,hw*.08)});
-    k.extra('head','teeth',at(hl*.35,-hh*.18,sx*hw*.3),{s:sx,len:hl*.6,size:hh*.09});
+    k.extra('head','teeth',at(hl*.35,-hh*.18,sx*hw*.3),{s:sx,len:hl*.6,size:hh*(p.real?.17:.09),n:p.real?11:9});
+    if(p.real){k.extra('head','teeth',at(hl*.38,-hh*.3-gape*.7,sx*hw*.24),{s:sx,len:hl*.5,size:hh*.13,n:9,up:1});
+      // a heavy angry brow over each eye
+      k.ell(at(hl*.32,hh*.36,sx*hw*.36),[hw*.16,hh*.08,hl*.16],'head',{k:hh*.06,pat:1,rot:[0,0,sx*.35],detail:1});
+      k.extra('root','claw',[sx*(W*.4),hip+Hb*.1-p.arm*s*.5,L*.36+p.arm*s*.48],{size:.18*s*Math.max(.6,p.arm)})}
     const i=sx>0?0:1,sh=[sx*W*.35,hip+Hb*.1,L*.36];
     k.cap(sh,ad(sh,[sx*W*.05,-p.arm*s*.5,p.arm*s*.45]),Math.max(.04,W*.07),Math.max(.03,W*.05),'root',{k:.04*s,pat:1,detail:1});
     const top=[sx*W*.32,hip,-L*.08],knee=[sx*W*.36,hip*.52,L*.06],ank=[sx*W*.36,hip*.15,-L*.08],toe=[sx*W*.36,.06*s,L*.12];
@@ -414,6 +420,16 @@ function fish(p){
     for(const sx of[-1,1]){k.extra('root','eye',[sx*s*.2,y+th*.25,s*.36],{r:s*.025});k.cap([sx*s*.12,y,s*.4],[sx*s*.14,y-th*.1,s*.55],s*.04,s*.025,'root',{k:s*.02,pat:1,detail:1})}
     k.extra('tail','tail',[0,y,-s*.38],{len:s*.9,r:s*.018,col:p.col,ang:1.62});
     k.anim={kind:'fish',stride:s*.5,ray:1};return k}
+  if(p.gw){k.ell([0,y,s*.04],[w*1.25,th*.62,s*.4],'root',{k:th*.3,pat:1});
+    k.cap([0,y+th*.05,s*.28],[0,y+th*.02,s*.6],th*.42,th*.08,'root',{k:th*.15,pat:1});
+    k.cap([0,y,-s*.1],[0,y+th*.02,-s*.42],th*.38,th*.06,'tail',{k:th*.12,pat:1});
+    k.ell([0,y-th*.3,s*.42],[w*.62,th*.12,s*.1],'root',{k:th*.04,col:'#3a0e12',detail:1});
+    for(const sx of[-1,1]){k.extra('root','teeth',[sx*w*.55,y-th*.2,s*.34],{s:sx,len:s*.13,size:th*.13,n:8});k.extra('root','teeth',[sx*w*.5,y-th*.4,s*.35],{s:sx,len:s*.11,size:th*.11,n:7,up:1});
+      for(let g=0;g<5;g++)k.cap([sx*w*1.08,y+th*.18,s*(.2-g*.035)],[sx*w*1.08,y-th*.22,s*(.21-g*.035)],th*.018,th*.018,'root',{k:.01,col:'#2a3038',detail:1});
+      k.extra('root','eye',[sx*w*.7,y+th*.16,s*.43],{r:Math.max(.02,th*.06)});k.extra('root','pfin',[sx*w*1.05,y-th*.3,s*.12],{s:sx,size:th*.9,col:p.fin||p.col})}
+    k.extra('tail','tfin',[0,y,-s*.42],{size:th*1.25,col:p.fin||p.col});k.extra('root','dfin',[0,y+th*.55,s*.06],{size:s*.2,tall:1.6,col:p.fin||p.col});
+    k.extra('tail','dfin',[0,y-th*.2,-s*.3],{size:s*.06,tall:-1,col:p.fin||p.col});
+    k.anim={kind:'fish',stride:s*.5};return k}
   k.ell([0,y,s*.06],[w,th*.5,s*.42],'root',{k:th*.3,pat:1});
   k.ell([0,y+th*.02,s*.3],[w*.92,th*.42,s*.22],'root',{k:th*.25,pat:1});
   k.cap([0,y,-s*.1],[0,y,-s*.44],th*.3,th*.07,'tail',{k:th*.15,pat:1});
@@ -484,7 +500,8 @@ function painter(p){
   return(pr,x,y,z,nx,ny,nz)=>{
     let c=pr.col?C(pr.col):base;
     const pat=pr.pat==='rings'?'rings':(pr.pat&&!pr.col?(pr.tex||p.tex):null);
-    if(!pr.col&&ny<-.2&&!p.noBelly)c=mixc(c,belly,Math.min(1,(-ny-.2)*1.8));
+    if(p.sharpBelly&&!pr.col)c=ny<-.08+.12*(fbm(x*3,y*3,z*3)-.5)?belly:c;
+    else if(!pr.col&&ny<-.2&&!p.noBelly)c=mixc(c,belly,Math.min(1,(-ny-.2)*1.8));
     if(pr.front&&nz>.15)c=mixc(c,C(pr.front),Math.min(1,(nz-.15)*4));
     if(pat){
       let t;
@@ -605,7 +622,7 @@ function extraMesh(e,p){
     case'trifrill':{const f=add(new T.CircleGeometry(e.r,28,0,Math.PI),smat(e.col,{side:T.DoubleSide,roughness:.7}));f.rotation.x=-.5+e.tilt*.5;f.position.y=e.r*.1;break}
     case'plate':{const geo=new T.CircleGeometry(e.size,4);geo.rotateY(Math.PI/2);geo.scale(1,1.2,.9);const o=add(geo,smat(e.col,{side:T.DoubleSide,roughness:.6}));o.position.y=e.size*.7;break}
     case'spike':{const geo=new T.ConeGeometry(e.r,e.len,8);geo.translate(0,e.len/2,0);add(geo,m.ivory,null,[0,0,e.s*1.1]);break}
-    case'teeth':for(let i=0;i<9;i++){const geo=new T.ConeGeometry(e.size*.35,e.size,5);geo.rotateX(Math.PI);add(geo,m.ivory,[0,0,i*e.len/9])}break;
+    case'teeth':for(let i=0;i<(e.n||9);i++){const geo=new T.ConeGeometry(e.size*.35,e.size*(1+.3*Math.sin(i*2.3)),5);if(!e.up)geo.rotateX(Math.PI);add(geo,m.ivory,[0,0,i*e.len/(e.n||9)])}break;
     case'claw':{const geo=new T.ConeGeometry(e.size*.25,e.size,6);add(geo,m.horn,null,[-.8,0,0]);break}
     case'quill':{const geo=new T.ConeGeometry(e.size*.15,e.size,5);geo.translate(0,e.size/2,0);add(geo,smat(e.col||'#3a2a1a'),null,[-.6,0,0]);break}
     case'sail':{const geo=new T.CircleGeometry(1,40,0,Math.PI);geo.scale(e.len/2,e.ht,1);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.6}));break}

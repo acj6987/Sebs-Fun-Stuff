@@ -372,6 +372,14 @@ function updateAnimals(dt,time){
             a.soar=a.sp.def.soar&&Math.random()<.4;if(a.soar){a.vx*=2.5;a.vz*=2.5}}
           // the Mummy Dreams have lots of long naps together
           if(a.sp.def.mate&&Math.random()<.6){const T=30+Math.random()*40;for(const m of G?G.members:[a]){m.state='sleep';m.sleepT=T;m.vx=m.vz=0;m.soar=0}}}}}}
+    // the Megalodon cruises round like a great white, then charges and smashes into the glass tunnel
+    if(a.lagoon&&a.sp.def.gw&&world.lagoonDome&&world.walk){const D=world.lagoonDome,W=world.walk;a.mt=(a.mt??12)-dt;a.t=99;
+      if(a.charge){const tz=clamp(a.z,W.z0,W.z1-6),dx=W.x-a.x,dz=tz-a.z,d=Math.hypot(dx,dz)||1;a.vx=dx/d*15;a.vz=dz/d*15;a.swimY=W.y+3;
+        if(d<a.m.rad*.6+5){a.charge=0;a.mt=18+Math.random()*20;a.vx=-dx/d*8;a.vz=-dz/d*8;a.swimY=W.y+20;world.shake=1.2;
+          if(Math.hypot(a.x-px,a.z-pz)<120)toast('💥 BANG!! The Megalodon smashed into the glass tunnel! The glass held… just!',5000);
+          for(const v of world.walkers||[]){v.stop=0;v.dir=v.t>.5?1:-1;v.spd=.12;setTimeout(()=>{v.spd=.02+Math.random()*.02},4000)}}}
+      else{const ang=Math.atan2(a.x-D.x,a.z-D.z)+.5,r=D.R*.6,dx=D.x+Math.sin(ang)*r-a.x,dz=D.z+Math.cos(ang)*r-a.z,d=Math.hypot(dx,dz)||1;a.vx=dx/d*6;a.vz=dz/d*6;
+        if(a.mt<=0){a.charge=1;if(Math.hypot(a.x-px,a.z-pz)<120)toast('🦈 Uh oh… the Megalodon is swimming straight at the tunnel!',4000)}}}
     if(Math.abs(a.x)>LIMIT-5)a.vx=-Math.sign(a.x)*Math.abs(a.vx||1);
     if(Math.abs(a.z)>LIMIT-5)a.vz=-Math.sign(a.z)*Math.abs(a.vz||1);
     if(world.c.kingdom){if(a.z>GATE_Z-6)a.vz=-Math.abs(a.vz||1);
@@ -401,7 +409,7 @@ function updateAnimals(dt,time){
     else if(a.sp.def.swim&&a.state!=='netted'){const p=world.ponds.find(p=>Math.hypot(a.x-p.x,a.z-p.z)<p.r*1.3);
       if(p&&p.lagoon){const D=world.lagoonDome,W=world.walk,dd=Math.hypot(a.x-D.x,a.z-D.z),top=Math.sqrt(Math.max(0,D.R*D.R-dd*dd))*.85-a.m.h,low=p.lvl-14;
         if(a.swimY==null||Math.random()<dt*.08)a.swimY=low+Math.random()*Math.max(1,top-low);
-        let want=clamp(a.swimY,low,Math.max(low,top));if(W&&(Math.abs(a.x-W.x)<W.w+a.m.rad+3&&a.z>W.z0-14&&a.z<W.z1||Math.hypot(a.x-W.cx,a.z-W.cz)<W.cr+a.m.rad+3))want=Math.max(want,W.y+16);
+        let want=clamp(a.swimY,low,Math.max(low,top));if(W&&(Math.abs(a.x-W.x)<W.w+a.m.rad+3&&a.z>W.z0-14&&a.z<W.z1||Math.hypot(a.x-W.cx,a.z-W.cz)<W.cr+a.m.rad+3)&&!a.charge)want=Math.max(want,W.y+16);
         a.sy=a.sy==null?want:lerp(a.sy,want,Math.min(1,dt*.4));pitch=clamp((want-a.sy)*-.05,-.4,.4);a.alt=a.sy-H(a.x,a.z)}
       else if(p)a.alt=(p.lvl-a.m.h*.7)-H(a.x,a.z)}
     a.m.inner.rotation.x=pitch;
@@ -607,6 +615,7 @@ function placeCamera(){
   const fx=mode==='car'?car.x:me.x,fz=mode==='car'?car.z:me.z;world.sky.follow(fx,H(fx,fz),fz);
   if(mode!=='sub')underwater();
   if(world.zoo)spaceSky();
+  if(world.shake>0){cam.position.x+=(Math.random()-.5)*world.shake*.7;cam.position.y+=(Math.random()-.5)*world.shake*.7}
   const LD=world.lagoonDome;if(LD){const d=Math.hypot(cam.position.x-LD.x,cam.position.z-LD.z);if(d<LD.R-1&&cam.position.y<Math.sqrt(Math.max(0,LD.R*LD.R-d*d))+(world.ponds.find(p=>p.lagoon)||{lvl:0}).lvl){const f=world.scene.fog;f.color.set('#1e78b8');f.near=4;f.far=170;world.scene.background.set('#1e78b8')}}
 }
 const safari={running:false,
@@ -918,7 +927,7 @@ function buildKingdom(scene){
     const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,near=Math.hypot(px,pz-GATE_Z)<45;
     for(const d of world.gateDoors){const want=near?d.userData.sd*1.35:0;d.rotation.y+=(want-d.rotation.y)*Math.min(1,dt*1.2)}
     for(const gd of world.guards||[])ANIMALS.animate(gd,dt,0,time,{});
-    for(const v of world.visitors||[])ANIMALS.animate(v.inst,dt,0,time,{});updateWalkers(dt,time);
+    for(const v of world.visitors||[])ANIMALS.animate(v.inst,dt,0,time,{});updateWalkers(dt,time);world.shake=Math.max(0,(world.shake||0)-dt*1.2);
     const LD=world.lagoonDome;if(LD){const nr=Math.hypot(px-LD.x,pz-(LD.z+LD.R))<28;LD.open+=((nr?1:0)-LD.open)*Math.min(1,dt*2.5);for(const d of LD.doors){const{sd,w}=d.userData;d.position.x=sd*(w/2+LD.open*w*.95)}}
     for(const d of world.padDoors||[]){const near=Math.hypot(px-d.x0,pz-(d.q.z+d.q.s/2))<30||inPaddock(d.q,px,pz,0);d.open+=((near?1:0)-d.open)*Math.min(1,dt*1.5);d.g.position.x=d.x0+d.open*(d.gw+1)}
     for(const f of world.fires||[])f.scale.set(1+Math.sin(time*13+f.position.x)*.15,1+Math.sin(time*17)*.2,1)};
