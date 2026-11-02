@@ -888,13 +888,14 @@ function buildDoctor(){
 function nearDoctor(x=car.x,z=car.z){return Math.abs(x-DOC.x)<DOC.D/2+12&&Math.abs(z-DOC.z)<DOC.W/2+4}
 function visitDoctor(){
   if(!S.cages.length){toast('🩺 Bring animals in your truck and the doctor will check them!');return true}
-  const now=Date.now(),names=[];let babies=0;
+  const now=Date.now(),names=[];let babies=0,healed=0;
   for(const c of S.cages.splice(0)){delete c.pen;names.push(SP[c.k].n);
+    if(c.hurt){delete c.hurt;healed++;hist(c,'was made better by the Animal Doctor')}
     hist(c,'had a check-up at the Animal Doctor');
     if(c.preg){hist(c,'had a baby at the Animal Doctor');S.holding.push({uid:S.uid++,k:babyKind(c),born:now,mum:c.uid});delete c.preg;babies++}
     S.holding.push(c)}
   S.coins+=names.length*20;autoHome();save();coins();refreshCages();syncZooAnimals();if(curView==='zoo')renderZooUI();
-  toast('🩺 The doctor checked your '+names.join(', ')+'. All healthy and happy! ❤️'+(babies?' And the doctor helped '+babies+' baby'+(babies>1?' babies':'')+' be born! 🍼':'')+' They went home to their domes. +'+names.length*20+' coins',8000);return true}
+  toast('🩺 The doctor checked your '+names.join(', ')+'.'+(healed?' The doctor bandaged up '+healed+' hurt animal'+(healed>1?'s':'')+' and made '+(healed>1?'them':'it')+' better! 🩹':'')+' All healthy and happy! ❤️'+(babies?' And the doctor helped '+babies+' baby'+(babies>1?' babies':'')+' be born! 🍼':'')+' They went home to their domes. +'+names.length*20+' coins',8000);return true}
 
 /* ---------- 🧬 the DNA Lab: take DNA from animals and mix two to make a new animal ---------- */
 const LAB={x:125,z:12,D:24,W:20};

@@ -292,7 +292,7 @@ function spawnAnimal(initial,force){
 }
 // fish stay in the deep water, land animals stay on the islands; turtles and the Sparkle Zebraffe go anywhere
 function livesAt(sp,x,z){if(!world.sea){if(sp.def.swim)return inPond(x,z);if(sp.def.nearWater&&!world.ponds.some(p=>Math.hypot(x-p.x,z-p.z)<p.r+25))return false;return sp.def.amph||!inPond(x,z)}const h=H(x,z),d=sp.def;return d.swim?h<-2.2:d.amph?true:h>.8}
-function removeAnimal(a){world.scene.remove(a.m.g);world.animals.splice(world.animals.indexOf(a),1);
+function removeAnimal(a){world.scene.remove(a.m.g);if(a.blood){world.scene.remove(a.blood);a.blood=null}world.animals.splice(world.animals.indexOf(a),1);
   if(a.grp){a.grp.members=a.grp.members.filter(m=>m!==a)}world.respawn.push(10)}
 // hunters chase their prey; if they catch it, it falls over and is gone
 function startHunt(){
@@ -322,7 +322,13 @@ function updateAnimals(dt,time){
       // netted animals follow you in a line, each one behind the one before
       const own=me.pack.includes(a)?me:world.asst,i=own.pack.indexOf(a),lead=i>0?own.pack[i-1]:own,gap=i>0?2.2+a.m.rad+lead.m.rad:3.2,td=Math.hypot(lead.x-a.x,lead.z-a.z);
       if((mode==='foot'||own!==me)&&td>gap){const s=Math.min(7,(td-gap+.2)*2.2);a.vx=(lead.x-a.x)/td*s;a.vz=(lead.z-a.z)/td*s}else{a.vx*=.8;a.vz*=.8}}
-    else if(a.state==='caught'){a.vx=a.vz=0;a.dead=(a.dead||0)+dt;a.m.g.rotation.z=Math.min(Math.PI/2,a.dead*2.5);if(a.dead>50){removeAnimal(a);continue}}
+    else if(a.state==='caught'){a.vx=a.vz=0;a.dead=(a.dead||0)+dt;const alive=a.dead<HURT_T;
+      a.m.g.rotation.z=Math.min(Math.PI/2,a.dead*2.5)+(alive?Math.sin(time*9+a.x)*.05*(1-a.dead/HURT_T)+Math.max(0,Math.sin(time*1.3))*.12*(1-a.dead/HURT_T):0);
+      if(!a.blood){const m=new T.Mesh(new T.CircleGeometry(1,24),new T.MeshStandardMaterial({color:'#5a0808',roughness:.25,metalness:.1,transparent:true,opacity:.92,depthWrite:false}));m.rotation.x=-Math.PI/2;m.renderOrder=1;world.scene.add(m);a.blood=m}
+      const br=Math.max(1.2,a.m.rad*1.2)*(.45+Math.min(1,a.dead/HURT_T)*.75),off=a.m.h*.35;a.blood.scale.set(br,br*.8,1);a.blood.position.set(a.x+Math.cos(a.yaw)*off,H(a.x,a.z)+.04,a.z-Math.sin(a.yaw)*off);
+      if(alive&&!a.saidDead&&a.dead>=HURT_T-.05){}
+      if(!alive&&!a.saidDead){a.saidDead=1;if(Math.hypot(a.x-px,a.z-pz)<150)toast('💔 The '+a.sp.n+' died. Nobody got there in time.')}
+      if(a.dead>110){removeAnimal(a);continue}}
     else if(a.state==='stalk'){
       // creeping low through the grass towards the prey
       const q=a.prey;if(!q||!world.animals.includes(q)||q.state==='caught'||q.state==='netted'){a.state='rest';a.restT=4;a.vx=a.vz=0}
@@ -330,7 +336,9 @@ function updateAnimals(dt,time){
         if(dd<28||(a.stalkT-=dt)<=0||q.state!=='wander')sprintAt(a,q)}}
     else if(a.state==='eat'){
       // eating their catch, heads down, until they are full
-      const q=a.prey;a.graze=1;if(q){const tx=q.x+a.ex,tz=q.z+a.ez,ex=tx-a.x,ez=tz-a.z,ed=Math.hypot(ex,ez);if(ed>.3){a.vx=ex/ed*Math.min(3,ed*2);a.vz=ez/ed*Math.min(3,ed*2)}else{a.vx=a.vz=0;a.yaw=Math.atan2(q.x-a.x,q.z-a.z)}}
+      const q=a.prey;a.graze=1;
+      if(q&&q.dead<HURT_T&&Math.hypot(a.x-px,a.z-pz)<22){const dx=a.x-px,dz=a.z-pz,dd=Math.hypot(dx,dz)||1;a.state='wander';a.t=5;a.vx=dx/dd*a.sp.s*4;a.vz=dz/dd*a.sp.s*4;a.graze=0;a.prey=null;continue}
+      if(q){const tx=q.x+a.ex,tz=q.z+a.ez,ex=tx-a.x,ez=tz-a.z,ed=Math.hypot(ex,ez);if(ed>.3){a.vx=ex/ed*Math.min(3,ed*2);a.vz=ez/ed*Math.min(3,ed*2)}else{a.vx=a.vz=0;a.yaw=Math.atan2(q.x-a.x,q.z-a.z)}}
       if((a.eatT-=dt)<=0||!q||!world.animals.includes(q)){a.state='rest';a.restT=20;a.vx=a.vz=0;a.prey=null}}
     else if(a.state==='hunt'){
       const q=a.prey;if(!q||!world.animals.includes(q)||q.state==='caught'||q.state==='netted'||(a.huntT-=dt)<=0){a.state='rest';a.restT=6;a.vx=a.vz=0}
@@ -434,6 +442,7 @@ function aimTarget(){
 function toggleNet(){me.noNet=!me.noNet;if(netRig)netRig.visible=!me.noNet&&mode==='foot';setDriveUI();toast(me.noNet?'🎣 You put your net away. Press N to get it out again.':'🎣 You got your net out!')}
 function throwNet(){
   if(!safari.running)return;if(me.noNet&&mode==='foot'&&!(world.zoo&&inLab())){toast('Your net is put away! Press N (or the NET button) to get it out.');return}if(mode==='plane'){planeCatch();return}
+  if(!world.zoo&&rescueHurt())return;
   if(world.c.kingdom){toast('🦖 These are your own dinosaurs! They live free here in your Dino Kingdom.');return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){if(!labAction())zooCatch();return}
@@ -646,8 +655,9 @@ function hud(){
     const st=a.state==='flee'?'<small>Running away! Let it get tired</small>':a.state==='tired'?'<small>Tired! Throw now!</small>':a.state==='netted'?'<small>In your net</small>':'';
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
-  let msg;
-  if(mode==='plane'&&plane.star)msg=plane.launchT>0?'🚀 Countdown… hold on tight!':plane.homing?'🛬 Autopilot: flying home to the Launch Room…':'🚀 <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up to space · <b>Shift</b> down · <b>P</b> fly home · '+Math.round(plane.y)+' m high';
+  let msg;hurtIndicator();const hn=!world.zoo&&hurtNear();
+  if(hn)msg='🚑 Press <b>F</b> to save the hurt '+hn.sp.n+'!';
+  else   if(mode==='plane'&&plane.star)msg=plane.launchT>0?'🚀 Countdown… hold on tight!':plane.homing?'🛬 Autopilot: flying home to the Launch Room…':'🚀 <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up to space · <b>Shift</b> down · <b>P</b> fly home · '+Math.round(plane.y)+' m high';
   else if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
   else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
   else if(paddockHint())msg=paddockHint();
@@ -1017,3 +1027,25 @@ function buildLagoon(scene){
 function updateWalkers(dt,time){const W=world.walk;if(!W)return;
   for(const v of world.walkers||[]){if(v.stop>0){v.stop-=dt;ANIMALS.animate(v.inst,dt,0,time,{look:1})}else{v.t+=v.dir*v.spd*dt;if(v.t>1||v.t<0){v.dir*=-1;v.t=clamp(v.t,0,1)}if(Math.random()<dt*.15)v.stop=2+Math.random()*4;ANIMALS.animate(v.inst,dt,1.2,time,{})}
     const z=W.z1-2-(W.z1-2-W.z0)*v.t,x=W.x+v.side*(z<W.cz+W.cr?2.5:1);v.inst.g.position.set(x,W.y,z);v.inst.g.rotation.y=v.stop>0?Math.PI/2*Math.sign(v.side||1):v.dir>0?Math.PI:0}}
+
+/* ---------- 🚑 saving hurt animals: a red arrow points to them, get there in time and press F ---------- */
+const HURT_T=40;
+function hurtAnimals(){return world.animals.filter(a=>a.state==='caught'&&(a.dead||0)<HURT_T)}
+function hurtNear(){if(mode!=='foot')return null;return hurtAnimals().find(a=>Math.hypot(a.x-me.x,a.z-me.z)<a.m.rad+5)||null}
+function rescueHurt(){
+  const a=hurtNear();if(!a)return false;
+  if(smallUsed()>=CAGES){toast('Your truck cages are full! Empty them at the zoo, then come back.');return true}
+  S.cages.push({uid:S.uid++,k:a.sp.k,hurt:1,h:[[Date.now(),'was saved by you after being hurt in a hunt']]});S.coins+=100;save();coins();refreshCages();
+  for(const h of world.animals)if(h.prey===a){h.state='wander';h.prey=null;h.t=3}
+  removeAnimal(a);toast('🚑 You saved the hurt '+a.sp.n+'! It is in your truck. Take it to the 🩺 Animal Doctor at the zoo to make it better. +100 coins',7000);return true}
+// the red arrow at the top of the screen pointing to the nearest hurt animal
+function hurtIndicator(){
+  let el=document.getElementById('hurtInd');
+  if(!el){el=document.createElement('div');el.id='hurtInd';el.style.cssText='position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:30;background:#b01010;color:#fff;font-weight:800;font-size:16px;padding:6px 14px;border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.35);display:flex;gap:10px;align-items:center;pointer-events:none';
+    el.innerHTML='<span class="ar" style="display:inline-block;font-size:22px">⬆</span><span class="tx"></span>';document.body.appendChild(el)}
+  const list=curView==='drive'&&safari.running&&world&&!world.zoo?hurtAnimals():[];
+  if(!list.length){el.style.display='none';return}
+  const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,a=list.sort((p,q)=>Math.hypot(p.x-px,p.z-pz)-Math.hypot(q.x-px,q.z-pz))[0];
+  const f=V(0,0,-1).applyQuaternion(cam.quaternion),rel=Math.atan2(a.x-px,a.z-pz)-Math.atan2(f.x,f.z),d=Math.round(Math.hypot(a.x-px,a.z-pz));
+  el.style.display='flex';el.querySelector('.ar').style.transform='rotate('+(-rel)+'rad)';
+  el.querySelector('.tx').textContent='🩸 A '+a.sp.n+' is hurt! '+d+' m · '+Math.ceil(HURT_T-(a.dead||0))+' s left to save it'}
