@@ -238,10 +238,16 @@ function updateZooAnimals(dt,time){
   const driving=curView==='drive'&&world&&world.zoo,px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   for(const o of zoo.animals){
     if(o.follow&&driving&&mode==='foot'){const b=V(Math.sin(look.yaw),0,Math.cos(look.yaw)),side=o.follow===1?-1:1;o.tx=me.x+b.x*4+b.z*side*2.5;o.tz=me.z+b.z*4-b.x*side*2.5;o.t=1}
+    // meat-eating dinosaurs charge at you when you come into their dome, and attack your truck
+    const sp=SP[o.an.k],meat=driving&&!o.follow&&o.A.R0>0&&sp.cont==='dino'&&!!(sp.def.hunts||sp.def.chase)&&!sp.def.swim;o.hunting=0;
+    if(meat&&Math.hypot(px-o.A.x,pz-o.A.z)<o.A.R0-2){const dd=Math.hypot(o.x-px,o.z-pz);
+      if(dd<110){o.hunting=1;o.tx=px;o.tz=pz;o.t=2;o.pile=null;
+        if(dd<5+o.inst.len*.35){o.biteT=(o.biteT||0)-dt;if(o.biteT<=0){o.biteT=2.5;world.shake=1.2;if(mode==='car')car.v*=-.5;
+          toast(mode==='car'?'🦖 ROAR!! The '+sp.n+' is attacking your truck! Drive away, quick!':'🦖 ROAR!! The '+sp.n+' is after you! Run back to the truck!',3500)}}}}
     // move out of the way of the jeep or of you
-    if(driving&&!o.follow&&!swims(o.an)&&Math.hypot(o.x-px,o.z-pz)<9){const a=Math.atan2(o.x-px,o.z-pz);const lim=o.A.R0-4;let nx=o.x+Math.sin(a)*8-o.A.x,nz=o.z+Math.cos(a)*8-o.A.z;const d=Math.hypot(nx,nz);if(d>lim){nx*=lim/d;nz*=lim/d}o.tx=o.A.x+nx;o.tz=o.A.z+nz;o.t=2}
+    if(driving&&!o.follow&&!o.hunting&&!swims(o.an)&&Math.hypot(o.x-px,o.z-pz)<9){const a=Math.atan2(o.x-px,o.z-pz);const lim=o.A.R0-4;let nx=o.x+Math.sin(a)*8-o.A.x,nz=o.z+Math.cos(a)*8-o.A.z;const d=Math.hypot(nx,nz);if(d>lim){nx*=lim/d;nz*=lim/d}o.tx=o.A.x+nx;o.tz=o.A.z+nz;o.t=2}
     const dx=o.tx-o.x,dz=o.tz-o.z,d=Math.hypot(dx,dz);let spd=0;
-    if(d>.4){spd=Math.min(SP[o.an.k].s*(o.follow||o.dash?2.2:driving&&o.t===2?1.4:.55),o.follow?d*2:d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
+    if(d>.4){spd=Math.min(SP[o.an.k].s*(o.hunting?2.8:o.follow||o.dash?2.2:driving&&o.t===2?1.4:.55),o.follow?d*2:d);o.x+=dx/d*spd*dt;o.z+=dz/d*spd*dt;
       const ty=Math.atan2(dx,dz);let dy=ty-o.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));o.yaw+=dy*Math.min(1,dt*4)}
     else{o.t-=dt;o.dash=0;if(o.pile&&o.pile.left>0){o.pile.left-=dt;o.t=Math.max(o.t,.5)}
       if(o.t<=0){o.t=3+Math.random()*6;const p=nextSpot(o);o.tx=p.x;o.tz=p.z;o.pile=p.pile||null}}
@@ -256,6 +262,7 @@ function updateZooAnimals(dt,time){
     o.inst.g.position.set(o.x,sw?.12-(SP[o.an.k].def.dorsalS&&o.inst.h>1?o.inst.h*.7:o.inst.h*.85):base+(o.inst.hop||0),o.z);o.inst.g.rotation.y=o.yaw;
     if(o.an.born){const g=Math.min(1,(Date.now()-o.an.born)/GROW);o.inst.g.scale.setScalar(.35+.65*g);if(g>=1)delete o.an.born}
   }
+  if(driving)world.shake=Math.max(0,(world.shake||0)-dt*1.2);
   breed(dt);updateFood(dt);updateNursery();
 }
 
