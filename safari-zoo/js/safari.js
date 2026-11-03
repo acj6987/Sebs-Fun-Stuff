@@ -664,7 +664,8 @@ function hud(){
   else if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
   else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
   else if(paddockHint())msg=paddockHint();
-  else if(world.zoo)msg=labHint()||barnHint()||foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
+  else if(world.c.kingdom&&nearHatchery())msg='🥚 Press <b>G</b> to hatch Blue, Rexy or another famous dinosaur';
+  else if(world.zoo)msg=labHint()||(nearArena(mode==='car'?car.x:me.x,mode==='car'?car.z:me.z)?(zoo.stage?'🎪 Press <b>G</b> to end the show':'🎪 Press <b>G</b> to put an animal from your truck on the stage'):'')||barnHint()||foodHint()||eggHint()||(mode==='car'?'<b>W A S D</b> to drive · go through a doorway to drive inside a dome · <b>G</b> food':'Walk around · <b>Space</b> jump · <b>E</b> by the truck to get in');
   else if(mode==='car')msg=target&&target.dist<30?`A <b>${target.a.sp.n}</b>! Stop and press <b>E</b> to jump out`:'<b>W A S D</b> to drive · drag to look around · find an animal';
   else if(me.pack.length){const tp=trailerPos(),n=me.pack.length,nm=n>1?n+' animals':'the '+me.pack[0].sp.n;msg=Math.hypot(me.x-tp.x,me.z-tp.z)<7.5*TS?`Press <b>E</b> to put ${nm} in the cages`:`Leading <b>${nm}</b> (${n}/${PACK}) · catch more with <b>F</b> or walk back to the cages`}
   else if(world.sea&&H(me.x,me.z)<-1.2&&!target)msg='🤿 Swimming! <b>Space</b> up · <b>Shift</b> dive · <b>F</b> net · <b>E</b> by the '+(sub.on?'submarine':'truck')+' to get in';
@@ -925,7 +926,7 @@ function buildKingdom(scene){
     for(let t=0;t<L;t+=10){const x0=ax+(bx-ax)*t/L,z0=az+(bz-az)*t/L,x1=ax+(bx-ax)*Math.min(L,t+10)/L,z1=az+(bz-az)*Math.min(L,t+10)/L,ln=Math.hypot(x1-x0,z1-z0),hh=(H(x0,z0)+H(x1,z1))/2;
       for(let y=2;y<=12;y+=2.5){const wg=new T.BoxGeometry(ln,.07,.07);wg.rotateY(-Math.atan2(z1-z0,x1-x0));wg.translate((x0+x1)/2,hh+y,(z0+z1)/2);wires.push(wg)}}}
   add(NATURE.merge(posts),iron,0,0,0);add(NATURE.merge(wires),new T.MeshStandardMaterial({color:'#c8ccd0',metalness:.8,roughness:.3,emissive:'#3a6aff',emissiveIntensity:.25}),0,0,0);
-  buildPaddocks(scene);buildLagoon(scene);
+  buildPaddocks(scene);buildLagoon(scene);buildHatchery(scene);
   // visitors stand outside every paddock to see Blue and the others
   world.visitors=world.visitors||[];let vi=0;for(const q of world.paddocks)for(let i=0;i<6;i++){const x=q.x-15+i*6,z=q.z+q.s/2+10+(i%2)*2,v=ANIMALS.make(personSp(vi++%LOOKS.length));v.g.position.set(x,H(x,z),z);v.g.rotation.y=Math.PI;scene.add(v.g);world.visitors.push({inst:v,y:H(x,z),ph:Math.random()*6})}
   // security guards stand at the gate and at every paddock door
@@ -1101,3 +1102,27 @@ function removeBones(b){world.scene.remove(b.g);if(b.blood)world.scene.remove(b.
 function bonesNear(){if(mode!=='foot')return null;return(world.bones||[]).find(b=>Math.hypot(b.x-me.x,b.z-me.z)<4)||null}
 function collectBones(){const b=bonesNear();if(!b)return false;removeBones(b);S.bones=(S.bones||0)+1;S.coins+=50;save();coins();
   toast('🦴 You collected the '+b.n+' bones! You have collected '+S.bones+' sets of bones. +50 coins',5000);return true}
+
+/* ---------- 🥚 the Hatchery: hatch Blue, Rexy and the others, then drive them to their paddocks ---------- */
+const HATCH={x:-70,z:GATE_Z-40};
+function buildHatchery(scene){
+  const g=new T.Group(),y=H(HATCH.x,HATCH.z);g.position.set(HATCH.x,y,HATCH.z);scene.add(g);
+  const white=new T.MeshStandardMaterial({color:'#eef2f4',roughness:.5}),glass=new T.MeshPhysicalMaterial({color:'#bfe6ff',roughness:.05,transparent:true,opacity:.35}),roof=new T.MeshStandardMaterial({color:'#2a5a3a',roughness:.6});
+  const B=(m,x,yy,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,yy,z);o.castShadow=o.receiveShadow=true;g.add(o);return o};
+  B(white,0,4,-8,24,8,.6);for(const sd of[-1,1])B(white,sd*12,4,0,.6,8,16);B(glass,0,4,8,24,8,.3);B(roof,0,8.3,0,25,.6,17);
+  // warm incubators with eggs glowing under red lamps
+  const eggM=new T.MeshStandardMaterial({color:'#f2ead8',roughness:.5}),lamp=new T.MeshStandardMaterial({color:'#ff5a2a',emissive:'#ff3a10',emissiveIntensity:1.5});
+  for(let i=0;i<4;i++){B(white,-8+i*5.3,1,-2,4,2,4);for(let e=0;e<3;e++){const o=new T.Mesh(new T.SphereGeometry(.35,12,10),eggM);o.scale.y=1.3;o.position.set(-9+i*5.3+e*.9,2.4,-2);g.add(o)}B(lamp,-8+i*5.3,6.5,-2,3,.3,1)}
+  const [c,cg]=NATURE.canvas(1024,256);cg.fillStyle='#2a5a3a';cg.fillRect(0,0,1024,256);cg.strokeStyle='#ffcf3a';cg.lineWidth=14;cg.strokeRect(12,12,1000,232);
+  cg.fillStyle='#ffcf3a';cg.textAlign='center';cg.textBaseline='middle';cg.font='bold 110px "Lilita One","Arial Black",sans-serif';cg.fillText('🥚 HATCHERY',512,100);cg.font='bold 50px Nunito,sans-serif';cg.fillStyle='#fff';cg.fillText('Hatch Blue, Rexy & more · press G',512,192);
+  const sg=new T.Mesh(new T.PlaneGeometry(14,3.5),new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.7}));sg.position.set(0,10.5,8.4);g.add(sg);
+  for(let x=-12;x<=12;x+=2){addCol({x:HATCH.x+x,z:HATCH.z-8,r:1.2});addCol({x:HATCH.x+x,z:HATCH.z+8,r:1.2})}for(let z=-8;z<=8;z+=2)for(const sd of[-1,1])addCol({x:HATCH.x+sd*12,z:HATCH.z+z,r:1.2})}
+function nearHatchery(){const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;return Math.abs(px-HATCH.x)<22&&Math.abs(pz-HATCH.z)<22}
+function openHatchery(){
+  const famous=Object.keys(SP).filter(k=>SP[k].def.unique&&SP[k].cont==='dino'&&!SP[k].def.lagoon);
+  const items=famous.map(k=>{const have=owns(k)||S.cages.some(c=>c.k===k);return{label:SP[k].e+' '+SP[k].n,sub:have?'✅ already yours':'🥚 hatch',val:k,have}});
+  pickPanel('🥚 Hatchery','Pick a famous dinosaur to hatch. The baby goes into your truck — then drive it into its paddock and press G!',items,k=>{
+    if(owns(k)||S.cages.some(c=>c.k===k)){toast('🦖 You already have '+SP[k].n+'! There is only one in the whole world.');return}
+    if(smallUsed()>=CAGES){toast('Your truck cages are full!');return}
+    S.cages.push({uid:S.uid++,k,h:[[Date.now(),'hatched in your Hatchery']]});S.dex[k]=(S.dex[k]||0)+1;save();refreshCages();
+    bigAlert('🐣',SP[k].n+' hatched!',SP[k].n+' is in your truck. Drive '+(SP[k].n==='Blue'?'her':'it')+' into '+(SP[k].n==='Blue'?'her':'its')+' paddock and press <b>G</b>!',8000)})}

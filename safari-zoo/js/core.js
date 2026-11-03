@@ -257,6 +257,15 @@ function checkDream(){
 function bigAlert(em,big,sm,ms=12000){const pz=$('#prize');if(!pz)return;pz.querySelector('.em').textContent=em;pz.querySelector('.big').textContent=big;pz.querySelector('.sm').innerHTML=sm;
   pz.hidden=false;clearTimeout(pz.t);pz.t=setTimeout(()=>pz.hidden=true,ms)}
 function hist(an,txt){if(!an)return;(an.h=an.h||[]).push([Date.now(),txt]);if(an.h.length>6)an.h.shift()}
+function pickPanel(title,info,items,onPick){
+  let el=document.getElementById('pickPanel');
+  if(!el){el=document.createElement('div');el.id='pickPanel';el.style.cssText='position:fixed;inset:0;z-index:56;display:grid;place-items:center;background:rgba(20,20,30,.55)';
+    el.innerHTML='<div style="background:#fdf3dc;color:#222;border-radius:22px;padding:18px 20px;width:min(520px,92vw);max-height:86vh;overflow:auto;text-align:center"><h2 class="t" style="margin:4px 0"></h2><p class="i"></p><div class="l" style="display:flex;flex-direction:column;gap:8px;margin:12px 0"></div><button class="act blue c">Close</button></div>';
+    document.body.appendChild(el);el.querySelector('.c').onclick=()=>el.style.display='none'}
+  el.querySelector('.t').textContent=title;el.querySelector('.i').textContent=info;const l=el.querySelector('.l');l.innerHTML='';
+  for(const it of items){const b=document.createElement('button');b.style.cssText='display:flex;justify-content:space-between;align-items:center;border:3px solid #b8741a;background:#fff;border-radius:14px;padding:10px 14px;font-weight:800;font-size:17px;cursor:pointer';
+    b.innerHTML='<span>'+it.label+'</span><small>'+(it.sub||'')+'</small>';b.onclick=()=>{el.style.display='none';onPick(it.val)};l.appendChild(b)}
+  el.style.display='grid'}
 function smallUsed(){return S.cages.filter(c=>c.pen==null).length}
 function pensUsed(){return new Set(S.cages.filter(c=>c.pen!=null).map(c=>c.pen)).size}
 function coins(){document.querySelectorAll('.coinTxt').forEach(e=>e.textContent='🪙 '+S.coins);const c=$('#cagesTxt');if(c)c.textContent='🧺 '+smallUsed()+'/'+CAGES+' cages · '+pensUsed()+'/'+PENS+' pens'}

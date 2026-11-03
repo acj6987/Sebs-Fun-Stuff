@@ -54,7 +54,7 @@ function buildZoo(){
   zoo.cols.push(...NATURE.scatter(scene,types,Math.round(1600*QUALITY.trees),rr=>{const x=(rr()-.5)*1400,z=40-rr()*2600;
     return(Math.abs(x)<ROAD+10+MEGA*2+40||x>0&&x<ULTRA.x+ULTRA.R+40)&&z<60?null:V(x,0,z)},r));
   NATURE.scatter(scene,types,Math.round(260*QUALITY.trees),rr=>{const x=(rr()-.5)*900,z=60+rr()*300;return Math.abs(x)<110&&z<190?null:V(x,0,z)},r);
-  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();buildLab();buildStaffArea();buildLaunchRoom();
+  buildEntrance();buildFoodStore();buildNursery();buildFamilyPens();buildDoctor();buildLab();buildStaffArea();buildLaunchRoom();buildArena();
   // planes flying high over the zoo
   zoo.skyPlanes=[0,1,2].map(i=>{const g=planeModel();g.scale.setScalar(1.6);scene.add(g);return{g,a:i*2.1,r:350+i*120,h:110+i*35,spd:(i%2?-1:1)*(30+i*6),cx:0,cz:-500}});
   // entrance gate
@@ -277,7 +277,7 @@ function focusArea(id){const A=zoo.areas.get(id);if(!A)return;const w=zoo.cam.w;
 function zooTick(dt,time){
   updateZooAnimals(dt,time);updateVisitors(dt,time);updateTours(dt,time);updateDinoTour(dt);updateRides(dt,time);
   if(zoo.flyers)updateFlyers(zoo.flyers,dt,time,()=>0);
-  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);workersFeed(dt);updateShow(dt,time);updateLaunchShow(dt);
+  if(zoo.helix)zoo.helix.rotation.y+=dt*.8;updateLab(dt);updateArena(dt,time);workersFeed(dt);updateShow(dt,time);updateLaunchShow(dt);
   for(const p of zoo.skyPlanes||[]){p.a+=p.spd/p.r*dt;const x=p.cx+Math.cos(p.a)*p.r,z=p.cz+Math.sin(p.a)*p.r,d=Math.sign(p.spd);p.g.position.set(x,p.h,z);p.g.rotation.set(0,Math.atan2(-Math.sin(p.a)*d,Math.cos(p.a)*d),-d*.25,'YXZ');p.g.userData.prop.rotation.z+=dt*40}
   const driving=curView==='drive'&&world&&world.zoo;
   for(const A of zoo.areas.values()){const gx=A.door.x,gz=A.door.z;let near=false;
@@ -778,11 +778,12 @@ function nearStore(){return Math.abs(car.x-FOOD.x)<FOOD.D/2+12&&Math.abs(car.z-F
 function domeAt(x,z){return[...zoo.areas.values()].find(a=>Math.hypot(x-a.x,z-a.z)<a.R0-3)||null}
 // G: load food at the store, or drop food in the dome you are in
 function foodAction(){
-  if(world&&!world.zoo){if(world.c.kingdom&&paddockDrop())return;callDreams();return}
+  if(world&&!world.zoo){if(world.c.kingdom&&paddockDrop())return;if(world.c.kingdom&&nearHatchery()){openHatchery();return}callDreams();return}
   if(!(world&&world.zoo))return;
   // use where YOU are: in the truck or walking about
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
   if(inLab()||nearLab(px,pz)){openLab();return}
+  if(nearArena(px,pz)){openArena();return}
   {const bA=nearBarn(px,pz);if(bA&&(bA.area.barn||[]).length){openRelease(bA.area.id);return}}if(nearNursery(px,pz)&&dropEggs())return;if(nearPens(px,pz)&&dropFamily())return;if(nearDoctor(px,pz)&&visitDoctor())return;const f=truckFood();
   if(nearStore()){if(f.meat>=FOOD.max&&f.hay>=FOOD.max){toast('Your truck is full of food! Drive it to a dome and press G to feed the animals.');return}
     f.meat=FOOD.max;f.hay=FOOD.max;save();showFood();toast('🥩🌾 Loaded '+FOOD.max+' crates of meat and '+FOOD.max+' bales of hay onto your truck! Take them to the domes and press G.');return}
@@ -1256,7 +1257,7 @@ function openShow(){
   $('#showPanel').hidden=false}
 function showSay(text){$('#speaker .say').textContent='📢 '+text}
 // the crowd cheers: clapping hands and confetti float up, and you hear them
-function cheer(){
+function cheer(){if(zoo.stage)zoo.stage.cheerT=3;
   const box=$('#cheer');for(let i=0;i<14;i++){const e=document.createElement('i');e.textContent=['👏','🎉','🙌','⭐','🥳','📣'][i%6];e.style.left=(5+Math.random()*90)+'%';e.style.animationDelay=(Math.random()*.5)+'s';box.appendChild(e);setTimeout(()=>e.remove(),2800)}
   if(zoo.show2)zoo.show2.cheerT=2.5;
   try{const ac=zoo.ac||(zoo.ac=new(window.AudioContext||window.webkitAudioContext)()),n=ac.sampleRate*1.8,buf=ac.createBuffer(1,n,ac.sampleRate),d=buf.getChannelData(0);
@@ -1299,7 +1300,7 @@ function updateShow(dt,time){const sh=zoo.show2;if(!sh)return;sh.t+=dt;sh.cheerT
   }
 $('#showOpen').onclick=openShow;$('#showClose').onclick=()=>$('#showPanel').hidden=true;
 $('#showList').addEventListener('click',e=>{const b=e.target.closest('[data-show]');if(b)startShow(b.dataset.show)});
-$('#showFeed').onclick=throwShowFood;$('#showEnd').onclick=()=>endShow();
+$('#showFeed').onclick=()=>zoo.stage?stageTreat():throwShowFood();$('#showEnd').onclick=()=>zoo.stage?endStage():endShow();
 
 /* ---------- 📺 The Animal Programme: people watch at home while a drone flies to each animal and the presenter tells its story ---------- */
 const FACTS={Zebra:'Every zebra has its own stripes, like a fingerprint. No two are the same!',Giraffe:'Giraffes are the tallest animals in the world. Their tongues are purple and very long.',
@@ -1421,3 +1422,41 @@ function workersFeed(dt){
     const p=A.inside;dropPile(A,need,p.x+(Math.random()-.5)*8,p.z+(Math.random()-.5)*8);
     for(const o of zoo.animals)if(o.A===A&&!o.an.preg&&eats(SP[o.an.k])===need){const s=nextSpot(o);o.tx=s.x;o.tz=s.z;o.pile=s.pile||null;o.t=0}
     zoo.fedN=(zoo.fedN||0)+1;if(zoo.fedN%4===1)toast('👷 Your zoo workers brought '+(need==='meat'?'🥩 meat':'🌾 hay')+' to the '+domeName(a)+'!');break}}
+
+/* ---------- 🎪 the Show Arena: put an animal on the stage for the crowd who paid to come and watch ---------- */
+const ARENA={x:336,z:6,r:20};
+function buildArena(){
+  const g=new T.Group();g.position.set(ARENA.x,0,ARENA.z);zoo.scene.add(g);
+  const st=new T.MeshStandardMaterial({color:'#9a9a94',roughness:.9}),red=new T.MeshStandardMaterial({color:'#c8242a',roughness:.6}),gold=new T.MeshStandardMaterial({color:'#e8b820',metalness:.5,roughness:.35});
+  // the round stage in the middle
+  const stage=new T.Mesh(new T.CylinderGeometry(6,6.4,1,40),red);stage.position.y=.5;stage.receiveShadow=stage.castShadow=true;g.add(stage);
+  const rim=new T.Mesh(new T.TorusGeometry(6.1,.15,8,40),gold);rim.rotation.x=Math.PI/2;rim.position.y=1;g.add(rim);
+  // rows of seats all round, with a gap on the west side to drive in
+  const rows=[];zoo.arenaSeats=[];for(let r=0;r<4;r++){const rad=12+r*2.4,y=.6+r*1.1;for(let a=.55;a<Math.PI*2-.55;a+=.09){const x=-Math.cos(a)*rad,z=Math.sin(a)*rad,gm=new T.BoxGeometry(2.6,1,1.6);gm.rotateY(Math.PI/2-a);gm.translate(x,y-.5,z);rows.push(gm)}
+    for(let a=.6;a<Math.PI*2-.6;a+=.42)zoo.arenaSeats.push({x:ARENA.x-Math.cos(a)*rad,z:ARENA.z+Math.sin(a)*rad,y:y+.05,yaw:Math.atan2(Math.cos(a),-Math.sin(a))})}
+  const sm=new T.Mesh(NATURE.merge(rows),st);sm.castShadow=sm.receiveShadow=true;g.add(sm);
+  for(let a=.55;a<Math.PI*2-.55;a+=.12)zoo.cols.push({x:ARENA.x-Math.cos(a)*18,z:ARENA.z+Math.sin(a)*18,r:2.5});
+  // a big sign on two poles and flags
+  const sg=new T.Mesh(new T.PlaneGeometry(12,3),new T.MeshStandardMaterial({map:signTexture(['🎪 SHOW ARENA','Live animal shows · press G'],'#c8242a'),roughness:.7,side:T.DoubleSide}));sg.position.set(-22,6,0);sg.rotation.y=Math.PI/2;g.add(sg);
+  for(const sd of[-1,1]){const p=new T.Mesh(new T.CylinderGeometry(.25,.25,7,8),gold);p.position.set(-22,3.5,sd*6);g.add(p)}
+  // the crowd, sitting and waiting for the show
+  zoo.arenaCrowd=[];for(let i=0;i<Math.min(46,zoo.arenaSeats.length);i++){const q=zoo.arenaSeats[(i*7)%zoo.arenaSeats.length],v=ANIMALS.make(personSp(i%LOOKS.length));seat(v);v.g.position.set(q.x,q.y,q.z);v.g.rotation.y=q.yaw;zoo.scene.add(v.g);zoo.arenaCrowd.push({inst:v,y:q.y,ph:Math.random()*6})}}
+function nearArena(x,z){return Math.hypot(x-ARENA.x,z-ARENA.z)<ARENA.r+6}
+function openArena(){
+  if(zoo.stage){endStage();return}
+  const ks=[...new Set(S.cages.map(c=>c.k))];
+  if(!ks.length){toast('🎪 Catch an animal and bring it here in your truck, then press G to show it to the crowd!',6000);return}
+  pickPanel('🎪 Show Arena','Which animal do you want to show to the crowd?',ks.map(k=>({label:SP[k].e+' '+SP[k].n,sub:'👥 the crowd pays to watch',val:k})),startStage)}
+function startStage(k){
+  const sp=SP[k],m=ANIMALS.make(sp),f=Math.min(1,9/Math.max(m.len,1),6/Math.max(m.h,1));m.inner.scale.multiplyScalar(f);m.g.position.set(ARENA.x,1,ARENA.z);zoo.scene.add(m.g);
+  const pay=[0,20000,50000,150000][sp.r]||20000;S.coins+=pay;save();coins();
+  zoo.stage={k,m,t:0,cheerT:3};cheer();
+  $('#speaker').hidden=false;$('#speaker .say').textContent='📢 Ladies and gentlemen, please welcome… the '+sp.n+'!';
+  toast('🎪 The crowd paid '+pay.toLocaleString()+' coins to see the '+sp.n+'! Use 🎙️ to talk to them, and 🍖 to give it a treat.',7000);
+  if(curView==='zoo'){const w=zoo.cam.w;w.tx=ARENA.x;w.tz=ARENA.z;w.dist=32;w.pitch=.45}}
+function stageTreat(){const st=zoo.stage;if(!st)return;st.cheerT=3;cheer();S.coins+=1000;save();coins();
+  $('#speaker .say').textContent='📢 '+['Look how clever it is!','Give it a big round of applause!','Who wants to see a trick?','Isn\'t it amazing?'][Math.floor(Math.random()*4)]}
+function endStage(){const st=zoo.stage;if(!st)return;zoo.scene.remove(st.m.g);zoo.stage=null;$('#speaker').hidden=true;toast('🎪 What a show! The '+SP[st.k].n+' went back into your truck.')}
+function updateArena(dt,time){const st=zoo.stage;
+  for(const c of zoo.arenaCrowd||[]){ANIMALS.animate(c.inst,dt,0,time,{look:st?1:0});c.inst.g.position.y=c.y+(st&&st.cheerT>0?Math.max(0,Math.sin(time*9+c.ph))*.45:0)}
+  if(!st)return;st.t+=dt;st.cheerT-=dt;st.m.g.rotation.y+=dt*.4;ANIMALS.animate(st.m,dt,0,time,{})}
