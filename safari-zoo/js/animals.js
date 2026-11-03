@@ -135,6 +135,9 @@ function quad(p){
     k.cap(tb,end,W*.12,W*.24,'tail',{k:W*.15,col:tcol,pat:1,rough:.02,rf:20});
     if(p.tip)k.ell(ad(end,sc([0,end[1]-tb[1],end[2]-tb[2]],.12)),[W*.2,W*.2,W*.2],'tail',{k:W*.12,col:p.tip,rough:.02,rf:20})}
   else if(p.tail==='dino'){const t1=ad(tb,[0,-Hb*.15,-tl*.5]),t2=ad(tb,[0,-Hb*.35,-tl]);k.bone('tail2','tail',t1);
+    if(p.spines){for(let i=1;i<=14;i++){const t=i/15;k.extra('neck','quill',ad(ad(nb,sc(nd,p.neck*t)),sc(up,p.neckW*(1.1-t*.4))),{size:p.neckW*.5*(1-t*.4),col:p.col2})}
+      for(let i=0;i<10;i++)k.extra('root','quill',[0,by+Hb*.5,L*(.4-i*.09)],{size:Hb*.12,col:p.col2});
+      for(let i=0;i<8;i++){const t=i/8;k.extra(t<.5?'tail':'tail2','quill',t<.5?ad(tb,[0,Hb*.2*(1-t),-tl*t]):ad(t1,[0,Hb*.1*(1.5-t),-tl*(t-.5)]),{size:Hb*.08*(1-t*.6),col:p.col2})}}
     k.cap(ad(tb,[0,0,L*.08]),t1,W*.32,W*.17,'tail',{k:W*.15,pat:1});k.cap(t1,t2,W*.17,W*.035,'tail2',{k:W*.08,pat:1});
     if(p.club)k.extra('tail2','club',t2,{r:W*.22});
     if(p.plates)for(let i=0;i<4;i++)k.extra(i<2?'tail':'tail2','spike',ad(i<2?ad(tb,[0,-Hb*.1,-tl*(.7+i*.08)]):t1,i<2?[0,0,0]:[0,-Hb*.05*(i-1),-tl*.12*(i-1)]),{s:i%2?1:-1,len:.6,r:.07})}
@@ -416,9 +419,23 @@ function theropod(p){
   const tb=[0,hip+Hb*.1,-L*.4],t1=real?[0,hip+Hb*.02,-L*.4-p.tail*s*.45]:[0,hip-Hb*.05,-L*.4-p.tail*s*.45],t2=real?[0,hip-Hb*.1,-L*.4-p.tail*s]:[0,hip-Hb*.25,-L*.4-p.tail*s];
   k.bone('tail','root',tb);k.bone('tail2','tail',t1);
   k.cap(tb,t1,Hb*(real?.46:.4),Hb*(real?.24:.2),'tail',{k:Hb*.2,pat:1});k.cap(t1,t2,Hb*(real?.24:.2),Math.max(.03,Hb*.03),'tail2',{k:Hb*.1,pat:1});
-  if(p.sail)k.extra('root','sail',[0,hip+Hb*.35,L*.02],{len:L*.95,ht:Hb*1.4,col:p.col2});
+  if(p.sail)k.extra('root','sail',[0,hip+Hb*.35,L*.02],{len:L*.95,ht:Hb*1.4,col:p.col2,stripes:p.sailStripes,base:p.col});
+  if(p.tailFin)k.extra('tail','sail',ad(tb,[0,Hb*.18,-p.tail*s*.32]),{len:p.tail*s*.55,ht:Hb*.5,col:p.col2,stripes:1,base:p.col});
+  // a feathered raptor: feathered arms like folded wings, a feather crest and a feathery tail
+  if(p.feathers){for(const sx of[-1,1])k.extra('root','armfeath',[sx*W*.46,hip-Hb*.05,L*.42],{s:sx,size:p.arm*s*.75,col:p.featherCol,tip:p.tipCol});
+    for(let i=0;i<6;i++)k.extra('head','quill',at(hl*(.08-i*.07),hh*.42,0),{size:hh*(.9-i*.08),col:p.tipCol});
+    for(let i=0;i<8;i++)for(const sx of[-1,1])k.extra('tail2','quill',ad(t1,[sx*Hb*.12,Hb*.05,-i*p.tail*s*.065]),{size:.16*s,col:i%2?p.featherCol:p.tipCol});
+    for(let i=0;i<10;i++)for(const sx of[-1,1])k.extra('root','quill',[sx*W*.3,hip+Hb*.3,L*.3-i*L*.07],{size:.1*s,col:p.featherCol})}
+  // bristly fuzz down the T-Rex's neck and back
+  if(p.bristles){for(let i=0;i<8;i++)k.extra('neck','quill',ad(nb,[0,Hb*.32+i*p.neck*s*.04,i*p.neck*s*.1]),{size:.22*s,col:p.col2});
+    for(let i=0;i<12;i++)k.extra('root','quill',[0,hip+Hb*.55,L*.35-i*L*.07],{size:.25*s,col:p.col2})}
   if(p.dcrest)for(const sx of[-1,1])k.extra('head','dcrest',at(hl*.45,hh*.42,sx*hw*.12),{len:hl*.75,ht:hh*.7,col:p.col2});
   if(p.raptor)for(let i=0;i<6;i++)k.extra('neck','quill',ad(nb,[0,Hb*.3+i*p.neck*s*.06,i*p.neck*s*.13-.05]),{size:.15*s,col:p.col2});
+  // raptors: a crest of quills all down the back and tail, glowing yellow eyes, and three hooked claws on each hand
+  if(p.raptor&&real){for(let i=0;i<9;i++)k.extra('root','quill',[0,hip+Hb*.5-i*Hb*.01,L*.3-i*L*.09],{size:.13*s*(1-i*.06),col:p.col2});
+    for(let i=0;i<5;i++)k.extra(i<2?'tail':'tail2','quill',i<2?ad(tb,[0,Hb*.22,-i*p.tail*s*.18]):ad(t1,[0,Hb*.12,-(i-2)*p.tail*s*.16]),{size:.09*s*(1-i*.12),col:p.col2});
+    for(const sx of[-1,1]){k.extra('head','eye',at(hl*.31,hh*.22,sx*hw*.43),{r:Math.max(.02,hw*.06),owl:1});
+      const hand=[sx*(W*.4),hip+Hb*.1-p.arm*s*.5,L*.36+p.arm*s*.48];for(const c of[-1,0,1])k.extra('root','claw',ad(hand,[c*W*.05,0,0]),{size:.11*s})}}
   if(p.fairy)fairyWings(k,[0,hip+Hb*.4,0],L*.9);
   k.anim={kind:'biped',stride:hip*1.1,fly:p.fly};
   return k;
@@ -665,7 +682,13 @@ function extraMesh(e,p){
     case'teeth':for(let i=0;i<(e.n||9);i++){const geo=new T.ConeGeometry(e.size*.35,e.size*(1+.3*Math.sin(i*2.3)),5);if(!e.up)geo.rotateX(Math.PI);add(geo,m.ivory,[0,0,i*e.len/(e.n||9)])}break;
     case'claw':{const geo=new T.ConeGeometry(e.size*.25,e.size,6);add(geo,m.horn,null,[-.8,0,0]);break}
     case'quill':{const geo=new T.ConeGeometry(e.size*.15,e.size,5);geo.translate(0,e.size/2,0);add(geo,smat(e.col||'#3a2a1a'),null,[-.6,0,0]);break}
-    case'sail':{const geo=new T.CircleGeometry(1,40,0,Math.PI);geo.scale(e.len/2,e.ht,1);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.6}));break}
+    case'sail':{const geo=new T.CircleGeometry(1,40,0,Math.PI);geo.scale(e.len/2,e.ht,1);geo.rotateY(Math.PI/2);
+      if(e.stripes){const[c,g]=NATURE.canvas(256,128);g.fillStyle=e.base;g.fillRect(0,0,256,128);for(let i=0;i<14;i++){const x=10+i*17.5;g.fillStyle=i%2?e.col:shade(e.base,-.08);g.globalAlpha=i%2?.75:.5;g.beginPath();g.moveTo(x-5,128);g.lineTo(128+(x-128)*1.25,0);g.lineTo(128+(x+8-128)*1.25,0);g.lineTo(x+5,128);g.fill()}
+        g.globalAlpha=1;add(geo,new T.MeshStandardMaterial({map:NATURE.toTex(c,true),side:T.DoubleSide,roughness:.6}))}
+      else add(geo,smat(e.col,{side:T.DoubleSide,roughness:.6}));break}
+    case'armfeath':{const z=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.lineTo(z*.2,0);for(let i=0;i<=6;i++){const t=i/6;sh.lineTo(z*(.2-t*.9),-z*(.55+.25*Math.sin(t*3))-(i%2)*z*.08)}sh.lineTo(-z*.75,-z*.15);sh.lineTo(0,0);
+      const geo=new T.ShapeGeometry(sh,8);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.85}));
+      const g2=new T.ShapeGeometry(sh,8);g2.scale(.6,.55,1);g2.rotateY(Math.PI/2);add(g2,smat(e.tip,{side:T.DoubleSide,roughness:.85}),[e.s*.01,-z*.02,0]);break}
     case'dcrest':{const geo=new T.CircleGeometry(1,24,0,Math.PI);geo.scale(e.len/2,e.ht,1);geo.rotateY(Math.PI/2);add(geo,smat(e.col,{side:T.DoubleSide,roughness:.5}),null,[0,0,0]);break}
     case'crestTube':{const geo=new T.CylinderGeometry(e.r*.7,e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,smat(e.col,{roughness:.6}),null,[-1.9+e.tilt,0,0]);break}
     case'club':{const o=add(new T.SphereGeometry(e.r,16,12),smat('#5a4a38',{roughness:.7}));o.scale.set(1.4,.8,1.1);break}

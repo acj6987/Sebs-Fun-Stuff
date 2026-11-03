@@ -392,7 +392,7 @@ function updateAnimals(dt,time){
     if(Math.abs(a.z)>LIMIT-5)a.vz=-Math.sign(a.z)*Math.abs(a.vz||1);
     if(world.c.kingdom){if(a.z>GATE_Z-6)a.vz=-Math.abs(a.vz||1);
       if(a.pen){const q=a.pen,h=q.s/2-4;if(Math.abs(a.x-q.x)>h)a.vx=-Math.sign(a.x-q.x)*Math.abs(a.vx||1);if(Math.abs(a.z-q.z)>h)a.vz=-Math.sign(a.z-q.z)*Math.abs(a.vz||1);a.x=clamp(a.x,q.x-h-1,q.x+h+1);a.z=clamp(a.z,q.z-h-1,q.z+h+1)}
-      if(!a.sp.def.swim)for(const p of world.ponds)if(p.lagoon&&Math.hypot(a.x-p.x,a.z-p.z)<p.r+3){const dx=a.x-p.x,dz=a.z-p.z,d=Math.hypot(dx,dz)||1;a.vx=dx/d*3;a.vz=dz/d*3}
+      if(!a.sp.def.swim)for(const p of world.ponds)if(p.lagoon&&Math.hypot(a.x-p.x,a.z-p.z)<p.r+10){const dx=a.x-p.x,dz=a.z-p.z,d=Math.hypot(dx,dz)||1;a.vx=dx/d*3;a.vz=dz/d*3}
       if(!a.pen)for(const q of world.paddocks||[])if(inPaddock(q,a.x,a.z,3)){const dx=a.x-q.x,dz=a.z-q.z;if(Math.abs(dx)>Math.abs(dz))a.vx=Math.sign(dx)*Math.abs(a.vx||2);else a.vz=Math.sign(dz)*Math.abs(a.vz||2)}}
     a.x+=a.vx*dt;a.z+=a.vz*dt;
     if(world.sea&&a.state!=='netted'&&!(a.sp.def.fly&&a.alt>1.5)){const d=a.sp.def,h=H(a.x,a.z);
@@ -936,7 +936,7 @@ function buildKingdom(scene){
   car.x=0;car.z=LIMIT-15;car.yaw=0;me.x=car.x;me.z=car.z;
   // your dinosaurs roam free inside
   const r=rng(77);for(const an of(S.park||[]).slice(0,140)){const sp=SP[an.k];if(!sp)continue;let x,z,t=0;
-    do{x=(r()-.5)*2*(LIMIT-25);z=-LIMIT+25+r()*(GATE_Z-30+LIMIT-25);t++}while(t<40&&inPond(x,z));
+    do{x=(r()-.5)*2*(LIMIT-25);z=-LIMIT+25+r()*(GATE_Z-30+LIMIT-25);t++}while(t<80&&world.ponds.some(p=>Math.hypot(x-p.x,z-p.z)<p.r+(p.lagoon?14:2)));
     const m=ANIMALS.make(sp);scene.add(m.g);const icon=makeIcon();m.g.add(icon);icon.position.y=m.h+.7;
     const pen=world.paddocks.find(q=>q.n===sp.n);if(pen){x=pen.x+(r()-.5)*pen.s*.5;z=pen.z+(r()-.5)*pen.s*.5}else while(world.paddocks.some(q=>inPaddock(q,x,z,6))){x=(r()-.5)*2*(LIMIT-25);z=-LIMIT+25+r()*(GATE_Z-30+LIMIT-25)}
     world.animals.push({sp,own:an,pen,x,z,ox:0,oz:0,vx:0,vz:0,yaw:r()*6.3,t:r()*3,state:'wander',stam:1,tired:0,alt:0,graze:0,m,icon,far:false,grp:null})}
