@@ -327,8 +327,8 @@ function updateAnimals(dt,time){
       if(!a.blood){const m=new T.Mesh(new T.CircleGeometry(1,24),new T.MeshStandardMaterial({color:'#5a0808',roughness:.25,metalness:.1,transparent:true,opacity:.92,depthWrite:false}));m.rotation.x=-Math.PI/2;m.renderOrder=1;world.scene.add(m);a.blood=m}
       const br=Math.max(1.2,a.m.rad*1.2)*(.45+Math.min(1,a.dead/HURT_T)*.75),off=a.m.h*.35;a.blood.scale.set(br,br*.8,1);a.blood.position.set(a.x+Math.cos(a.yaw)*off,H(a.x,a.z)+.04,a.z-Math.sin(a.yaw)*off);
       if(alive&&!a.saidDead&&a.dead>=HURT_T-.05){}
-      if(!alive&&!a.saidDead){a.saidDead=1;if(Math.hypot(a.x-px,a.z-pz)<150)toast('💔 The '+a.sp.n+' died. Nobody got there in time.')}
-      if(a.dead>110){removeAnimal(a);continue}}
+      if(!alive&&!a.saidDead){a.saidDead=1;if(a.ambTaken&&car.amb&&car.amb.job&&car.amb.job.a===a)car.amb.job.ph='back';if(Math.hypot(a.x-px,a.z-pz)<150)toast('💔 The '+a.sp.n+' died. Nobody got there in time.')}
+      if(a.dead>HURT_T+32){leaveBones(a);continue}}
     else if(a.state==='stalk'){
       // creeping low through the grass towards the prey
       const q=a.prey;if(!q||!world.animals.includes(q)||q.state==='caught'||q.state==='netted'){a.state='rest';a.restT=4;a.vx=a.vz=0}
@@ -429,6 +429,7 @@ function updateAnimals(dt,time){
     const ic=a.icon;if(a.state==='flee'||a.state==='chased'){ic.visible=true;ic.material.map=ICON.run}else if(a.state==='tired'||a.state==='sleep'){ic.visible=true;ic.material.map=ICON.tired}else ic.visible=false;
     if(a.net){a.net.position.set(a.x,g.position.y+a.m.h*.45,a.z);const s=Math.max(a.m.rad,a.m.h*.6)*1.15;a.net.scale.set(s,s,s)}
   }
+  updateBones(dt);
   if(!world.c.kingdom)world.respawn=world.respawn.map(t=>t-dt).filter(t=>t>0||(world.animals.length<world.maxAn-2&&spawnAnimal(false),false));
 }
 
@@ -442,7 +443,7 @@ function aimTarget(){
 function toggleNet(){me.noNet=!me.noNet;if(netRig)netRig.visible=!me.noNet&&mode==='foot';setDriveUI();toast(me.noNet?'🎣 You put your net away. Press N to get it out again.':'🎣 You got your net out!')}
 function throwNet(){
   if(!safari.running)return;if(me.noNet&&mode==='foot'&&!(world.zoo&&inLab())){toast('Your net is put away! Press N (or the NET button) to get it out.');return}if(mode==='plane'){planeCatch();return}
-  if(!world.zoo&&rescueHurt())return;
+  if(!world.zoo&&(rescueHurt()||collectBones()))return;
   if(world.c.kingdom){toast('🦖 These are your own dinosaurs! They live free here in your Dino Kingdom.');return}
   if(mode==='car'){toast('Jump out of the truck first! Press E.');return}
   if(world.zoo){if(!labAction())zooCatch();return}
@@ -635,7 +636,7 @@ const safari={running:false,
     else if(mode==='plane'){for(let i=0;i<n&&mode==='plane';i++)updatePlane(h)}
     else if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
-    updateHelpers();updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);
+    updateHelpers();updateAmbulance(dt,time);updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
     if(world.tick)world.tick(dt,time);
     if(world.grass)world.grass.userData.update(cam.position,time,world.scene.fog,world.sky.sunDir);
@@ -656,7 +657,9 @@ function hud(){
     tag.innerHTML=`<span class="${a.sp.r===3?'r3':''}">${a.sp.n} · ${RAR[a.sp.r]}</span> · ${Math.round(target.dist)} m${st}`}
   else tag.hidden=true;
   let msg;hurtIndicator();const hn=!world.zoo&&hurtNear();
+  const bn=!world.zoo&&!hn&&bonesNear();
   if(hn)msg='🚑 Press <b>F</b> to save the hurt '+hn.sp.n+'!';
+  else if(bn)msg='🦴 Press <b>F</b> to collect the '+bn.n+' bones';
   else   if(mode==='plane'&&plane.star)msg=plane.launchT>0?'🚀 Countdown… hold on tight!':plane.homing?'🛬 Autopilot: flying home to the Launch Room…':'🚀 <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up to space · <b>Shift</b> down · <b>P</b> fly home · '+Math.round(plane.y)+' m high';
   else if(mode==='plane'){const t=planeTarget();msg=t?`Press <b>F</b> to catch the ${t.n}!`:'✈️ <b>W</b> faster · <b>S</b> slower · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> down · <b>F</b> catch · <b>P</b> land'}
   else if(mode==='sub')msg=target&&target.dist<=26?`Press <b>F</b> to catch the ${target.a.sp.n}!`:'🚢 <b>W</b> go · <b>A D</b> turn · <b>Space</b> up · <b>Shift</b> dive · <b>F</b> catch · <b>E</b> snorkel · <b>B</b> truck';
@@ -869,14 +872,17 @@ function helperTruck(col,riders=0){
   g.scale.setScalar(TS*.85);return{g,holds};
 }
 function buildHelpers(scene){
-  car.helpers=[];car.helperHolds=[];car.trail=[];const n=Math.min(16,S.shop.helpers||0);if(!n)return;
+  car.helpers=[];car.helperHolds=[];car.trail=[];if(car.amb&&car.amb.g.parent)car.amb.g.parent.remove(car.amb.g);car.amb=ambulanceModel();scene.add(car.amb.g);
+  const n=Math.min(16,S.shop.helpers||0);if(!n)return;
   const cols=['#2f9a4a','#2a5bd7','#d8251f','#ff9a2a','#8a4ad8','#1aa8a8','#ff5fae','#c4843a'];
   const crew=S.shop.crew||0;for(let i=0;i<n;i++){const h=helperTruck(cols[i%cols.length],Math.min(6,Math.ceil(crew/n)));scene.add(h.g);car.helpers.push(h);car.helperHolds.push(...h.holds)}
   refreshCages();
 }
+function trailSpot(want){const t=car.trail||[];let d=0;for(let j=t.length-1;j>0;j--){d+=Math.hypot(t[j].x-t[j-1].x,t[j].z-t[j-1].z);if(d>=want)return t[j-1]}const b=V(Math.sin(car.yaw),0,Math.cos(car.yaw));return{x:car.x+b.x*want,z:car.z+b.z*want,yaw:car.yaw}}
 function updateHelpers(){
-  if(!car.helpers||!car.helpers.length)return;const t=car.trail,last=t[t.length-1];
+  const t=car.trail=car.trail||[],last=t[t.length-1];
   if(!last||Math.hypot(car.x-last.x,car.z-last.z)>1){t.push({x:car.x,z:car.z,yaw:car.yaw});if(t.length>900)t.shift()}
+  if(!car.helpers||!car.helpers.length)return;
   car.helpers.forEach((h,i)=>{const want=(i+1)*16;let d=0,p=null;
     for(let j=t.length-1;j>0;j--){d+=Math.hypot(t[j].x-t[j-1].x,t[j].z-t[j-1].z);if(d>=want){p=t[j-1];break}}
     if(!p){const b=V(Math.sin(car.yaw),0,Math.cos(car.yaw));p={x:car.x+b.x*want,z:car.z+b.z*want,yaw:car.yaw}}
@@ -1049,3 +1055,49 @@ function hurtIndicator(){
   const f=V(0,0,-1).applyQuaternion(cam.quaternion),rel=Math.atan2(a.x-px,a.z-pz)-Math.atan2(f.x,f.z),d=Math.round(Math.hypot(a.x-px,a.z-pz));
   el.style.display='flex';el.querySelector('.ar').style.transform='rotate('+(-rel)+'rad)';
   el.querySelector('.tx').textContent='🩸 A '+a.sp.n+' is hurt! '+d+' m · '+Math.ceil(HURT_T-(a.dead||0))+' s left to save it'}
+
+/* ---------- 🚑 the ambulance: 50 vets drive with you and race to save hurt animals ---------- */
+function ambulanceModel(){
+  const g=new T.Group(),white=new T.MeshPhysicalMaterial({color:'#f4f6f8',roughness:.35,clearcoat:.6}),red=new T.MeshStandardMaterial({color:'#d81e1e',roughness:.5}),dark=new T.MeshStandardMaterial({color:'#222',roughness:.8}),glass=new T.MeshStandardMaterial({color:'#2a3a48',roughness:.2});
+  const B=(m,x,y,z,a,b,c)=>{const o=new T.Mesh(new T.BoxGeometry(a,b,c),m);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o};
+  B(white,0,1.35,-2.5,2.3,1.7,1.8);B(glass,0,1.75,-3.42,2,.7,.05);B(white,0,1.7,1,2.5,2.6,5.2);B(red,0,1.15,1,2.52,.3,5.22);B(dark,0,.65,0,2.4,.3,7.4);
+  const [c,cg]=NATURE.canvas(128,128);cg.fillStyle='#fff';cg.fillRect(0,0,128,128);cg.fillStyle='#d81e1e';cg.fillRect(44,14,40,100);cg.fillRect(14,44,100,40);
+  const cm=new T.MeshStandardMaterial({map:NATURE.toTex(c,true),roughness:.5});
+  for(const[x,z,ry]of[[1.27,1,Math.PI/2],[-1.27,1,-Math.PI/2],[0,3.62,0]]){const p=new T.Mesh(new T.PlaneGeometry(1.5,1.5),cm);p.position.set(x,2.1,z);p.rotation.y=ry;g.add(p)}
+  for(const[x,z]of[[-1.15,-2.5],[1.15,-2.5],[-1.15,2.3],[1.15,2.3]]){const w=new T.Mesh(new T.CylinderGeometry(.5,.5,.35,14),dark);w.rotation.z=Math.PI/2;w.position.set(x,.5,z);g.add(w)}
+  // flashing lights on the roof
+  const lights=[['#ff2020',-.5],['#2050ff',.5]].map(([col,x])=>{const m=new T.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:0});const o=new T.Mesh(new T.BoxGeometry(.7,.25,.4),m);o.position.set(x,2.35,-2.6);g.add(o);return m});
+  const sg=new T.Mesh(new T.PlaneGeometry(2.2,.5),new T.MeshStandardMaterial({map:signTextureLite('🚑 50 VETS'),roughness:.6}));sg.position.set(0,2.45,3.62);g.add(sg);
+  g.scale.setScalar(TS*.85);return{g,lights,x:car.x,z:car.z+40,yaw:car.yaw,job:null}}
+function signTextureLite(t){const[c,g]=NATURE.canvas(256,64);g.fillStyle='#d81e1e';g.fillRect(0,0,256,64);g.fillStyle='#fff';g.font='bold 40px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(t,128,34);return NATURE.toTex(c,true)}
+function updateAmbulance(dt,time){
+  const A=car.amb;if(!A||!world)return;const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z;
+  if(!A.job&&!world.zoo){const h=hurtAnimals().filter(a=>!a.ambTaken&&Math.hypot(a.x-px,a.z-pz)<220).sort((p,q)=>Math.hypot(p.x-px,p.z-pz)-Math.hypot(q.x-px,q.z-pz))[0];
+    if(h){A.job={a:h,ph:'go'};h.ambTaken=1;toast('🚑 Nee-naw! Your 50 vets are racing to save the hurt '+h.sp.n+'!',5000)}}
+  const drive=(tx,tz,spd)=>{const dx=tx-A.x,dz=tz-A.z,d=Math.hypot(dx,dz);if(d>.5){const st=Math.min(d,spd*dt);A.x+=dx/d*st;A.z+=dz/d*st;A.yaw=Math.atan2(-dx,-dz)}return d};
+  const on=!!A.job;for(const[i,m]of A.lights.entries())m.emissiveIntensity=on?(Math.sin(time*14+i*Math.PI)>0?3:0):0;
+  if(A.job){const j=A.job,a=j.a;
+    if(j.ph==='go'){if(!world.animals.includes(a)||a.state!=='caught'||a.dead>=HURT_T)j.ph='back';else if(drive(a.x+3,a.z+3,24)<a.m.rad+3){j.ph='load';j.t=2.5}}
+    else if(j.ph==='load'){j.t-=dt;if(j.t<=0){if(world.animals.includes(a)&&a.dead<HURT_T){
+        S.holding.push({uid:S.uid++,k:a.sp.k,wait:1,h:[[Date.now(),'was saved by your vets and made better at the Animal Doctor']]});S.coins+=100;save();coins();
+        for(const h of world.animals)if(h.prey===a){h.state='wander';h.prey=null;h.t=3}removeAnimal(a);
+        toast('🚑 Your vets saved the hurt '+a.sp.n+'! It is on its way to the Animal Doctor at your zoo to get better. +100 coins',7000)}j.ph='back'}}
+    else{const p=trailSpot(((car.helpers||[]).length+1)*16);if(drive(p.x,p.z,26)<5)A.job=null}}
+  else{const p=trailSpot(((car.helpers||[]).length+1)*16);A.x=p.x;A.z=p.z;A.yaw=p.yaw}
+  A.g.position.set(A.x,HW(A.x,A.z),A.z);A.g.rotation.y=A.yaw;A.g.visible=!world.c.kingdom||true}
+
+/* ---------- 🦴 bones: what is left after an animal has died and been eaten ---------- */
+function leaveBones(a){
+  const g=new T.Group(),bm=new T.MeshStandardMaterial({color:'#e8dfc8',roughness:.7}),L=Math.max(1,a.m.len),h=Math.max(.6,a.m.h),r=L*.035+.03;
+  const sp=new T.Mesh(new T.CylinderGeometry(r,r*.6,L*.85,8),bm);sp.rotation.x=Math.PI/2;sp.position.y=r;g.add(sp);
+  for(let i=0;i<7;i++){const rr=h*.22*(1-Math.abs(i-2)*.08);const rib=new T.Mesh(new T.TorusGeometry(rr,r*.35,6,14,Math.PI*.95),bm);rib.position.set(0,r,L*(.18-i*.055));rib.rotation.set(0,Math.PI/2,-Math.PI/2+(Math.random()-.5)*.3);g.add(rib)}
+  const sk=new T.Mesh(new T.SphereGeometry(h*.14,12,10),bm);sk.scale.set(1,.8,1.6);sk.position.set(.1,h*.1,L*.48);g.add(sk);
+  for(const s of[-1,1])for(const z of[.25,-.25]){const lb=new T.Mesh(new T.CylinderGeometry(r*.6,r*.5,h*.6,6),bm);lb.rotation.set(Math.PI/2,0,(Math.random()-.5)*1.2);lb.position.set(s*h*.3+(Math.random()-.5)*.3,r*.6,L*z+(Math.random()-.5)*.4);g.add(lb)}
+  g.position.set(a.x,H(a.x,a.z)+.02,a.z);g.rotation.y=a.yaw;g.traverse(o=>{if(o.isMesh)o.castShadow=true});world.scene.add(g);
+  const blood=a.blood;a.blood=null;if(blood)blood.material.color.set('#3a0606');
+  (world.bones=world.bones||[]).push({g,blood,x:a.x,z:a.z,n:a.sp.n,t:0});removeAnimal(a)}
+function updateBones(dt){for(const b of(world.bones||[]).slice()){b.t+=dt;if(b.t>300)removeBones(b)}}
+function removeBones(b){world.scene.remove(b.g);if(b.blood)world.scene.remove(b.blood);world.bones.splice(world.bones.indexOf(b),1)}
+function bonesNear(){if(mode!=='foot')return null;return(world.bones||[]).find(b=>Math.hypot(b.x-me.x,b.z-me.z)<4)||null}
+function collectBones(){const b=bonesNear();if(!b)return false;removeBones(b);S.bones=(S.bones||0)+1;S.coins+=50;save();coins();
+  toast('🦴 You collected the '+b.n+' bones! You have collected '+S.bones+' sets of bones. +50 coins',5000);return true}
