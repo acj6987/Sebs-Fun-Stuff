@@ -118,6 +118,7 @@ function quad(p){
   if(p.trunk){const t0=at(hl*.8,-hh*.2),t1=ad(t0,[0,-.55,.18]),t2=ad(t1,[0,-.55,.06]),t3=ad(t2,[0,-.35,.12]);
     k.bone('trunk','head',t0);k.bone('trunk2','trunk',t1);
     k.cap(t0,t1,.2,.15,'trunk',{k:.1,pat:1});k.cap(t1,t2,.15,.11,'trunk2',{k:.06,pat:1});k.cap(t2,t3,.11,.08,'trunk2',{k:.05,pat:1})}
+  if(p.sabre)for(const s of[-1,1])k.extra('head','horn',at(hl*.62,-hh*.24,s*hw*.13),{len:hh*.6,r:hh*.055,tilt:Math.PI-.12,col:'#f2ead2'});
   if(p.tusks)for(const s of[-1,1])k.extra('head','tusk',at(hl*.6,-hh*.32,s*hw*.27),{s,len:.65*p.tusks,r:.055*Math.min(1,p.tusks+.3)});
   if(p.horn){const hL=p.hornL||1;k.extra('head','horn',at(hl*.82,hh*.12),{len:.55*hL,r:.09*Math.sqrt(hL),tilt:.35});k.extra('head','horn',at(hl*.55,hh*.24),{len:.28*hL,r:.07*Math.sqrt(hL),tilt:.2})}
   if(p.horns)for(const s of[-1,1])k.extra('head','horns',at(0,hh*.4,s*hw*.38),{s,kind2:p.horns});
@@ -330,6 +331,7 @@ function lizard(p){
     k.bone('leg'+i,'root',a);k.bone('low'+i,'leg'+i,b);
     k.cap(a,b,s*.065,s*.05,'leg'+i,{k:s*.05,pat:1});k.cap(b,f,s*.05,s*.04,'low'+i,{k:s*.03,pat:1})});
   if(p.frill)k.extra('head','frill',[0,s*.25,s*.5],{s,col:p.frill});
+  if(p.sail)k.extra('root','sail',[0,s*.32,0],{len:s*.95,ht:s*.75,col:p.col2,stripes:1,base:p.col});
   if(p.shell){k.ell([0,s*.27,-s*.02],[s*.4,s*.2,s*.55],'root',{k:s*.08,col:p.shell,rough:.015,rf:9});k.ell([0,s*.15,0],[s*.36,s*.06,s*.5],'root',{k:s*.04,col:p.belly||'#d8c890'})}
   if(p.fairy)fairyWings(k,[0,s*.32,s*.05],s*1.1);
   k.anim={kind:'lizard',stride:s*.45,fly:p.fly};
@@ -372,7 +374,7 @@ function hedgehog(p){
 }
 /* ---------- dinosaurs on two legs ---------- */
 function theropod(p){
-  const k=kit(),s=p.s||1,hip=p.hip*s,L=p.L*s,W=p.W*s,Hb=p.Hb*s,lw=p.legW*s,real=!!p.real;
+  const k=kit(),s=p.s||1,hip=p.hip*s,L=p.L*s,W=p.W*s,Hb=p.Hb*s,lw=p.legW*s,real=!!p.real,mean=real&&!p.gentle;
   k.bone('root',null,[0,hip,0]);
   // a level body like the film dinosaurs: deep chest, round belly, strong hips
   if(real){k.ell([0,hip+Hb*.12,L*.2],[W*.52,Hb*.58,L*.36],'root',{k:Hb*.35,rot:[.06,0,0],pat:1});
@@ -392,17 +394,20 @@ function theropod(p){
   if(real){k.ell(at(hl*.06,-hh*.08),[hw*.6,hh*.46,hl*.24],'head',{k:hh*.25,pat:1});
     for(const sx of[-1,1])k.ell(at(hl*.86,hh*.06,sx*hw*.14),[hw*.1,hh*.08,hl*.08],'head',{k:hh*.05,pat:1,detail:1})}
   k.cap(at(hl*.35,hh*.05),at(hl*.95,-hh*.05),hh*.36,hh*(real?.2:.24),'head',{k:hh*.25,pat:1});
-  const gape=real?hh*.22:0;
+  const gape=mean?hh*.22:0;
   k.cap(at(hl*.25,-hh*.3-gape*.5),at(hl*.85,-hh*.32-gape),hh*.24,hh*.14,'head',{k:hh*.15,pat:1,col:p.belly||null});
-  if(real)k.ell(at(hl*.55,-hh*.24-gape*.5),[hw*.3,hh*.16+gape*.3,hl*.3],'head',{k:hh*.05,col:'#4a1418',detail:1});
+  if(mean)k.ell(at(hl*.55,-hh*.24-gape*.5),[hw*.3,hh*.16+gape*.3,hl*.3],'head',{k:hh*.05,col:'#4a1418',detail:1});
   for(const sx of[-1,1]){
     k.extra('head','eye',at(hl*.3,hh*.22,sx*hw*.4),{r:Math.max(.03,hw*.08)});
-    k.extra('head','teeth',at(hl*.35,-hh*.18,sx*hw*.3),{s:sx,len:hl*.6,size:hh*(real?.17:.09),n:real?11:9});
-    if(real){k.extra('head','teeth',at(hl*.38,-hh*.3-gape*.7,sx*hw*.24),{s:sx,len:hl*.5,size:hh*.13,n:9,up:1});
+    if(!p.gentle)k.extra('head','teeth',at(hl*.35,-hh*.18,sx*hw*.3),{s:sx,len:hl*.6,size:hh*(real?.17:.09),n:real?11:9});
+    if(mean){k.extra('head','teeth',at(hl*.38,-hh*.3-gape*.7,sx*hw*.24),{s:sx,len:hl*.5,size:hh*.13,n:9,up:1});
       // heavy angry brows with little horn bumps over each eye
       k.ell(at(hl*.32,hh*.36,sx*hw*.36),[hw*.16,hh*.08,hl*.16],'head',{k:hh*.06,pat:1,rot:[0,0,sx*.35],detail:1});
       k.extra('head','horn',at(hl*.26,hh*.42,sx*hw*.36),{len:hh*.16,r:hh*.06,tilt:-.3,col:shade(p.col,-.15)});
-      k.extra('root','claw',[sx*(W*.4),hip+Hb*.1-p.arm*s*.5,L*.36+p.arm*s*.48],{size:.18*s*Math.max(.6,p.arm)})}
+      k.extra('root','claw',[sx*(W*.4),hip+Hb*.1-p.arm*s*.5,L*.36+p.arm*s*.48],{size:.18*s*Math.max(.6,p.arm)*(p.bigClaw?2.2:1)})}
+    // Carnotaurus bull horns, Therizinosaurus giant hand claws
+    if(p.bullHorns)k.extra('head','horn',at(hl*.18,hh*.45,sx*hw*.45),{len:hh*.55,r:hh*.12,tilt:-.2,col:shade(p.col,-.2)});
+    if(p.giantClaws)for(const c of[-1,0,1])k.extra('root','claw',[sx*(W*.4)+c*W*.06,hip+Hb*.1-p.arm*s*.5,L*.36+p.arm*s*.48],{size:p.arm*s*.45});
     const i=sx>0?0:1,sh=[sx*W*.35,hip+Hb*.1,L*.36];
     k.cap(sh,ad(sh,[sx*W*.05,-p.arm*s*.5,p.arm*s*.45]),Math.max(.04,W*.07),Math.max(.03,W*.05),'root',{k:.04*s,pat:1,detail:1});
     // big muscular thighs, a long shin, a long foot bone and three clawed toes
@@ -419,6 +424,7 @@ function theropod(p){
   const tb=[0,hip+Hb*.1,-L*.4],t1=real?[0,hip+Hb*.02,-L*.4-p.tail*s*.45]:[0,hip-Hb*.05,-L*.4-p.tail*s*.45],t2=real?[0,hip-Hb*.1,-L*.4-p.tail*s]:[0,hip-Hb*.25,-L*.4-p.tail*s];
   k.bone('tail','root',tb);k.bone('tail2','tail',t1);
   k.cap(tb,t1,Hb*(real?.46:.4),Hb*(real?.24:.2),'tail',{k:Hb*.2,pat:1});k.cap(t1,t2,Hb*(real?.24:.2),Math.max(.03,Hb*.03),'tail2',{k:Hb*.1,pat:1});
+  if(p.domeHead){k.ell(at(hl*.1,hh*.48),[hw*.62,hh*.55,hl*.36],'head',{k:hh*.25,pat:1,col:shade(p.col,.08)});for(let i=0;i<7;i++){const a=i/6*Math.PI;k.extra('head','horn',at(hl*(.1-Math.cos(a)*.32),hh*.38,Math.sin(a)*hw*.55-hw*.28),{len:hh*.18,r:hh*.05,tilt:-.8,col:shade(p.col,-.2)})}}
   if(p.sail)k.extra('root','sail',[0,hip+Hb*.35,L*.02],{len:L*.95,ht:Hb*1.4,col:p.col2,stripes:p.sailStripes,base:p.col});
   if(p.tailFin)k.extra('tail','sail',ad(tb,[0,Hb*.18,-p.tail*s*.32]),{len:p.tail*s*.55,ht:Hb*.5,col:p.col2,stripes:1,base:p.col});
   // a feathered raptor: feathered arms like folded wings, a feather crest and a feathery tail

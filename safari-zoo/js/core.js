@@ -200,6 +200,59 @@ CONT.at(-1).animals.push(
   ['Bubble Dragon','🐉',3,2,{home:'dream',amph:1,soar:1,fly:1,fairy:1,sparkle:1,plan:'lizard',s:1.6,col:'#3ab8ff',tex:'spots',col2:'#b45aff',belly:'#c8f0ff',frill:'#ff7ad8'}]);
 const DREAM=['ocean:10','ocean:11'],DREAM_PRIZE=2000000;
 function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.areas.some(a=>a.animals.some(x=>x.k===k)||(a.barn||[]).some(x=>x.k===k))||!!(S.vet&&S.vet.animals.some(x=>x.k===k))||(S.fam||[]).some(p=>p.some(x=>x.k===k))||(S.park||[]).some(x=>x.k===k)}
+// lots more real animals, and more prehistoric giants (always added at the end of each list)
+{const P=(id,...l)=>CONT.find(c=>c.id===id).animals.push(...l);
+ P('dino',
+  ['Allosaurus','🦖',2,2.2,{home:'carnivore',chase:1,hunts:['Stegosaurus','Parasaurolophus','Iguanodon','Gallimimus'],herd:[1,2],plan:'theropod',hip:2.4,L:3.4,W:1.1,Hb:1.4,neck:.9,neckW:.4,headL:1.1,headW:.45,headH:.55,tail:4.5,arm:1,legW:.32,real:1,skin:1,dim:.8,col:'#6a5a44',back:'#4a3e30',col2:'#3a2e22',belly:'#a89a7a',tex:'stripes',freq:7,thin:.6}],
+  ['Carnotaurus','🦖',2,2.4,{home:'carnivore',chase:1,hunts:['Gallimimus','Parasaurolophus','Iguanodon'],herd:[1,2],plan:'theropod',hip:2,L:3,W:.9,Hb:1.2,neck:.7,neckW:.35,headL:.8,headW:.4,headH:.5,tail:4,arm:.3,legW:.3,real:1,skin:1,dim:.8,bullHorns:1,col:'#7a3a2a',back:'#5a2a1e',col2:'#2e1a12',belly:'#a87a62',tex:'stripes',freq:9,thin:.5}],
+  ['Baryonyx','🦖',2,1.9,{home:'carnivore',hunts:['Gallimimus'],herd:[1,2],plan:'theropod',hip:1.8,L:3,W:.8,Hb:1,neck:.9,neckW:.3,headL:1.3,headW:.28,headH:.34,tail:3.6,arm:1.1,legW:.26,real:1,skin:1,dim:.8,bigClaw:1,col:'#5a6a50',back:'#3e4a36',col2:'#2e3628',belly:'#b0aa8a',tex:'stripes',freq:10,thin:.6}],
+  ['Gallimimus','🦖',1,3,{herd:[6,9],plan:'theropod',gentle:1,hip:1.6,L:1.4,W:.45,Hb:.55,neck:1.1,neckW:.12,headL:.35,headW:.14,headH:.14,tail:1.8,arm:.55,legW:.12,real:1,skin:1,col:'#8a7a5a',back:'#6a5a40',belly:'#d8ccb0'}],
+  ['Pachycephalosaurus','🦖',2,1.8,{herd:[3,5],plan:'theropod',gentle:1,domeHead:1,hip:1.4,L:2,W:.7,Hb:.8,neck:.5,neckW:.2,headL:.5,headW:.3,headH:.35,tail:2,arm:.35,legW:.2,real:1,skin:1,col:'#8a6a4a',back:'#6a4a30',belly:'#c8b08a',tex:'stripes',freq:6,thin:.7,col2:'#5a3a22'}],
+  ['Therizinosaurus','🦖',3,1.2,{herd:[1,2],plan:'theropod',gentle:1,giantClaws:1,feathers:1,featherCol:'#5a4a36',tipCol:'#9a8a6a',hip:3,L:3.4,W:1.4,Hb:1.8,neck:1.8,neckW:.35,headL:.6,headW:.25,headH:.28,tail:2.5,arm:2.2,legW:.4,real:1,col:'#6a5a4a',back:'#4a3e32',belly:'#a89a80'}],
+  ['Iguanodon','🦕',1,1.4,{herd:[3,5],L:4.5,W:1.4,Hb:1.8,leg:1.8,legW:.3,neck:.9,neckW:.4,neckAng:.8,headL:.9,headW:.35,headH:.45,hp:.5,real:1,heavy:1,skin:1,col:'#6a7258',back:'#4e5640',belly:'#a8ac90',ears:'none',tail:'dino',tl:4,scaly:1,graze:1}],
+  ['Dimetrodon','🦎',2,1.1,{hunts:['Gallimimus'],plan:'lizard',s:1.8,sail:1,col:'#7a5a3a',col2:'#b04a2a',tex:'spots',belly:'#b8a080'}],
+  ['Woolly Mammoth','🦣',2,1.4,{herd:[2,4],real:1,heavy:1,dome:1,L:3.6,W:1.8,Hb:2.2,leg:1.5,legW:.34,neck:.3,neckW:.7,neckAng:1.2,headL:1.1,headW:1,headH:1.1,col:'#5a3a22',shag:'#4a2e1a',hump:1,ears:'round',trunk:1,tusks:1.8,tail:'tuft',tl:.6,noBelly:1,graze:1}],
+  ['Sabre-tooth Tiger','🐅',2,2.2,{chase:1,hunts:['Gallimimus','Pachycephalosaurus'],herd:[1,2],real:1,headType:'cat',lean:1,sabre:1,L:1.8,W:.6,Hb:.72,leg:.65,legW:.1,neck:.32,neckW:.24,neckAng:1.05,headL:.45,headW:.42,headH:.4,col:'#b08a5a',back:'#8a6a40',belly:'#e2d2b0',tex:'spots',col2:'#7a5a34',ears:'round',tail:'short',paws:1,cheeks:1}],
+  ['Woolly Rhino','🦏',2,1.4,{herd:[1,2],real:1,heavy:1,shoulderHump:1,horn:1,hornL:2,L:3,W:1.3,Hb:1.4,leg:.7,legW:.22,neck:.45,neckW:.5,neckAng:1.3,headL:1,headW:.5,headH:.55,col:'#5a3e26',shag:'#4a3220',ears:'pointy',tail:'tuft',tl:.5,noBelly:1,hp:.45,graze:1}]);
+ P('samerica',
+  ['Capybara','🐹',1,1.6,{herd:[3,6],real:1,L:.95,W:.45,Hb:.5,leg:.3,legW:.07,neck:.15,neckW:.25,neckAng:1.2,headL:.42,headW:.26,headH:.3,muzzle:1.3,col:'#8a6040',back:'#6e4a2e',ears:'round',tail:'short',graze:1,hp:.5}],
+  ['Toucan','🦜',1,1.5,{herd:[2,3],plan:'bird',s:.5,body:'#111216',wing:'#111216',head:'#111216',beak:'#f29a1a',beakL:1.9,leg:.14,neck:.05,fly:1,tailL:.5,tailCol:'#111216',legCol:'#3a6ad8',sz:1.6}],
+  ['Giant Anteater','🐾',2,1.6,{herd:[1,1],real:1,L:1.5,W:.45,Hb:.65,leg:.55,legW:.09,neck:.3,neckW:.2,neckAng:1.25,headL:.65,headW:.14,headH:.14,muzzle:.5,hp:.75,col:'#5a4a3a',back:'#3a2e24',belly:'#8a7a62',ears:'round',tail:'bushy',tl:.7,tailCol:'#3a2e24',paws:1}],
+  ['Tapir','🐗',2,1.4,{herd:[1,2],real:1,L:1.8,W:.7,Hb:.85,leg:.55,legW:.12,neck:.3,neckW:.35,neckAng:1.25,headL:.55,headW:.3,headH:.35,hp:.5,col:'#2a2a2c',back:'#1e1e20',belly:'#3a3a3c',ears:'round',tail:'short',hoof:'#1a1a1a',graze:1}],
+  ['Piranha','🐟',1,2.2,{swim:1,herd:[5,8],sz:2,plan:'fish',s:.4,tall:.6,wide:.16,col:'#7a8a8a',belly:'#e04a2a',fin:'#6a7a7a'}]);
+ P('asia',
+  ['Snow Leopard','🐆',3,2,{hunts:['Peacock'],herd:[1,1],real:1,headType:'cat',lean:1,L:1.4,W:.45,Hb:.55,leg:.55,legW:.08,neck:.3,neckW:.16,neckAng:1,headL:.34,headW:.3,headH:.27,col:'#d8d6d0',back:'#bcbab4',belly:'#f2f2ee',tex:'rosette',col2:'#3a3a3a',snout:'#ecebe6',nose:'#8a6a6a',cheeks:1,ears:'round',tail:'long',tl:1.15,paws:1}],
+  ['Komodo Dragon','🦎',2,1.3,{hunts:['Peacock'],plan:'lizard',s:1.6,col:'#6a6250',col2:'#4a4436',tex:'spots',belly:'#8a8270'}],
+  ['Asian Elephant','🐘',1,1.5,{herd:[2,4],real:1,heavy:1,dome:1,skin:1,L:2.8,W:1.4,Hb:1.8,leg:1.2,legW:.28,neck:.25,neckW:.55,neckAng:1.25,headL:.95,headW:.85,headH:.9,col:'#6a6460',dust:'#8a6448',hoof:'#4e4a46',ears:'round',trunk:1,tusks:.6,tail:'tuft',tl:.9,eyeS:.7,noBelly:1}],
+  ['Yak','🐂',1,1.4,{herd:[3,5],real:1,L:2.4,W:1,Hb:1.2,leg:.6,legW:.13,neck:.3,neckW:.5,neckAng:1.3,headL:.55,headW:.45,headH:.45,col:'#2a2420',shag:'#1e1a16',hump:1,horns:'buffalo',ears:'round',tail:'tuft',graze:1,noBelly:1}]);
+ P('namerica',
+  ['Moose','🫎',2,1.6,{herd:[1,2],real:1,L:2.4,W:.8,Hb:1.1,leg:1.25,legW:.1,neck:.5,neckW:.25,neckAng:.85,headL:.75,headW:.3,headH:.38,muzzle:1.4,col:'#3e2e22',back:'#2e2218',belly:'#5a4a3a',antlers:1,ears:'long',tail:'short',hump:1,graze:1}],
+  ['Mountain Lion','🐆',2,2.2,{hunts:['Deer','Raccoon'],herd:[1,1],real:1,headType:'cat',lean:1,L:1.6,W:.5,Hb:.6,leg:.6,legW:.08,neck:.3,neckW:.18,neckAng:1,headL:.36,headW:.32,headH:.28,col:'#b08a5a',back:'#966f42',belly:'#efe2c8',snout:'#efe2c8',nose:'#c08a7a',cheeks:1,ears:'round',tail:'long',tl:1,paws:1}],
+  ['American Alligator','🐊',2,1,{hunts:['Deer'],nearWater:1,amph:1,plan:'lizard',s:2,col:'#2e3428',col2:'#1e2218',tex:'spots',belly:'#b8b49a',croc:1}],
+  ['Coyote','🐺',1,2.2,{hunts:['Raccoon','Skunk'],herd:[1,3],real:1,L:1.1,W:.36,Hb:.42,leg:.6,legW:.05,neck:.3,neckW:.14,neckAng:.95,headL:.36,headW:.22,headH:.2,col:'#a8885a',back:'#7a6448',belly:'#e8dcc8',snout:'#d8c8a8',ears:'pointy',earS:1.2,tail:'bushy',tl:.5,tip:'#2a2a28',paws:1}],
+  ['Pronghorn','🦌',1,2.9,{herd:[3,6],real:1,headType:'horse',lean:1,L:1.3,W:.4,Hb:.55,leg:.8,legW:.04,neck:.45,neckW:.1,neckAng:.6,headL:.32,headW:.15,headH:.17,col:'#c8945a',back:'#a8743a',belly:'#f6f1e8',rumpWhite:1,horns:'gazelle',ears:'pointy',hoof:'#1e1712',tail:'short',graze:1}]);
+ P('australia',
+  ['Platypus','🦆',3,1,{herd:[1,1],nearWater:1,amph:1,real:1,L:.5,W:.26,Hb:.2,leg:.1,legW:.04,neck:.05,neckW:.12,neckAng:1.3,headL:.28,headW:.15,headH:.1,muzzle:1.3,hp:.3,col:'#6a4a32',snout:'#2a2a2a',nose:'#2a2a2a',ears:'none',tail:'flat',paws:1,sz:1.6}],
+  ['Wombat','🐻',1,1.2,{herd:[1,2],real:1,L:.9,W:.5,Hb:.45,leg:.2,legW:.08,neck:.1,neckW:.25,neckAng:1.25,headL:.35,headW:.3,headH:.28,col:'#7a6a5a',back:'#5e5044',ears:'round',tail:'short',paws:1}],
+  ['Emu','🪶',1,2.6,{herd:[2,4],plan:'bird',s:1.15,body:'#4a3e32',wing:'#4a3e32',head:'#3a4a6a',beak:'#2a2a2a',leg:1.05,neck:.95,neckAng:.12,legCol:'#5a5048',beakL:.4,tailCol:'#4a3e32'}],
+  ['Tasmanian Devil','🐾',2,1.8,{herd:[1,2],real:1,L:.65,W:.32,Hb:.32,leg:.2,legW:.05,neck:.1,neckW:.16,neckAng:1.15,headL:.3,headW:.26,headH:.24,col:'#1e1a18',back:'#141210',belly:'#2a2624',snout:'#3a2a28',nose:'#e8a8a0',ears:'round',earCol:'#e8a8a0',tail:'short',paws:1,sz:1.4}],
+  ['Echidna','🦔',2,.7,{plan:'hedgehog',col:'#3a2e24',col2:'#e8dcb8',tex:'spots',s:.55,sz:1.6}],
+  ['Dingo','🐕',1,2.2,{hunts:['Kangaroo'],herd:[2,3],real:1,L:1.1,W:.36,Hb:.45,leg:.6,legW:.055,neck:.3,neckW:.15,neckAng:.95,headL:.36,headW:.22,headH:.21,col:'#c8945a',back:'#a8743a',belly:'#f2e6d2',snout:'#f2e6d2',ears:'pointy',earS:1.2,tail:'bushy',tl:.45,tip:'#f2e6d2',paws:1}]);
+ P('poles',
+  ['Reindeer','🦌',1,2,{herd:[4,6],real:1,L:1.6,W:.55,Hb:.7,leg:.9,legW:.07,neck:.5,neckW:.16,neckAng:.5,headL:.42,headW:.2,headH:.24,col:'#7a6a5a',back:'#5e5044',belly:'#d8d0c0',mane:'#e8e2d8',antlers:1,ears:'long',tail:'short',tailCol:'#f2ece2',graze:1}],
+  ['Musk Ox','🐂',2,1.4,{herd:[3,5],real:1,L:2.2,W:1,Hb:1.1,leg:.55,legW:.13,neck:.3,neckW:.5,neckAng:1.3,headL:.55,headW:.45,headH:.45,col:'#2a2018',shag:'#3a2a1e',hump:1,horns:'buffalo',ears:'round',tail:'short',graze:1,noBelly:1}],
+  ['Arctic Hare','🐇',1,2.6,{herd:[1,3],plan:'hopper',col:'#f4f4f2',belly:'#ffffff',s:.5}]);
+ P('europe',
+  ['Lynx','🐈',2,2,{hunts:['Deer'],herd:[1,1],real:1,headType:'cat',lean:1,L:1.1,W:.38,Hb:.48,leg:.55,legW:.07,neck:.25,neckW:.15,neckAng:1,headL:.3,headW:.28,headH:.25,col:'#b8945e',back:'#9a7848',belly:'#efe4d0',tex:'dots',dotF:8,dotR:.28,col2:'#4a3826',snout:'#efe4d0',cheeks:1,ears:'pointy',earCol:'#2a2018',tail:'short',paws:1}],
+  ['Brown Bear','🐻',2,1.6,{hunts:['Deer'],herd:[1,2],real:1,L:2.1,W:.95,Hb:1,leg:.7,legW:.17,neck:.45,neckW:.32,neckAng:1.05,headL:.5,headW:.4,headH:.4,col:'#5a3e26',back:'#4a321e',snout:'#7a5a3e',hump:1,ears:'round',tail:'short',paws:1,noBelly:1}],
+  ['Red Deer','🦌',1,2,{herd:[3,6],real:1,headType:'horse',L:1.8,W:.55,Hb:.75,leg:1.05,legW:.065,neck:.65,neckW:.15,neckAng:.4,headL:.45,headW:.2,headH:.24,col:'#8a5a32',back:'#6e4626',belly:'#d8c8a8',mane:'#5a3a22',antlers:1,ears:'long',tail:'short',tailCol:'#e8dcc8',graze:1}],
+  ['Golden Eagle','🦅',2,1.4,{plan:'bird',s:.8,body:'#5a3e24',wing:'#4a321c',head:'#b88a4a',beak:'#e8b830',leg:.22,neck:.1,fly:1,tailCol:'#4a321c',legCol:'#e8b830'}]);
+ P('ocean',
+  ['Orca','🐋',3,2.6,{swim:1,jump:1,herd:[2,4],hunts:FISHES,plan:'fish',s:5,tall:.24,wide:.14,col:'#121418',belly:'#f4f4f4',sharpBelly:1,flukes:1,dorsalS:.26,fin2:1.9,fin:'#121418'}],
+  ['Humpback Whale','🐋',2,1.2,{swim:1,herd:[1,2],plan:'fish',s:9,tall:.24,wide:.16,col:'#3a4048',belly:'#d8dce0',flukes:1,dorsalS:.06,fin2:.6,fin:'#3a4048'}],
+  ['Blue Whale','🐋',3,1,{swim:1,herd:[1,1],plan:'fish',s:14,tall:.18,wide:.13,col:'#5a6a80',belly:'#a8b4c4',flukes:1,dorsalS:.04,fin2:.5,fin:'#4a5a70'}],
+  ['Hammerhead Shark','🦈',2,2,{swim:1,herd:[2,4],hunts:FISHES,plan:'fish',s:3.5,tall:.2,wide:.12,col:'#8a8e86',belly:'#eef0ea',dorsalS:.16,fin2:1.5,fin:'#7a7e76'}],
+  ['Sea Otter','🦦',1,1.4,{herd:[2,4],amph:1,plan:'seal',col:'#4a3a2e',col2:'#6a5a4a',s:.9}]);}
 const SP={};
 ENV.carnivore=ENV.dino;
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:a[4].home||c.hab}}));
