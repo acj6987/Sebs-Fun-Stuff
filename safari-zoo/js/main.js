@@ -33,7 +33,7 @@ function renderMap(){
     return `<button class="cont" data-c="${c.id}" style="--g:linear-gradient(180deg,${ENV[c.hab].zen},${ENV[c.hab].hor} 60%,${ENV[c.hab].ground})">
       <div class="sky">${c.deco.join('')}</div>
       <div class="info"><span class="place">${c.place}</span><h3>${c.name}</h3>
-      <div class="dex">${sp.map(s=>`<span class="${S.dex[s.k]?'':'no'}" title="${S.dex[s.k]?s.n:'Not found yet'}">${s.e}</span>`).join('')}</div>
+      <div class="dex">${sp.filter(s=>!s.def.x||S.dex[s.k]).map(s=>`<span class="${S.dex[s.k]?'':'no'}" title="${S.dex[s.k]?s.n:'Not found yet'}">${s.e}</span>`).join('')}${sp.some(s=>s.def.x&&!S.dex[s.k])?`<span class="no" title="More animals to find">+${sp.filter(s=>s.def.x&&!S.dex[s.k]).length}</span>`:''}</div>
       <div class="bar"><i style="width:${found/sp.length*100}%"></i></div>
       <span style="font-size:13px;font-weight:800">${found} of ${sp.length} animals found</span></div></button>`}).join('');
 }

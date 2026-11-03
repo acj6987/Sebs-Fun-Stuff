@@ -67,7 +67,10 @@ async function buildSafari(c,progress){
   buildCar(scene);buildFootRig();scene.add(cam);buildHelpers(scene);
   sub.on=false;sub.g=null;plane.on=false;plane.g=null;plane.star=0;
   // build each animal shape once, showing progress
-  const list=c.animals.map((a,i)=>SP[c.id+':'+i]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]),c.kingdom?[...new Set((S.park||[]).map(an=>an.k))].map(k=>SP[k]):[]);
+  // every curated animal comes each visit, plus a random mix of the extra ones (animals you haven't found yet come first)
+  {const all=c.animals.map((a,i)=>c.id+':'+i),ex=all.filter(k=>SP[k].def.x).sort(()=>Math.random()-.5).sort((a,b)=>(S.dex[a]?1:0)-(S.dex[b]?1:0));
+   world.pool=all.filter(k=>!SP[k].def.x).concat(ex.slice(0,c.sea?16:22).sort(()=>Math.random()-.5))}
+  const list=world.pool.map(k=>SP[k]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]),c.kingdom?[...new Set((S.park||[]).map(an=>an.k))].map(k=>SP[k]):[]);
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
   // pterodactyls circling high in the sky over Dino Zone
   if(!c.kingdom)buildDNA(scene,c);else world.dnaVials=[];
@@ -76,7 +79,7 @@ async function buildSafari(c,progress){
   refreshCages();
   // one group of every kind of animal first, then extra ones
   if(c.kingdom){buildKingdom(scene);return}
-  c.animals.forEach((x,i)=>spawnAnimal(true,SP[c.id+':'+i]));
+  world.pool.forEach(k=>spawnAnimal(true,SP[k]));
   while(world.animals.length<world.maxAn)spawnAnimal(true);
 }
 
@@ -264,7 +267,7 @@ function makeIcon(){if(!ICON.run){ICON.run=iconTex('!','#d4602f');ICON.tired=ico
 /* ---------- animals ---------- */
 let grpId=1;
 function spawnAnimal(initial,force){
-  const c=world.c,list=c.animals.map((a,i)=>SP[c.id+':'+i]);
+  const c=world.c,list=(world.pool||c.animals.map((a,i)=>c.id+':'+i)).map(k=>SP[k]);
   const w=list.map(s=>s.def.mate||s.def.bornOnly||s.def.lagoon?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
   if(force&&force.def.bornOnly)return;
   if(force&&force.def.lagoon)return;
@@ -842,7 +845,7 @@ function planeCatch(){
 function grabDNA(r){const v=(world.dnaVials||[]).find(v=>Math.hypot(v.x-me.x,v.z-me.z)<r);if(!v)return false;v.y=me.y-1;v.x=me.x;v.z=me.z;updateDNA(0);return true}
 /* ---------- 🧬 DNA tubes to find on safari ---------- */
 function buildDNA(scene,c){
-  world.dnaVials=[];const ks=c.animals.map((a,i)=>c.id+':'+i).filter(k=>!SP[k].def.bornOnly&&!SP[k].def.mate);
+  world.dnaVials=[];const ks=world.pool.filter(k=>!SP[k].def.bornOnly&&!SP[k].def.mate);
   const glass=new T.MeshPhysicalMaterial({color:'#e8fbff',roughness:.05,transmission:.5,transparent:true,opacity:.5}),cap=new T.MeshStandardMaterial({color:'#d8d8dc',metalness:.9,roughness:.2});
   for(let i=0,t=0;i<8&&t<400;t++){const x=(Math.random()-.5)*2*(LIMIT-20),z=(Math.random()-.5)*2*(LIMIT-20),h=H(x,z);if(world.sea?h<.8:inPond(x,z))continue;
     const blocked=[...world.cols.values()].some(L=>L.some(c=>Math.hypot(c.x-x,c.z-z)<c.r+4));if(blocked)continue;

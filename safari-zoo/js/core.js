@@ -253,6 +253,7 @@ function owns(k){return S.cages.some(c=>c.k===k)||S.holding.some(c=>c.k===k)||S.
   ['Blue Whale','🐋',3,1,{swim:1,herd:[1,1],plan:'fish',s:14,tall:.18,wide:.13,col:'#5a6a80',belly:'#a8b4c4',flukes:1,dorsalS:.04,fin2:.5,fin:'#4a5a70'}],
   ['Hammerhead Shark','🦈',2,2,{swim:1,herd:[2,4],hunts:FISHES,plan:'fish',s:3.5,tall:.2,wide:.12,col:'#8a8e86',belly:'#eef0ea',dorsalS:.16,fin2:1.5,fin:'#7a7e76'}],
   ['Sea Otter','🦦',1,1.4,{herd:[2,4],amph:1,plan:'seal',col:'#4a3a2e',col2:'#6a5a4a',s:.9}]);}
+if(typeof moreAnimals==='function')moreAnimals(CONT); // js/more.js adds lots more animals
 const SP={};
 ENV.carnivore=ENV.dino;
 CONT.forEach(c=>c.animals.forEach((a,i)=>{SP[c.id+':'+i]={k:c.id+':'+i,n:a[0],e:a[1],r:a[2],s:a[3],def:a[4],cont:c.id,hab:a[4].home||c.hab}}));
