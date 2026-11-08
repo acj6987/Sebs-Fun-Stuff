@@ -35,7 +35,8 @@ function renderMap(){
       <div class="info"><span class="place">${c.place}</span><h3>${c.name}</h3>
       <div class="dex">${sp.filter(s=>!s.def.x||S.dex[s.k]).map(s=>`<span class="${S.dex[s.k]?'':'no'}" title="${S.dex[s.k]?s.n:'Not found yet'}">${s.e}</span>`).join('')}${sp.some(s=>s.def.x&&!S.dex[s.k])?`<span class="no" title="More animals to find">+${sp.filter(s=>s.def.x&&!S.dex[s.k]).length}</span>`:''}</div>
       <div class="bar"><i style="width:${found/sp.length*100}%"></i></div>
-      <span style="font-size:13px;font-weight:800">${found} of ${sp.length} animals found</span></div></button>`}).join('');
+      <span style="font-size:13px;font-weight:800">${found} of ${sp.length} animals found</span>
+      <div style="font-size:12px;font-weight:700;margin-top:2px">✅ ${(S.caught&&S.caught[c.id]||[]).length} of ${countable(c).length} caught here${S.wins&&S.wins[c.id]?' · 🏆×'+S.wins[c.id]:''} · ${S.potionsGot&&S.potionsGot[c.id]?'🧪 potion found':'🧪 potion still guarded'}</div></div></button>`}).join('');
 }
 $('#conts').addEventListener('click',e=>{const b=e.target.closest('.cont');if(b)startSafari(CONT.find(c=>c.id===b.dataset.c))});
 

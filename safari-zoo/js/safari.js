@@ -68,7 +68,7 @@ async function buildSafari(c,progress){
   sub.on=false;sub.g=null;plane.on=false;plane.g=null;plane.star=0;
   // build each animal shape once, showing progress
   // every curated animal comes each visit, plus a random mix of the extra ones (animals you haven't found yet come first)
-  {const all=c.animals.map((a,i)=>c.id+':'+i),ex=all.filter(k=>SP[k].def.x).sort(()=>Math.random()-.5).sort((a,b)=>(S.dex[a]?1:0)-(S.dex[b]?1:0));
+  {const got=new Set(caughtList(c)),all=c.animals.map((a,i)=>c.id+':'+i).filter(k=>!got.has(k)),ex=all.filter(k=>SP[k].def.x).sort(()=>Math.random()-.5).sort((a,b)=>(S.dex[a]?1:0)-(S.dex[b]?1:0));
    world.pool=all.filter(k=>!SP[k].def.x).concat(ex.slice(0,c.sea?16:22).sort(()=>Math.random()-.5))}
   const list=world.pool.map(k=>SP[k]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]),c.kingdom?[...new Set((S.park||[]).map(an=>an.k))].map(k=>SP[k]):[]);
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
@@ -81,6 +81,7 @@ async function buildSafari(c,progress){
   if(c.kingdom){buildKingdom(scene);return}
   world.pool.forEach(k=>spawnAnimal(true,SP[k]));
   while(world.animals.length<world.maxAn)spawnAnimal(true);
+  buildPotion(scene,c);
 }
 
 // Mount Kilimanjaro far away on the horizon, blue in the haze with snow on top
@@ -268,8 +269,9 @@ function makeIcon(){if(!ICON.run){ICON.run=iconTex('!','#d4602f');ICON.tired=ico
 let grpId=1;
 function spawnAnimal(initial,force){
   const c=world.c,list=(world.pool||c.animals.map((a,i)=>c.id+':'+i)).map(k=>SP[k]);
-  const w=list.map(s=>s.def.mate||s.def.bornOnly||s.def.lagoon?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
+  const got=new Set(caughtList(c)),w=list.map(s=>s.def.mate||s.def.bornOnly||s.def.lagoon||got.has(s.k)?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
   if(force&&force.def.bornOnly)return;
+  if(force&&caughtList(world.c).includes(force.k))return;
   if(force&&force.def.lagoon)return;
   if(sp0Unique(force))return;
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
@@ -497,7 +499,7 @@ function cageIt(own=me){
   if(!caged.length){toast('The cages and pens are full! Drive to the zoo to empty them.');return}
   own.pack=own.pack.filter(a=>!caged.includes(a));
   for(const a of caged){world.scene.remove(a.net);world.scene.remove(a.rope);removeAnimal(a)}
-  S.coins+=coinsWon;save();refreshCages();checkDream();
+  S.coins+=coinsWon;save();refreshCages();checkDream();caughtNow(caged.map(a=>a.sp.k));
   const count={};names.forEach(n=>count[n]=(count[n]||0)+1);
   toast((fresh?'NEW ANIMAL! ':'')+Object.entries(count).map(([n,c])=>c>1?c+' '+n+'s':n).join(', ')+' in the truck'+(own!==me?' (your assistant brought them)':'')+' · +'+coinsWon+' coins'+(own.pack.length?' · No room for '+own.pack.length+' more!':''));
 }
@@ -639,7 +641,7 @@ const safari={running:false,
     else if(mode==='plane'){for(let i=0;i<n&&mode==='plane';i++)updatePlane(h)}
     else if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
-    updateHelpers();updateAmbulance(dt,time);updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);
+    updateHelpers();updateAmbulance(dt,time);updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);if(world.potion)updatePotion(dt,time);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
     if(world.tick)world.tick(dt,time);
     if(world.grass)world.grass.userData.update(cam.position,time,world.scene.fog,world.sky.sunDir);
@@ -685,6 +687,7 @@ function hud(){
   c.fillStyle=world.E.water;for(const p of world.ponds){c.beginPath();c.arc(W/2+(p.x-cx)*k,W/2+(p.z-cz)*k,p.r*k,0,7);c.fill()}
   for(const a of world.animals){if(a.sp.def.mate&&a.state!=='follow')continue;c.fillStyle=a.sp.def.mate?'#ff4fa3':a.sp.r===3?'#ffc93c':a.sp.r===2?'#d4602f':'#1d2116';c.beginPath();c.arc(W/2+(a.x-cx)*k,W/2+(a.z-cz)*k,a.sp.r===3?9:7,0,7);c.fill();if(a.sp.r===3){c.strokeStyle='#fff';c.lineWidth=2;c.stroke()}}
   if(world.dnaVials){c.fillStyle='#2ad06a';c.strokeStyle='#fff';c.lineWidth=2;for(const v of world.dnaVials){c.beginPath();c.arc(W/2+(v.x-cx)*k,W/2+(v.z-cz)*k,6,0,7);c.fill();c.stroke()}}
+  if(world.potion){const P=world.potion;c.fillStyle=P.open?'#ff3aa8':'#a02a7a';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.arc(W/2+(P.x-cx)*k,W/2+(P.z-cz)*k,8,0,7);c.fill();c.stroke()}
   const arrow=(x,z,yaw,col)=>{c.save();c.translate(W/2+(x-cx)*k,W/2+(z-cz)*k);c.rotate(-yaw);c.fillStyle=col;c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-14);c.lineTo(10,10);c.lineTo(0,5);c.lineTo(-10,10);c.closePath();c.fill();c.stroke();c.restore()};
   if(!sub.on&&mode!=='plane')arrow(car.x,car.z,car.yaw,'#d38a2c');if(mode==='foot')arrow(me.x,me.z,look.yaw,'#2f6fa8');if(mode==='plane')arrow(plane.x,plane.z,plane.yaw,'#e02a2a');if(mode==='sub')arrow(sub.x,sub.z,sub.yaw,'#ffcf1f');
   c.restore();
@@ -860,6 +863,78 @@ function updateDNA(time){
     if(Math.hypot(p.x-v.x,p.y-v.g.position.y,p.z-v.z)<reach){world.scene.remove(v.g);world.dnaVials.splice(world.dnaVials.indexOf(v),1);S.dna[v.k]=(S.dna[v.k]||0)+1;save();
       toast('🧬 You picked up '+SP[v.k].n+' DNA! It is in the DNA box on your truck. Mix it in the DNA Lab at your zoo!',5000)}}
 }
+
+/* ---------- ✅ catch them all: once you catch a kind of animal, it is gone from that place until you have caught every kind there ---------- */
+function caughtList(c){return c&&S.caught&&S.caught[c.id]||[]}
+function countable(c){return c.animals.map((a,i)=>c.id+':'+i).filter(k=>{const d=SP[k].def;return!d.bornOnly&&!d.mate&&!d.lagoon})}
+function caughtNow(ks){
+  const c=world&&world.c;if(!c||c.kingdom||world.zoo||!CONT.includes(c))return;
+  S.caught=S.caught||{};const got=S.caught[c.id]=S.caught[c.id]||[];
+  const fresh=[...new Set(ks)].filter(k=>SP[k]&&SP[k].cont===c.id&&!got.includes(k));if(!fresh.length)return;got.push(...fresh);
+  // the rest of that kind run away: you can't catch it here again until you've caught everything
+  const held=new Set([...me.pack,...(world.asst?world.asst.pack:[])]);
+  for(const a of world.animals.slice())if(fresh.includes(a.sp.k)&&a.state!=='caught'&&a.state!=='netted'&&!held.has(a)&&!a.lagoon){
+    for(const h of world.animals)if(h.prey===a){h.state='wander';h.prey=null;h.t=3}removeAnimal(a)}
+  const left=countable(c).filter(k=>!got.includes(k)).length;save();
+  if(!left){S.caught[c.id]=[];S.wins=S.wins||{};S.wins[c.id]=(S.wins[c.id]||0)+1;S.coins+=20000;save();coins();
+    setTimeout(()=>bigAlert('🏆','You caught them all!','Every kind of animal in <b>'+c.name+'</b> is caught! +20,000 coins. All the animals will come back next time you visit.',12000),800);return}
+  setTimeout(()=>toast('✅ '+fresh.map(k=>SP[k].n).join(', ')+(fresh.length>1?' are':' is')+' caught! Gone from '+c.name+' until you catch every animal here. '+left+' kinds left to catch.',6500),3000)}
+
+/* ---------- 🧪 a healing potion in every place, guarded by animals: catch every guard to get it ---------- */
+function buildPotion(scene,c){
+  world.potion=null;if(c.kingdom||!CONT.includes(c)||(S.potionsGot||{})[c.id])return;
+  let x,z,ok=false;for(let t=0;t<500&&!ok;t++){const a=Math.random()*6.283,d=70+Math.random()*90;x=Math.sin(a)*d;z=Math.cos(a)*d;
+    if(Math.abs(x)>LIMIT-30||Math.abs(z)>LIMIT-30)continue;const h=H(x,z);if(world.sea?h>-3:inPond(x,z))continue; // out at sea it sits on a rock in the water, guarded by sea creatures
+    ok=![...world.cols.values()].some(L=>L.some(q=>Math.hypot(q.x-x,q.z-z)<q.r+5))}
+  if(!ok)return;
+  const g=new T.Group(),y=world.sea?-1.6:H(x,z);g.position.set(x,y,z);scene.add(g);
+  const glass=new T.MeshPhysicalMaterial({color:'#fff0fa',roughness:.05,transmission:.5,transparent:true,opacity:.55}),liq=new T.MeshStandardMaterial({color:'#ff3aa8',emissive:'#ff2a90',emissiveIntensity:1.4});
+  const stone=new T.Mesh(new T.CylinderGeometry(1.4,1.7,1,16),NATURE.rockMat('#8a8478'));stone.position.y=.5;stone.castShadow=stone.receiveShadow=true;g.add(stone);
+  const fl=new T.Group();fl.position.y=2.1;g.add(fl);
+  fl.add(new T.Mesh(new T.SphereGeometry(.55,18,14),glass));const lq=new T.Mesh(new T.SphereGeometry(.45,18,14),liq);lq.position.y=-.05;fl.add(lq);
+  const neck=new T.Mesh(new T.CylinderGeometry(.16,.2,.5,12),glass);neck.position.y=.65;fl.add(neck);const cork=new T.Mesh(new T.CylinderGeometry(.18,.15,.2,12),new T.MeshStandardMaterial({color:'#9a6a3a'}));cork.position.y=.95;fl.add(cork);
+  const glow=new T.PointLight('#ff5ab8',2,12);glow.position.y=2.2;g.add(glow);
+  // a shimmering shield keeps it safe while its guards are still free
+  const field=new T.Mesh(new T.SphereGeometry(2.6,24,16),new T.MeshStandardMaterial({color:'#b8e0ff',emissive:'#6ab8ff',emissiveIntensity:.6,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide}));field.position.y=1.8;g.add(field);
+  const P=world.potion={g,fl,field,x,z,y,open:false,label:null,warnT:0};
+  // the guards: the fiercest animals that live here (in Dino Zone, the dinosaurs)
+  const n=c.id==='dino'?8:5,ok2=sp=>{const d=sp.def;return!d.unique&&!d.mate&&!d.bornOnly&&!d.lagoon&&!d.fly&&!d.soar&&livesAt(sp,x,z)};
+  let cand=world.pool.map(k=>SP[k]).filter(ok2).sort(()=>Math.random()-.5);
+  const fierce=sp=>sp.def.hunts||sp.def.chase||sp.def.home==='carnivore'?2:sp.def.plan==='theropod'||sp.def.heavy?1:0;
+  cand.sort((a,b)=>fierce(b)-fierce(a));
+  for(const sp of cand){if(world.animals.filter(a=>a.guard).length>=n)break;
+    const before=world.animals.length;spawnAnimal(true,sp);let k=0;
+    for(const a of world.animals.slice(before)){if(world.animals.filter(q=>q.guard).length>=n||++k>2){removeAnimal(a);continue}
+      const an=Math.random()*6.283,d=5+Math.random()*7;a.x=x+Math.sin(an)*d;a.z=z+Math.cos(an)*d;a.guard=1}}
+  setPotionLabel();
+}
+function potionGuards(){return world.animals.filter(a=>a.guard&&a.state!=='caught')}
+function setPotionLabel(){const P=world.potion;if(!P)return;if(P.label)P.g.remove(P.label);const n=potionGuards().length;
+  P.label=labelSprite(P.open?'🧪 Healing potion: grab it!':'🧪 Healing potion: catch its '+n+' guard'+(n>1?'s':''),P.open?'#a01a6a':'#5a2a7a');P.label.position.y=4.2;P.label.scale.multiplyScalar(1.4);P.g.add(P.label);P.shown=n}
+function updatePotion(dt,time){
+  const P=world.potion;P.fl.rotation.y=time;P.fl.position.y=2.1+Math.sin(time*2)*.15;
+  const guards=potionGuards();
+  // guards stay close and keep watch around the potion
+  for(const a of guards)if(a.state==='wander'||a.state==='rest'){const dx=P.x-a.x,dz=P.z-a.z,d=Math.hypot(dx,dz);if(d>13){a.state='wander';a.vx=dx/d*a.sp.s*.9;a.vz=dz/d*a.sp.s*.9;a.graze=0;a.t=Math.max(a.t||0,.6)}}
+  if(!P.open){P.field.material.opacity=.22+Math.sin(time*3)*.08;P.field.rotation.y=time*.3;
+    if(!guards.length){P.open=true;P.g.remove(P.field);setPotionLabel();toast('🧪 You caught all the guards! The healing potion is free. Go and grab it!',6000)}
+    else if(P.shown!==guards.length)setPotionLabel()}
+  const p=mode==='plane'?V(plane.x,plane.y,plane.z):mode==='sub'?V(sub.x,sub.y,sub.z):mode==='car'?V(car.x,car.y+1,car.z):V(me.x,me.y+1,me.z),near=Math.hypot(p.x-P.x,p.z-P.z)<(mode==='foot'?4:8);
+  if(near&&!P.open){if((P.warnT-=dt)<=0){P.warnT=6;toast('🛡️ The potion is protected! Catch all '+guards.length+' of its guards first.',4000)}}
+  else if(near&&P.open){world.scene.remove(P.g);world.potion=null;S.potions=(S.potions||0)+1;S.potionsGot=S.potionsGot||{};S.potionsGot[world.c.id]=1;save();
+    const got=CONT.filter(c=>S.potionsGot[c.id]).length;
+    if(got>=CONT.length){S.coins+=50000;save();coins();bigAlert('🧪','Potion Master!','You found the healing potion in <b>every place in the world</b>! +50,000 coins',12000)}
+    else toast('🧪 You got the healing potion from '+world.c.name+'! You have '+S.potions+'. When an animal is hurt, press 🧪 to heal it. ('+got+' of '+CONT.length+' places)',8000)}
+}
+// heal every hurt animal at once
+function potionButton(el){let b=el.querySelector('.pot');
+  if(!b){b=document.createElement('button');b.className='pot';b.style.cssText='margin-left:8px;border:0;border-radius:10px;background:#ff3aa8;color:#fff;font-weight:800;font-size:15px;padding:4px 10px;cursor:pointer';
+    b.onclick=e=>{e.stopPropagation();useHealing()};el.appendChild(b)}
+  b.style.display=S.potions>0?'':'none';b.textContent='🧪 Heal ('+(S.potions||0)+')'}
+function useHealing(){const list=hurtAnimals();if(!list.length||!(S.potions>0))return;S.potions--;save();
+  for(const a of list){a.state='wander';a.dead=0;a.t=2;a.m.g.rotation.z=0;if(a.icon)a.icon.visible=true;if(a.blood){world.scene.remove(a.blood);a.blood=null}
+    for(const h of world.animals)if(h.prey===a){h.state='wander';h.prey=null;h.t=3}}
+  toast('🧪 The healing potion made the '+[...new Set(list.map(a=>a.sp.n))].join(' and ')+' all better!'+(S.potions?' '+S.potions+' potion'+(S.potions>1?'s':'')+' left.':''),6000)}
 
 /* ---------- worker trucks from the shop that follow you in a line ---------- */
 function helperTruck(col,riders=0){
@@ -1047,7 +1122,7 @@ function rescueHurt(){
   if(smallUsed()>=CAGES){toast('Your truck cages are full! Empty them at the zoo, then come back.');return true}
   S.cages.push({uid:S.uid++,k:a.sp.k,hurt:1,h:[[Date.now(),'was saved by you after being hurt in a hunt']]});S.coins+=100;save();coins();refreshCages();
   for(const h of world.animals)if(h.prey===a){h.state='wander';h.prey=null;h.t=3}
-  removeAnimal(a);toast('🚑 You saved the hurt '+a.sp.n+'! It is in your truck. Take it to the 🩺 Animal Doctor at the zoo to make it better. +100 coins',7000);return true}
+  removeAnimal(a);caughtNow([a.sp.k]);toast('🚑 You saved the hurt '+a.sp.n+'! It is in your truck. Take it to the 🩺 Animal Doctor at the zoo to make it better. +100 coins',7000);return true}
 // the red arrow at the top of the screen pointing to the nearest hurt animal
 function hurtIndicator(){
   let el=document.getElementById('hurtInd');
@@ -1055,6 +1130,7 @@ function hurtIndicator(){
     el.innerHTML='<span class="ar" style="display:inline-block;font-size:22px">⬆</span><span class="tx"></span>';document.body.appendChild(el)}
   const list=curView==='drive'&&safari.running&&world&&!world.zoo?hurtAnimals():[];
   if(!list.length){el.style.display='none';return}
+  potionButton(el);
   const px=mode==='car'?car.x:me.x,pz=mode==='car'?car.z:me.z,a=list.sort((p,q)=>Math.hypot(p.x-px,p.z-pz)-Math.hypot(q.x-px,q.z-pz))[0];
   const f=V(0,0,-1).applyQuaternion(cam.quaternion),rel=Math.atan2(a.x-px,a.z-pz)-Math.atan2(f.x,f.z),d=Math.round(Math.hypot(a.x-px,a.z-pz));
   el.style.display='flex';el.querySelector('.ar').style.transform='rotate('+(-rel)+'rad)';
