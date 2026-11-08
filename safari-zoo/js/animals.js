@@ -108,7 +108,7 @@ function quad(p){
     if(p.ears==='fluffy')k.ell(ad(base,[s*er*.9,0,0]),[er*1.45,er*1.45,er*.65],'head',{k:er*.3,col:'#d4d6d8',rough:.02,rf:25,detail:1});
     if(p.ears==='big')k.extra('head','ear',at(-hl*.08,-hh*.05,s*hw*.55),{s,size:[.06,hh*.85,hl*.62],col:p.col});
     // eyes
-    k.extra('head','eye',p.topEyes?at(hl*.24,hh*.5,s*hw*.33):at(hl*.32,hh*.16,s*hw*.4),{r:Math.max(.018,hw*.075)*(p.eyeS||1),s});
+    k.extra('head','eye',p.topEyes?at(hl*.24,hh*.5,s*hw*.33):at(hl*.32,hh*.16,s*hw*.4),{r:Math.max(.018,hw*.075)*(p.eyeS||1),s,col:p.eyeCol});
   }
   if(p.panda)for(const s of[-1,1])k.ell(at(hl*.3,hh*.12,s*hw*.27),[hw*.15,hh*.17,hl*.1],'head',{k:.02,col:'#161616',detail:1});
   if(p.mask)k.ell(at(hl*.27,hh*.12),[hw*.53,hh*.14,hl*.18],'head',{k:.02,col:'#1d1d1d',detail:1});
@@ -147,7 +147,7 @@ function quad(p){
   else if(p.tail==='flat')k.ell(ad(tb,[0,-by+.12,-.32]),[W*.32,.05,.3],'tail',{k:.04,col:'#3a2a1e',detail:1});
   else k.extra('tail','tail',tb,{len:tl,r:p.tail==='long'?.045:.025,tuft:p.tail==='tuft'?(p.tuftCol||p.mane||'#2a1d14'):null,col:p.tail==='long'?p.col:shade(p.col,-.1),ang:p.tail==='long'?2.1:2.75,tip:p.tail==='long'?(p.col2||p.col):null});
   k.anim={kind:'quad',stride:Math.max(.5,leg*1.5),graze:p.graze,fly:p.fly,jiggle:p.jiggle};
-  if(p.glam)glam(k,p,{by,at,nb,nd,na,hl,hw,hh});else if(p.fairy)fairyWings(k,[0,by+Hb*.45,L*.1],L*.8);
+  if(p.glam)glam(k,p,{by,at,nb,nd,na,hl,hw,hh});else if(p.fairy)fairyWings(k,[0,by+Hb*.45,L*.1],L*.8*(p.wingS||1),p.wingCol,p.wingCol2);
   if(p.eagle)for(const sx of[-1,1]){const wn='wing'+(sx>0?'R':'L'),q=[sx*W*.3,by+Hb*.42,L*.12];k.bone(wn,'root',q);k.extra(wn,'ewing',q,{s:sx,size:L*1.25})}
   return k;
 }
@@ -472,7 +472,7 @@ function person(p){
   return k;
 }
 // sparkly fairy wings on any animal's back
-function fairyWings(k,at,size){for(const sx of[-1,1]){const wn='wing'+(sx>0?'R':'L'),p=[at[0]+sx*size*.12,at[1],at[2]];k.bone(wn,'root',p);k.extra(wn,'fwing',p,{s:sx,size})}}
+function fairyWings(k,at,size,col,col2){for(const sx of[-1,1]){const wn='wing'+(sx>0?'R':'L'),p=[at[0]+sx*size*.12,at[1],at[2]];k.bone(wn,'root',p);k.extra(wn,'fwing',p,{s:sx,size,col,col2})}}
 /* ---------- fish, dolphins, sharks and rays ---------- */
 function fish(p){
   const k=kit(),s=p.s,th=s*(p.tall||.34),w=s*(p.wide||.16),y=th*.55;
@@ -661,7 +661,7 @@ function extraMesh(e,p){
   const m=mats(),g=new T.Group();
   const add=(geo,mat,pos,rot,scl)=>{const o=new T.Mesh(geo,mat);if(pos)o.position.set(...pos);if(rot)o.rotation.set(...rot);if(scl)o.scale.set(...scl);o.castShadow=true;g.add(o);return o};
   switch(e.kind){
-    case'eye':add(new T.SphereGeometry(e.r,14,10),e.owl?m.owlEye:m.eye);if(e.owl)add(new T.SphereGeometry(e.r*.5,10,8),m.eye,[0,0,e.r*.6]);break;
+    case'eye':add(new T.SphereGeometry(e.r,14,10),e.col?new T.MeshPhysicalMaterial({color:e.col,emissive:e.col,emissiveIntensity:.25,roughness:.08,clearcoat:1}):e.owl?m.owlEye:m.eye);if(e.owl)add(new T.SphereGeometry(e.r*.5,10,8),m.eye,[0,0,e.r*.6]);break;
     case'tusk':{const geo=new T.ConeGeometry(e.r,e.len,10);geo.translate(0,e.len/2,0);add(geo,m.ivory,null,e.down?[Math.PI*.95,0,0]:[1.25,e.s*.12,0]);break}
     case'horn':{const geo=new T.ConeGeometry(e.r,e.len,12);geo.translate(0,e.len/2,0);add(geo,smat(e.col||'#9b948a',{roughness:.6}),null,[e.tilt,0,0]);break}
     case'horns':{const hc={gnu:[[.25,-.05,0],[.38,.12,-.02],[.28,.3,-.08],.04],impala:[[.06,.25,-.12],[.14,.45,-.05],[.08,.6,.02],.022]}[e.kind2];
@@ -762,8 +762,12 @@ function extraMesh(e,p){
       const tips=new T.ShapeGeometry(sh,12);if(e.s<0)tips.scale(-1,1,1);tips.rotateX(Math.PI/2);tips.scale(.55,1,.55);const t2=add(tips,smat('#c8a070',{side:T.DoubleSide,roughness:.85}),[0,.02,0],[.3,0,e.s*.2]);break}
     case'fwing':{const z=e.size,sh=new T.Shape();sh.moveTo(0,0);sh.bezierCurveTo(z*.5,-z*.25,z*1.05,-z*.05,z*.9,z*.35);sh.bezierCurveTo(z*.75,z*.6,z*.3,z*.35,z*.15,z*.3);sh.bezierCurveTo(z*.5,z*.6,z*.55,z*1,z*.25,z*.95);sh.bezierCurveTo(z*.05,z*.85,0,z*.4,0,0);
       const geo=new T.ShapeGeometry(sh,16);if(e.s<0)geo.scale(-1,1,1);geo.rotateX(Math.PI/2);
-      const wm=new T.MeshPhysicalMaterial({color:'#ffb8e8',emissive:'#ff7ad8',emissiveIntensity:.25,roughness:.15,iridescence:1,iridescenceIOR:1.6,transparent:true,opacity:.6,side:T.DoubleSide,depthWrite:false});
-      const o=add(geo,addSparkle(wm,30,3),null,[.35,0,e.s*.25]);o.castShadow=false;break}
+      // feathered wings in their own colour (like the Coldness's purple eagle wings), or see-through fairy wings
+      // two-colour wings fade from one colour near the body to the other at the tips
+      if(e.col&&e.col2){const P=geo.attributes.position,C=new Float32Array(P.count*3),c1=new T.Color(e.col),c2=new T.Color(e.col2),c=new T.Color();
+        for(let i=0;i<P.count;i++){c.copy(c1).lerp(c2,Math.min(1,Math.hypot(P.getX(i),P.getZ(i))/z));C.set([c.r,c.g,c.b],i*3)}geo.setAttribute('color',new T.BufferAttribute(C,3))}
+      const wm=e.col?new T.MeshStandardMaterial({vertexColors:!!e.col2,color:e.col2?'#ffffff':e.col,emissive:e.col2?'#000000':e.col,emissiveIntensity:.12,roughness:.75,side:T.DoubleSide}):new T.MeshPhysicalMaterial({color:'#ffb8e8',emissive:'#ff7ad8',emissiveIntensity:.25,roughness:.15,iridescence:1,iridescenceIOR:1.6,transparent:true,opacity:.6,side:T.DoubleSide,depthWrite:false});
+      const o=add(geo,e.col?wm:addSparkle(wm,30,3),null,[.35,0,e.s*.25]);o.castShadow=false;break}
     case'sparkles':{const n=90,pos=new Float32Array(n*3),[sx,sy,sz]=e.size;for(let i=0;i<n;i++){const u=Math.random()*6.28,v=Math.acos(2*Math.random()-1),r=.6+Math.random()*.5;pos.set([Math.sin(v)*Math.cos(u)*sx*r,Math.cos(v)*sy*r*.5,Math.sin(v)*Math.sin(u)*sz*r],i*3)}
       const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3));
       const pm=new T.PointsMaterial({size:.12,map:starTex(),color:'#fff2ff',transparent:true,depthWrite:false,blending:T.AdditiveBlending});const pts=new T.Points(geo,pm);pts.userData.spark=1;g.add(pts);break}
@@ -811,7 +815,7 @@ function make(sp){
   for(const e of k.extras){const b=B[e.bone],bp=k.bones.find(x=>x.name===e.bone).pos;const m=extraMesh(e,p);
     // bone world position at rest = sum of chain; extras are placed relative to their bone
     m.position.set(e.pos[0]-bp[0],e.pos[1]-bp[1],e.pos[2]-bp[2]);b.add(m);if(e.kind==='sparkles')spark=m}
-  return{g,inner,mesh,low,B,A:k.anim,h:S.h,rad:S.rad,len:S.len,ph:Math.random()*6,seed:Math.random()*10,rest:B.root.position.y,spark};
+  return{g,inner,mesh,low,B,A:k.anim,h:S.h,rad:S.rad,len:S.len,ph:Math.random()*6,seed:Math.random()*10,rest:B.root.position.y,spark,invis:p.invis};
 }
 function setLOD(a,far){a.mesh.visible=!far;a.low.visible=far;a.B.root.traverse(o=>{if(o.isMesh)o.visible=!far})}
 function animate(a,dt,spd,time,o={}){
@@ -819,6 +823,8 @@ function animate(a,dt,spd,time,o={}){
   const ph=a.ph,amp=Math.min(.6,spd*.28),sd=a.seed;
   const breath=1+Math.sin(time*2.2+sd)*.01;B.root.scale.set(breath,breath,1);
   a.hop=0;GLT.value=time;
+  // the Coldness can turn invisible: it flickers, vanishes for a few seconds, then flickers back
+  if(a.invis){const t=(time+a.seed*7)%16,fl=Math.sin(time*40)>0;a.inner.visible=t<10||(t<10.6&&fl)||(t>15.4&&fl)}
   if(a.spark){a.spark.rotation.y=time*.35;a.spark.children[0].material.opacity=.65+.35*Math.sin(time*4+sd)}
   if(B.wingR){const f=o.alt>.4?Math.sin(time*12)*.75:.3+Math.sin(time*1.6+sd)*.08;B.wingR.rotation.z=f;B.wingL.rotation.z=-f}
   if(B.arm0){B.arm0.rotation.x=Math.sin(time*1.2+sd)*.15-Math.sin(ph)*amp*.3;B.fore0.rotation.x=-.2+Math.sin(time*1.7+sd)*.15;B.arm1.rotation.x=-.25;B.fore1.rotation.x=.25}

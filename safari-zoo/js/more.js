@@ -1039,6 +1039,14 @@ Megalodon Pup,,shark,3,1.4,#6a6e76
 `};
 for(const[id,txt]of Object.entries(DATA)){const c=CONT.find(c=>c.id===id);if(!c)continue;const have=new Set(c.animals.map(a=>a[0]));
   for(const line of txt.trim().split('\n')){const a=make(line);if(have.has(a[0]))continue;have.add(a[0]);c.animals.push(a)}}
+// Seb's own made-up animals (always added after everything else so saved games keep working)
+{const af=CONT.find(c=>c.id==='africa'),po=CONT.find(c=>c.id==='poles');
+ // the Sarah: part lion, tiger, panther and cheetah, very fit, kind, fluffy and fast; eats plants; fawn with blue eyes
+ if(af&&!af.animals.some(a=>a[0]==='Sarah'))af.animals.push(['Sarah','🦁',3,3.4,Object.assign(MK.cat(1.1,'#b8864e','#6a4422'),{
+   tex:'stripes',freq:9,thin:.6,dim:.9,mane:'#c8955a',shag:'#c08a50',eyeCol:'#2a8cff',eyeS:1.35,graze:1,herd:[1,2],belly:'#efe0c4'})]);
+ // the Coldness: an orange horse with purple eagle wings that lives at the North Pole, very fluffy, and can turn invisible
+ if(po&&!po.animals.some(a=>a[0]==='The Coldness'))po.animals.push(['The Coldness','🐎',3,2.4,Object.assign(MK.horse(1.25,'#e8842a','#f4a85a'),{
+   shag:'#f09a48',fairy:1,fly:1,soar:1,wingCol:'#2a6ae8',wingCol2:'#9a3ae0',wingS:1.5,invis:1,herd:[1,1],belly:'#f6c08a'})]);}
 // hunters hunt the smaller animals that live in the same place
 for(const c of CONT){const prey=c.animals.filter(a=>PREY.includes(a[4].tpl)).map(a=>a[0]);
   for(const a of c.animals){const d=a[4];if(d.x&&PRED.includes(d.tpl)&&!d.hunts&&prey.length)d.hunts=prey.filter(n=>n!==a[0]).sort(()=>Math.random()-.5).slice(0,8)}}
