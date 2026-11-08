@@ -244,7 +244,7 @@ function treeTypes(hab){
   if(hab==='woodland'){T2(5,pine(),{s:[.8,1.5],col:.5});T2(3,broad(9,6.5),{s:[.8,1.3],col:.6});T2(1,broad(8,4,'broad',pale),{s:[.8,1.2],col:.35});T2(3,bush('bush',1.1),{s:[.8,1.4]});T2(2,rock(E.rock),{s:[.6,1.8],col:1});T2(2,fern(),{s:[.6,1]})}
   if(hab==='outback'){T2(2.5,broad(7,4,'euca',pale),{s:[.8,1.3],col:.4});T2(5,bush('dry',.8),{s:[.6,1.3]});T2(3,rock(E.rock,0,.6),{s:[.6,2.5],col:1.2});T2(.5,rock(E.rock,0,.5),{s:[5,9],col:5});T2(1,dead(),{s:[.8,1.2],col:.3})}
   if(hab==='dream'){T2(5,broad(7,5,'blossom'),{s:[.8,1.3],col:.4});T2(3,palm(),{s:[.8,1.3],col:.4});T2(3,bush('broad',1.2),{s:[.8,1.4]});T2(1,rock(E.rock),{s:[.6,1.6],col:1})}
-  if(hab==='ocean'){T2(7,palm(),{s:[.8,1.4],col:.4});T2(1.5,broad(7,5,'blossom'),{s:[.7,1.1],col:.4});T2(3,bush('broad',1.1),{s:[.7,1.3]});T2(2,rock(E.rock),{s:[.6,2],col:1});T2(.4,rock(E.rock,0,.6),{s:[3,6],col:4})}
+  if(hab==='ocean'){T2(7,palm(),{s:[.8,1.4],col:.4,berry:1});T2(1.5,broad(7,5,'blossom'),{s:[.7,1.1],col:.4,berry:1});T2(3,bush('broad',1.1),{s:[.7,1.3]});T2(2,rock(E.rock),{s:[.6,2],col:1});T2(.4,rock(E.rock,0,.6),{s:[3,6],col:4})}
   if(hab==='dino'){T2(4,giant(),{s:[.9,1.3],col:1.1});T2(5,palm(),{s:[.6,1.3],col:.4});T2(8,fern(),{s:[1,2.2]});T2(3,bush('broad',1.5),{s:[.8,1.6]});T2(2,rock('#4a4440'),{s:[.8,2.5],col:1.2});T2(.4,rock('#3a3430',0,.6),{s:[4,8],col:5})}
   if(hab==='polar'){const ice=new T.MeshPhysicalMaterial({color:'#cfe9f7',roughness:.08,clearcoat:1,transparent:true,opacity:.92});
     const block=()=>{const g=rockGeo(r()*10,.9);return[[g,ice]]};
@@ -259,7 +259,8 @@ function scatter(scene,types,count,place,r){
   for(let i=0;i<count;i++){let k=r()*tot,ti=0;while((k-=types[ti].w)>0&&ti<types.length-1)ti++;const t=types[ti];
     const p=place(r);if(!p)continue;const s=t.s[0]+r()*(t.s[1]-t.s[0]);
     mats[ti].push(new T.Matrix4().compose(V(p.x,p.y-.15,p.z),new T.Quaternion().setFromAxisAngle(V(0,1,0),r()*6.28),V(s,s*(.9+r()*.2),s)));
-    if(t.col)cols.push({x:p.x,z:p.z,r:t.col*s})}
+    if(t.col){if(t.berry&&t.top==null)t.top=Math.max(...t.parts.map(([g])=>(g.computeBoundingBox(),g.boundingBox.max.y)));
+      cols.push(t.berry?{x:p.x,z:p.z,r:t.col*s,berry:1,top:p.y-.15+t.top*s}:{x:p.x,z:p.z,r:t.col*s})}}
   types.forEach((t,ti)=>{if(!mats[ti].length)return;
     for(const[geo,mat]of t.parts){const im=new T.InstancedMesh(geo,mat,mats[ti].length);mats[ti].forEach((m,j)=>im.setMatrixAt(j,m));
       im.castShadow=true;im.receiveShadow=true;if(mat.userData.depth)im.customDepthMaterial=mat.userData.depth;scene.add(im)}});

@@ -62,13 +62,13 @@ async function buildSafari(c,progress){
     if(c.sea)return H(x,z)>1.3?V(x,H(x,z),z):null;
     if(Math.max(Math.abs(x),Math.abs(z))>HALF+40&&rr()<.55)return null;return V(x,H(x,z),z)};
   const count={rainforest:2600,jungle:2000,woodland:2000,savanna:1500,outback:1300,polar:800,ocean:3000}[c.hab];
-  NATURE.scatter(scene,types,Math.round(count*QUALITY.trees),place,r).forEach(addCol);
+  {const tc=NATURE.scatter(scene,types,Math.round(count*QUALITY.trees),place,r);tc.forEach(addCol);world.berryTrees=tc.filter(t=>t.berry);if(world.berryTrees.length)addBerries(scene)}
   world.grass=NATURE.makeGrass(E,world.ponds,{half:HALF});if(world.grass)scene.add(world.grass);
   buildCar(scene);buildFootRig();scene.add(cam);buildHelpers(scene);
   sub.on=false;sub.g=null;plane.on=false;plane.g=null;plane.star=0;
   // build each animal shape once, showing progress
   // every curated animal comes each visit, plus a random mix of the extra ones (animals you haven't found yet come first)
-  {const got=new Set(caughtList(c)),all=c.animals.map((a,i)=>c.id+':'+i).filter(k=>!got.has(k)),ex=all.filter(k=>SP[k].def.x).sort(()=>Math.random()-.5).sort((a,b)=>(S.dex[a]?1:0)-(S.dex[b]?1:0));
+  {const got=new Set(caughtList(c)),all=c.animals.map((a,i)=>c.id+':'+i).filter(k=>!got.has(k)||SP[k].def.always),ex=all.filter(k=>SP[k].def.x).sort(()=>Math.random()-.5).sort((a,b)=>(S.dex[a]?1:0)-(S.dex[b]?1:0));
    world.pool=all.filter(k=>!SP[k].def.x).concat(ex.slice(0,c.sea?16:22).sort(()=>Math.random()-.5))}
   const list=world.pool.map(k=>SP[k]).concat(S.cages.map(x=>SP[x.k]),PET_KEYS.map(k=>SP[k]),c.kingdom?[...new Set((S.park||[]).map(an=>an.k))].map(k=>SP[k]):[]);
   for(let i=0;i<list.length;i++){if(!ANIMALS.isBuilt(list[i])){progress('Waking up the animals… '+(i+1)+'/'+list.length);await nextFrame();ANIMALS.species(list[i])}}
@@ -269,9 +269,9 @@ function makeIcon(){if(!ICON.run){ICON.run=iconTex('!','#d4602f');ICON.tired=ico
 let grpId=1;
 function spawnAnimal(initial,force){
   const c=world.c,list=(world.pool||c.animals.map((a,i)=>c.id+':'+i)).map(k=>SP[k]);
-  const got=new Set(caughtList(c)),w=list.map(s=>s.def.mate||s.def.bornOnly||s.def.lagoon||got.has(s.k)?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
+  const got=new Set(caughtList(c)),w=list.map(s=>s.def.mate||s.def.bornOnly||s.def.lagoon||got.has(s.k)&&!s.def.always?0:[0,7,3,1.2][s.r]*(s.def.unique?.3:1)),tot=w.reduce((a,b)=>a+b);
   if(force&&force.def.bornOnly)return;
-  if(force&&caughtList(world.c).includes(force.k))return;
+  if(force&&!force.def.always&&caughtList(world.c).includes(force.k))return;
   if(force&&force.def.lagoon)return;
   if(sp0Unique(force))return;
   let k=Math.random()*tot,sp=force||list[0];if(!force)for(let i=0;i<list.length;i++){k-=w[i];if(k<0){sp=list[i];break}}
@@ -418,7 +418,7 @@ function updateAnimals(dt,time){
         // dolphins leap out of the water
         if(d.jump&&a.state!=='netted'){a.jt=(a.jt||0)-dt;if(a.jt<-8&&spd>.4&&Math.random()<dt*.15)a.jt=1.3;if(a.jt>0){const q=(1.3-a.jt)/1.3;y+=Math.sin(q*Math.PI)*3.4;pitch=-Math.cos(q*Math.PI)*.7}}
         a.alt=Math.max(h,y)-h}
-      else if(h<-a.m.h*.45&&a.alt<1)a.alt=Math.max(a.alt,-a.m.h*.45-h)}
+      else if(h<-a.m.h*.45&&a.alt<1&&!(d.dive&&(time+a.m.seed*5)%22<13))a.alt=Math.max(a.alt,-a.m.h*.45-h)}
     else if(a.sp.def.swim&&a.state!=='netted'){const p=world.ponds.find(p=>Math.hypot(a.x-p.x,a.z-p.z)<p.r*1.3);
       if(p&&p.lagoon){const D=world.lagoonDome,W=world.walk,dd=Math.hypot(a.x-D.x,a.z-D.z),top=Math.sqrt(Math.max(0,D.R*D.R-dd*dd))*.85-a.m.h,low=p.lvl-14;
         if(a.swimY==null||Math.random()<dt*.08)a.swimY=low+Math.random()*Math.max(1,top-low);
@@ -641,7 +641,7 @@ const safari={running:false,
     else if(mode==='plane'){for(let i=0;i<n&&mode==='plane';i++)updatePlane(h)}
     else if(mode==='car'){for(let i=0;i<n;i++)updateCar(h);if(!look.drag){look.idle+=dt;if(look.idle>2.5&&Math.abs(car.v)>2){look.yaw*=Math.pow(.2,dt);look.pitch=lerp(look.pitch,-.12,dt*2)}}}
     else{car.g.updateMatrixWorld(true);for(let i=0;i<n;i++)updateFoot(h)}
-    updateHelpers();updateAmbulance(dt,time);updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);if(world.potion)updatePotion(dt,time);
+    updateHelpers();updateAmbulance(dt,time);updateAnimals(dt,time);updatePets(dt,time);placeCamera();updateNet(dt);if(world.treasure)updateTreasure(dt,time);if(world.dnaVials)updateDNA(time);if(world.potion)updatePotion(dt,time);updateSpecial(dt,time);
     for(const a of car.caged||[])ANIMALS.animate(a,dt,0,time,{});
     if(world.tick)world.tick(dt,time);
     if(world.grass)world.grass.userData.update(cam.position,time,world.scene.fog,world.sky.sunDir);
@@ -866,11 +866,11 @@ function updateDNA(time){
 
 /* ---------- ✅ catch them all: once you catch a kind of animal, it is gone from that place until you have caught every kind there ---------- */
 function caughtList(c){return c&&S.caught&&S.caught[c.id]||[]}
-function countable(c){return c.animals.map((a,i)=>c.id+':'+i).filter(k=>{const d=SP[k].def;return!d.bornOnly&&!d.mate&&!d.lagoon})}
+function countable(c){return c.animals.map((a,i)=>c.id+':'+i).filter(k=>{const d=SP[k].def;return!d.bornOnly&&!d.mate&&!d.lagoon&&!d.always})}
 function caughtNow(ks){
   const c=world&&world.c;if(!c||c.kingdom||world.zoo||!CONT.includes(c))return;
   S.caught=S.caught||{};const got=S.caught[c.id]=S.caught[c.id]||[];
-  const fresh=[...new Set(ks)].filter(k=>SP[k]&&SP[k].cont===c.id&&!got.includes(k));if(!fresh.length)return;got.push(...fresh);
+  const fresh=[...new Set(ks)].filter(k=>SP[k]&&SP[k].cont===c.id&&!got.includes(k)&&!SP[k].def.always);if(!fresh.length)return;got.push(...fresh);
   // the rest of that kind run away: you can't catch it here again until you've caught everything
   const held=new Set([...me.pack,...(world.asst?world.asst.pack:[])]);
   for(const a of world.animals.slice())if(fresh.includes(a.sp.k)&&a.state!=='caught'&&a.state!=='netted'&&!held.has(a)&&!a.lagoon){
@@ -879,6 +879,27 @@ function caughtNow(ks){
   if(!left){S.caught[c.id]=[];S.wins=S.wins||{};S.wins[c.id]=(S.wins[c.id]||0)+1;S.coins+=20000;save();coins();
     setTimeout(()=>bigAlert('🏆','You caught them all!','Every kind of animal in <b>'+c.name+'</b> is caught! +20,000 coins. All the animals will come back next time you visit.',12000),800);return}
   setTimeout(()=>toast('✅ '+fresh.map(k=>SP[k].n).join(', ')+(fresh.length>1?' are':' is')+' caught! Gone from '+c.name+' until you catch every animal here. '+left+' kinds left to catch.',6500),3000)}
+
+/* ---------- 🫐 juicy berries on the island trees, and Seb's made-up animals who are always there ---------- */
+function addBerries(scene){
+  const trees=world.berryTrees.slice().sort((p,q)=>Math.hypot(p.x,p.z)-Math.hypot(q.x,q.z)).slice(0,160);world.berryTrees=trees;
+  const geo=new T.SphereGeometry(.24,10,8),cols=['#c8102e','#6a1b9a','#e8452a'];
+  for(let ci=0;ci<3;ci++){const mat=new T.MeshStandardMaterial({color:cols[ci],emissive:cols[ci],emissiveIntensity:.25,roughness:.25}),list=[];
+    for(const t of trees)for(let i=0;i<5;i++){const a=Math.random()*6.283,d=t.r*(.4+Math.random()*1.4);list.push(new T.Matrix4().makeTranslation(t.x+Math.sin(a)*d,t.top-.9-Math.random()*1.4,t.z+Math.cos(a)*d))}
+    const im=new T.InstancedMesh(geo,mat,list.length);list.forEach((m,j)=>im.setMatrixAt(j,m));scene.add(im)}}
+function updateSpecial(dt,time){
+  // made-up animals live in their place at all times: if one is gone, another comes back
+  world.alwaysT=(world.alwaysT||0)-dt;
+  if(world.alwaysT<=0&&world.pool&&!world.c.kingdom){world.alwaysT=6;for(const k of world.pool)if(SP[k].def.always&&!world.animals.some(a=>a.sp.k===k&&a.state!=='caught'))spawnAnimal(false,SP[k])}
+  // berry eaters walk to the trees and stretch up to eat the best berries at the top
+  if(!world.berryTrees||!world.berryTrees.length)return;
+  for(const a of world.animals){if(!a.sp.def.browse||a.state!=='wander')continue;
+    if(a.berryT>0){a.berryT-=dt;a.vx=a.vz=0;a.graze=1;a.t=1;if(a.berryT<=0){a.graze=0;a.tree=null;a.berryWait=10+Math.random()*15}continue}
+    if((a.berryWait=(a.berryWait||0)-dt)>0)continue;
+    if(!a.tree){let best=null,bd=80;for(const t of world.berryTrees){const d=Math.hypot(t.x-a.x,t.z-a.z);if(d<bd){bd=d;best=t}}if(!best){a.berryWait=20;continue}a.tree=best}
+    const t=a.tree,dx=t.x-a.x,dz=t.z-a.z,d=Math.hypot(dx,dz);
+    if(d<t.r+a.m.rad+1.5){a.berryT=6+Math.random()*5;a.vx=a.vz=0}else{a.vx=dx/d*a.sp.s*.7;a.vz=dz/d*a.sp.s*.7;a.graze=0;a.t=1}}
+}
 
 /* ---------- 🧪 a healing potion in every place, guarded by animals: catch every guard to get it ---------- */
 function buildPotion(scene,c){

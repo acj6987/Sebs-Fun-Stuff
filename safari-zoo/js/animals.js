@@ -209,6 +209,7 @@ function glam(k,p,{by,at,nb,nd,na,hl,hw,hh}){
 
 /* ---------- birds ---------- */
 function bird(p){
+  if(p.dolphinTop)return dolphinBird(p);
   const k=kit(),s=p.s,by=p.leg+s*.3,tilt=p.upright?-1.25:-.15;
   k.bone('root',null,[0,by,0]);
   const front=p.penguin?'#f4f3ee':p.owl?shade(p.body,.15):null;
@@ -236,6 +237,28 @@ function bird(p){
   k.anim={kind:'bird',stride:.35,fly:p.fly,penguin:p.penguin};
   return k;
 }
+
+// the Acrystasaurus: long ostrich legs underneath, a whole dolphin on top, with two blowholes
+function dolphinBird(p){
+  const k=kit(),s=p.s,by=p.leg+s*.3,th=s*.44,w=s*.27,col=p.body,belly=p.belly||'#eef2f4';
+  k.bone('root',null,[0,by,0]);
+  k.ell([0,by,0],[w,th*.5,s*.55],'root',{k:th*.3,col});
+  k.ell([0,by-th*.2,s*.04],[w*.85,th*.3,s*.42],'root',{k:th*.2,col:belly});
+  k.bone('neck','root',[0,by+th*.05,s*.42]);k.bone('head','neck',[0,by+th*.05,s*.5]);
+  k.ell([0,by+th*.06,s*.56],[w*.82,th*.42,s*.24],'head',{k:th*.25,col});
+  k.cap([0,by-th*.06,s*.72],[0,by-th*.12,s*.98],th*.15,th*.08,'head',{k:th*.08,col});
+  for(const sx of[-1,1]){const side=sx>0?'R':'L';
+    k.extra('head','eye',[sx*w*.72,by+th*.1,s*.68],{r:Math.max(.02,th*.09)});
+    k.ell([sx*w*.22,by+th*.45,s*.5],[th*.08,th*.035,th*.08],'head',{k:th*.03,col:'#16181c',detail:1}); // blowholes
+    k.bone('wing'+side,'root',[sx*w*.8,by-th*.15,s*.22]);k.extra('wing'+side,'pfin',[sx*w*.85,by-th*.18,s*.22],{s:sx,size:th*.85,col});
+    k.bone('leg'+(sx>0?0:1),'root',[sx*s*.13,p.leg+s*.05,0]);
+    k.cap([sx*s*.14,by-th*.25,s*.02],[sx*s*.13,p.leg+s*.02,0],s*.09,s*.045,'leg'+(sx>0?0:1),{k:s*.05,col:p.legCol||'#d8a596'}); // strong ostrich thighs
+    k.extra('leg'+(sx>0?0:1),'birdleg',[sx*s*.13,p.leg+s*.05,0],{len:p.leg+s*.05,r:s*.03+.01,col:p.legCol||'#d8a596',s:sx})}
+  k.bone('tail','root',[0,by,-s*.4]);
+  k.cap([0,by,-s*.3],[0,by+th*.12,-s*.78],th*.32,th*.08,'tail',{k:th*.15,col});
+  k.extra('tail','flukes',[0,by+th*.12,-s*.78],{size:th*1.1,col});
+  k.extra('root','dfin',[0,by+th*.45,-s*.05],{size:s*.32,tall:.9,col});
+  k.anim={kind:'bird',stride:.45};return k}
 
 /* ---------- apes and monkeys ---------- */
 function ape(p){
@@ -815,7 +838,7 @@ function make(sp){
   for(const e of k.extras){const b=B[e.bone],bp=k.bones.find(x=>x.name===e.bone).pos;const m=extraMesh(e,p);
     // bone world position at rest = sum of chain; extras are placed relative to their bone
     m.position.set(e.pos[0]-bp[0],e.pos[1]-bp[1],e.pos[2]-bp[2]);b.add(m);if(e.kind==='sparkles')spark=m}
-  return{g,inner,mesh,low,B,A:k.anim,h:S.h,rad:S.rad,len:S.len,ph:Math.random()*6,seed:Math.random()*10,rest:B.root.position.y,spark,invis:p.invis};
+  return{g,inner,mesh,low,B,A:k.anim,h:S.h,rad:S.rad,len:S.len,ph:Math.random()*6,seed:Math.random()*10,rest:B.root.position.y,spark,invis:p.invis,browse:p.browse};
 }
 function setLOD(a,far){a.mesh.visible=!far;a.low.visible=far;a.B.root.traverse(o=>{if(o.isMesh)o.visible=!far})}
 function animate(a,dt,spd,time,o={}){
@@ -833,7 +856,7 @@ function animate(a,dt,spd,time,o={}){
     for(let i=0;i<4;i++){const u=B['leg'+i],l=B['low'+i],q=ph+off[i],front=i<2;
       u.rotation.x=Math.sin(q)*amp;l.rotation.x=Math.max(0,-Math.cos(q))*amp*(front?1.3:-.9)}
     B.root.position.y=a.rest+Math.abs(Math.sin(ph))*amp*.03;
-    if(B.neck)B.neck.rotation.x+=((o.graze?.95:Math.sin(ph*2)*amp*.05)-B.neck.rotation.x)*Math.min(1,dt*2.5);
+    if(B.neck)B.neck.rotation.x+=((o.graze?(a.browse?-.45:.95):Math.sin(ph*2)*amp*.05)-B.neck.rotation.x)*Math.min(1,dt*2.5);
     if(B.head)B.head.rotation.y=Math.sin(time*.4+sd)*.25*(spd<.2?1:.2);
     if(B.tail)B.tail.rotation.z=Math.sin(time*2.4+sd)*.3;
     if(B.tail2)B.tail2.rotation.y=Math.sin(time*1.5+sd-.6)*.2+Math.sin(ph)*amp*.15;
