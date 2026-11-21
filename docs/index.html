@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Code Code</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a field-dossier board. Header strip, team cards, calls, chats, boss tools. */
+:root {
+  --bg: #e9e4d4; --panel: #f6f2e6; --ink: #23271c; --muted: #646b55; --line: #c9c2a8;
+  --olive: #4b5a2a; --olive-ink: #f3f0e2; --stamp: #b8321f; --me: #dfe6c8;
+  --display: "Saira Stencil One", "Impact", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #1b1e16; --panel: #252a1e; --ink: #e8e5d6; --muted: #a3a98f; --line: #3b4230;
+  --olive: #7d9446; --olive-ink: #14170f; --stamp: #e0614b; --me: #34402a; color-scheme: dark } }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-block: 24px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 32px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; border-bottom: 3px solid var(--ink); padding-bottom: 14px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2.4rem, 7vw, 4rem); line-height: .95; margin: 0; letter-spacing: .02em; }
+.sub { font-family: var(--mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-top: 6px; }
+.stamp { font-family: var(--display); color: var(--stamp); border: 3px solid var(--stamp); padding: 4px 12px; transform: rotate(-4deg); font-size: 1.2rem; letter-spacing: .08em; border-radius: 4px; }
+.head-right { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+h2 { font-family: var(--display); font-weight: 400; font-size: 1.7rem; margin: 0; letter-spacing: .03em; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
+.hint { color: var(--muted); font-size: .9rem; }
+.status { font-family: var(--mono); font-size: .8rem; color: var(--stamp); }
+
+.btn { font: 600 .85rem var(--body); border: 1px solid var(--ink); background: transparent; color: var(--ink); border-radius: 4px; padding: 6px 12px; cursor: pointer; text-decoration: none; display: inline-block; }
+.btn:hover { background: var(--ink); color: var(--bg); }
+.btn.solid { background: var(--olive); color: var(--olive-ink); border-color: var(--olive); }
+.btn.solid:hover { filter: brightness(1.1); }
+.btn.small { padding: 3px 8px; font-size: .75rem; }
+.btn.danger { color: var(--stamp); border-color: var(--stamp); }
+.btn.danger:hover { background: var(--stamp); color: var(--panel); }
+.btn:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+input, select { font: 1rem var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; min-width: 0; }
+
+/* Login screen */
+.gate { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-items: center; overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.gate-box { width: min(380px, 100%); display: grid; gap: 14px; text-align: center; }
+.gate-box h2 { font-size: 2.6rem; }
+.gate form { display: grid; gap: 10px; text-align: left; }
+.gate label { font-family: var(--mono); font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.gate .btn.solid { padding: 12px; font-size: 1rem; }
+.gate-msg { min-height: 1.4em; color: var(--stamp); font-weight: 600; }
+.gate-box.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.linkish { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; font-size: .9rem; }
+
+/* Face scan */
+.scan { display: grid; gap: 8px; justify-items: center; }
+.scan-frame { position: relative; width: 160px; aspect-ratio: 3 / 4; max-width: 100%; border: 3px solid var(--stamp); border-radius: 8px; overflow: hidden; background: #0b0d09; }
+.scan-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-frame img:not([src]) { display: none; }
+.scan-face { position: absolute; inset: 18% 22% 22%; border: 2px dashed #6dff8a; border-radius: 50% 50% 45% 45%; }
+.scan-line { position: absolute; left: 0; right: 0; height: 3px; background: #6dff8a; box-shadow: 0 0 12px #6dff8a; top: 0; opacity: 0; }
+.scan-frame.scanning .scan-line { opacity: 1; animation: sweep 1s ease-in-out infinite alternate; }
+@keyframes sweep { to { top: calc(100% - 3px); } }
+.scan-status { font-family: var(--mono); font-weight: 600; letter-spacing: .1em; color: var(--stamp); }
+.scan-status.ok { color: var(--olive); }
+.scan-btn { cursor: pointer; }
+
+/* Team */
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 14px 12px; display: grid; gap: 6px; min-width: 0; }
+.card .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.name { font-weight: 700; font-size: 1.15rem; overflow-wrap: anywhere; }
+.job { overflow-wrap: anywhere; }
+.lvl { font-family: var(--mono); font-size: .75rem; font-weight: 600; background: var(--olive); color: var(--olive-ink); padding: 2px 8px; border-radius: 3px; white-space: nowrap; letter-spacing: .06em; }
+.lvl.top1 { background: var(--stamp); }
+.stars { color: var(--olive); letter-spacing: 2px; font-size: .9rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+form.add { display: grid; grid-template-columns: 1.2fr 2fr 110px auto; gap: 8px; margin-top: 12px; }
+@media (max-width: 640px) { form.add { grid-template-columns: 1fr 1fr; } form.add .wide { grid-column: 1 / -1; order: 2; } }
+.remove-box { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.remove-box form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.remove-box input { width: 120px; }
+
+/* Calls */
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; min-width: 0; }
+.box-head { background: var(--olive); color: var(--olive-ink); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.box-head h3 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 1.25rem; letter-spacing: .04em; }
+.box-head .freq { font-family: var(--mono); font-size: .72rem; opacity: .85; }
+.box.dark .box-head { background: var(--ink); color: var(--bg); }
+.box.secret .box-head { background: var(--stamp); color: var(--panel); }
+.call-lines { display: grid; gap: 12px; padding: 14px; }
+.call-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.call-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.call-addr { font-family: var(--mono); font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; user-select: all; margin-top: -6px; padding: 0 14px; }
+.talk { font: 700 1rem var(--body); background: var(--stamp); color: var(--panel); border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; text-decoration: none; display: inline-block; }
+.call-help { font-size: .9rem; background: var(--me); border-radius: 6px; padding: 10px 12px; }
+
+/* Chats */
+.chats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .chats { grid-template-columns: 1fr; } }
+.chat { display: flex; flex-direction: column; }
+.log { height: 340px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.msg { max-width: 85%; background: var(--bg); border-radius: 6px; padding: 6px 10px; align-self: flex-start; min-width: 0; }
+.msg.mine { align-self: flex-end; background: var(--me); }
+.msg .meta { font-family: var(--mono); font-size: .7rem; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.msg .meta b { color: var(--ink); font-weight: 600; }
+.msg .text { overflow-wrap: anywhere; white-space: pre-wrap; }
+.msg .del { border: 0; background: none; color: var(--stamp); cursor: pointer; font-size: .75rem; padding: 0; margin-left: auto; }
+.empty { color: var(--muted); text-align: center; margin: auto; padding: 20px; font-size: .95rem; }
+form.send { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+form.send input { flex: 1; }
+.locked { padding: 28px 18px; text-align: center; color: var(--muted); margin: auto; }
+.locked strong { display: block; font-family: var(--display); font-weight: 400; color: var(--stamp); font-size: 1.4rem; margin-bottom: 6px; }
+
+/* Tables (logins, intruders) */
+.table { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+.table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.table th, .table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
+.table th { font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.bad { color: var(--stamp); font-weight: 700; }
+img.face { width: 48px; height: 64px; object-fit: cover; border-radius: 4px; display: block; border: 1px solid var(--line); }
+form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; margin-top: 12px; }
+@media (max-width: 640px) { form.newlogin { grid-template-columns: 1fr; } }
+
+/* Alarm */
+.alarm { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--stamp); color: #fff; overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  animation: flash .6s steps(2) infinite; }
+@keyframes flash { 50% { background: #5a0d04; } }
+.alarm-box { display: grid; gap: 12px; text-align: center; max-width: 440px; font-size: 1.1rem; }
+.alarm-title { font-family: var(--display); font-size: clamp(3rem, 14vw, 6rem); line-height: 1; letter-spacing: .06em; }
+.alarm-who { font-family: var(--display); font-size: 1.8rem; }
+.alarm .btn { justify-self: center; border-color: #fff; color: #fff; font-size: 1rem; padding: 10px 18px; }
+.alarm .btn:hover { background: #fff; color: #5a0d04; }
+
+@media (prefers-reduced-motion: reduce) { .alarm, .gate-box.shake, .scan-frame.scanning .scan-line { animation: none; } }
+</style>
+</head>
+<body>
+
+<!-- Alarm screen -->
+<div class="alarm" id="alarm" hidden role="alert">
+  <div class="alarm-box">
+    <div class="alarm-title" id="alarm-title">ALARM</div>
+    <div id="alarm-text"></div>
+    <div class="alarm-who" id="alarm-who"></div>
+    <div>Seb and Freddie can see more in the Intruder Log.</div>
+    <button class="btn" id="alarm-off" type="button" hidden>Stop the alarm</button>
+    <div id="alarm-only-seb">Only Seb can stop the alarm. It turns itself off after 6 minutes.</div>
+  </div>
+</div>
+
+<!-- Login screen -->
+<div class="gate" id="gate">
+  <div class="gate-box" id="gate-box">
+    <div class="stamp" style="justify-self:center">Top Secret</div>
+    <h2>Code Code</h2>
+
+    <form id="login-form" autocomplete="on">
+      <label for="login-user">Username</label>
+      <input id="login-user" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="30">
+      <label for="login-pass">Password</label>
+      <input id="login-pass" type="password" autocomplete="current-password" required maxlength="64">
+      <button class="btn solid" type="submit" id="login-btn">Log in</button>
+    </form>
+
+    <form id="setup-form" hidden>
+      <div class="hint">First time for Seb or Freddie: choose your password.</div>
+      <label for="setup-who">Who are you?</label>
+      <select id="setup-who"><option value="seb">Seb</option><option value="freddie">Freddie</option></select>
+      <label for="setup-pass">New password (6 or more letters/numbers)</label>
+      <input id="setup-pass" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
+      <label for="setup-pass2">Type it again</label>
+      <input id="setup-pass2" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
+      <button class="btn solid" type="submit">Make my login</button>
+    </form>
+
+    <div class="gate-msg" id="gate-msg" role="status">Loading&hellip;</div>
+
+    <div class="scan" id="scan" hidden>
+      <div class="scan-frame" id="scan-frame">
+        <img id="scan-img" alt="Your face scan">
+        <div class="scan-line"></div>
+        <div class="scan-face" aria-hidden="true"></div>
+      </div>
+      <div class="scan-status" id="scan-status">FACE SCAN NEEDED</div>
+      <label class="btn danger scan-btn" for="scan-input">Scan my face</label>
+      <input id="scan-input" type="file" accept="image/*" capture="user" hidden>
+      <div class="hint">Take a photo of your face. Seb and Freddie will see it in the Intruder Log.</div>
+    </div>
+
+    <button class="linkish" id="setup-toggle" type="button">Seb or Freddie, first time here?</button>
+  </div>
+</div>
+
+<!-- The site -->
+<div class="wrap" id="site" hidden>
+  <header>
+    <div>
+      <h1>Code Code</h1>
+      <div class="sub">Logged in as <span id="me-name"></span></div>
+    </div>
+    <div class="head-right">
+      <div class="stamp">Top Secret</div>
+      <button class="btn danger" id="test-alarm" type="button" hidden>Test alarm</button>
+      <button class="btn" id="logout" type="button">Log out</button>
+    </div>
+  </header>
+
+  <section aria-labelledby="roster-h">
+    <div class="sec-head"><h2 id="roster-h">The Team</h2><span class="hint" id="roster-hint">Loading the team&hellip;</span></div>
+    <div class="roster" id="roster"></div>
+    <form class="add" id="add-form" hidden>
+      <input id="add-name" placeholder="Name" required maxlength="40" aria-label="Name">
+      <input id="add-job" class="wide" placeholder="What they do" maxlength="120" aria-label="What they do">
+      <select id="add-level" aria-label="Level"></select>
+      <button class="btn solid" type="submit">Add person</button>
+    </form>
+    <div class="remove-box" id="remove-box" hidden>
+      <button class="btn danger" id="remove-start" type="button">Remove someone</button>
+      <form id="remove-form" hidden>
+        <label for="remove-code" class="hint">Remove code</label>
+        <input id="remove-code" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+        <button class="btn danger" type="submit">Unlock</button>
+        <button class="btn" id="remove-cancel" type="button">Cancel</button>
+      </form>
+      <span class="status" id="remove-msg"></span>
+    </div>
+  </section>
+
+  <section aria-labelledby="calls-h" style="display:grid; gap:14px">
+    <h2 id="calls-h">Calls</h2>
+    <div class="box dark">
+      <div class="box-head"><h3>Calls</h3><span class="freq">VOICE &amp; VIDEO</span></div>
+      <div class="call-lines">
+        <div class="call-line">
+          <div><div class="name">Everyone call</div><div class="hint">Real voice and video call for the whole crew.</div></div>
+          <div class="call-btns">
+            <a class="talk" href="https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835" target="_blank" rel="noopener noreferrer">Join the call</a>
+            <button class="btn copy-call" type="button" data-url="https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835">Copy link</button>
+          </div>
+        </div>
+        <div class="call-addr">https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835</div>
+        <div class="call-line" id="boss-call" hidden>
+          <div><div class="name">Freddie &amp; Seb call</div><div class="hint">Private call for the two bosses.</div></div>
+          <div class="call-btns">
+            <a class="talk" href="https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163" target="_blank" rel="noopener noreferrer">Join the call</a>
+            <button class="btn copy-call" type="button" data-url="https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163">Copy link</button>
+          </div>
+        </div>
+        <div class="call-addr" id="boss-call-addr" hidden>https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163</div>
+        <div class="call-help"><b>No account needed.</b> Press <b>Join the call</b>, type your name, press <b>Join meeting</b>, and say yes when it asks for your microphone. Everyone who presses the same button is in the same call. If nothing happens, press <b>Copy link</b> and paste it into Chrome, Edge or Safari.</div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="radio-h" style="display:grid; gap:14px">
+    <div class="sec-head" style="margin:0"><h2 id="radio-h">Messages</h2><span class="status" id="status"></span></div>
+    <div class="chats">
+      <div class="box secret chat" id="boss-chat" hidden>
+        <div class="box-head"><h3>Freddie &amp; Seb</h3><span class="freq">PRIVATE</span></div>
+        <div class="log" id="log-boss"><div class="empty">Loading&hellip;</div></div>
+        <form class="send" id="send-boss">
+          <input id="in-boss" placeholder="Message Freddie &amp; Seb" maxlength="500" autocomplete="off" aria-label="Private message">
+          <button class="btn solid" type="submit">Send</button>
+        </form>
+      </div>
+      <div class="box chat">
+        <div class="box-head"><h3>Everyone</h3><span class="freq">ALL CREW</span></div>
+        <div class="log" id="log-all"><div class="empty">Loading&hellip;</div></div>
+        <form class="send" id="send-all">
+          <input id="in-all" placeholder="Message everyone" maxlength="500" autocomplete="off" aria-label="Message everyone">
+          <button class="btn solid" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="logins-h" id="logins-sec" hidden>
+    <div class="sec-head"><h2 id="logins-h">Logins</h2><span class="hint">Only Seb and Freddie see this. Make a username and password for each friend.</span></div>
+    <div class="table"><table><thead><tr><th>Username</th><th>Name</th><th>Status</th><th></th></tr></thead><tbody id="logins-body"></tbody></table></div>
+    <form class="newlogin" id="newlogin-form">
+      <input id="nl-user" placeholder="Username (like josh)" required maxlength="20" autocapitalize="none" spellcheck="false" aria-label="New username">
+      <input id="nl-name" placeholder="Name to show (like Josh Clark)" maxlength="40" aria-label="Name to show">
+      <input id="nl-pass" placeholder="Password (6+ letters)" required minlength="6" maxlength="64" aria-label="New password" autocomplete="off">
+      <button class="btn solid" type="submit">Make login</button>
+    </form>
+    <div class="status" id="nl-msg" style="margin-top:8px"></div>
+  </section>
+
+  <section aria-labelledby="intr-h" id="intr-sec" hidden>
+    <div class="sec-head"><h2 id="intr-h">Intruder Log</h2><span class="hint">Wrong passwords, newest first. Only Seb and Freddie see this.</span></div>
+    <div class="table"><table><thead><tr><th>Face</th><th>Username tried</th><th>When</th><th>Wrong tries</th><th>Status</th></tr></thead>
+      <tbody id="intr-body"><tr><td colspan="5" class="hint">No wrong passwords yet.</td></tr></tbody></table></div>
+  </section>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence, inMemoryPersistence }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, onSnapshot, query, orderBy, limit }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDG2ZgRoMh6ydwhAlP84FSJSyM-migz3ww",
+  authDomain: "sebs-chat.firebaseapp.com",
+  projectId: "sebs-chat",
+  storageBucket: "sebs-chat.firebasestorage.app",
+  messagingSenderId: "216788200497",
+  appId: "1:216788200497:web:791d5f11dcb9a60115b910"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+// A second copy, used only by Seb/Freddie to make logins without logging themselves out.
+const maker = getAuth(initializeApp(firebaseConfig, "maker"));
+setPersistence(maker, inMemoryPersistence).catch(() => {});
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+const DOMAIN = "users.sebs-chat.firebaseapp.com";
+const ADMINS = ["seb", "freddie"];
+const REMOVE_CODE = "5159";
+const emailOf = (u) => u + "@" + DOMAIN;
+const cleanUser = (u) => (u || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20);
+
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const local = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+function flash(t) { $("status").textContent = t; setTimeout(() => { if ($("status").textContent === t) $("status").textContent = ""; }, 5000); }
+function shake() { const b = $("gate-box"); b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); }
+
+let me = null;            // { uid, username, name, isAdmin, isSeb }
+let unsubs = [];
+let users = {};           // uid -> user doc
+let members = [];
+let removeMode = false;
+const confirmDel = new Set();
+
+/* ---------------- Alarm ---------------- */
+let siren = null, alarmOn = false, alarmDoc = null, lastWarned = 0, alarmTimer = null;
+function startSiren() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    const ctx = new AC(); if (ctx.resume) ctx.resume();
+    const comp = ctx.createDynamicsCompressor(), g = ctx.createGain(); g.gain.value = 1.0;
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator();
+    o1.type = "square"; o2.type = "sawtooth"; o2.detune.value = 15;
+    o1.connect(comp); o2.connect(comp); comp.connect(g); g.connect(ctx.destination); o1.start(); o2.start();
+    let up = true;
+    const t = setInterval(() => { const f = up ? 1250 : 650; o1.frequency.setTargetAtTime(f, ctx.currentTime, 0.12); o2.frequency.setTargetAtTime(f, ctx.currentTime, 0.12); up = !up; }, 400);
+    siren = () => { clearInterval(t); try { o1.stop(); o2.stop(); ctx.close(); } catch (e) {} siren = null; };
+  } catch (e) {}
+}
+function say(text) { try { const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} }
+function hideAlarm() { alarmOn = false; $("alarm").hidden = true; if (siren) siren(); clearTimeout(alarmTimer); }
+function showAlarm(a) {
+  const kind = a.kind === "practice" ? "PRACTICE" : a.kind === "test" ? "TEST" : "";
+  $("alarm-title").textContent = kind ? kind + " ALARM" : "ALARM";
+  const when = new Date(a.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  $("alarm-text").textContent = a.kind === "practice" ? "Practice! Someone got the password wrong 5 times and waited 30 seconds (" + when + ")."
+    : a.kind === "test" ? "Seb is testing the alarm (" + when + ")."
+    : "Someone typed the wrong password 6 times at " + when + ".";
+  const who = typeof a.username === "string" && a.username ? a.username : "";
+  $("alarm-who").textContent = who ? "It was: " + who : "";
+  $("alarm-off").hidden = !(me && me.isSeb); $("alarm-only-seb").hidden = !!(me && me.isSeb);
+  $("alarm").hidden = false; alarmOn = true;
+  if (!siren) startSiren();
+  clearTimeout(alarmTimer); alarmTimer = setTimeout(hideAlarm, Math.max(0, a.at + 6 * 60000 - Date.now()));
+  if (lastWarned !== a.at) {
+    lastWarned = a.at;
+    say(a.kind === "test" ? "Warning. This is a test of the alarm." :
+        a.kind === "practice" ? "Warning. Practice alarm." :
+        "Warning! Warning! " + (who ? who + " is" : "Someone is") + " trying to break in to Code Code. Seb, come quickly!");
+  }
+}
+function raiseAlarm(kind, username) {
+  return setDoc(doc(db, "alarm", "current"), { at: Date.now(), kind, username: username || "", stopped: false }).catch(() => {});
+}
+$("alarm-off").addEventListener("click", async () => {
+  hideAlarm();
+  if (alarmDoc) { try { await setDoc(doc(db, "alarm", "current"), { ...alarmDoc, stopped: true, stoppedAt: Date.now() }); } catch (e) {} }
+});
+$("test-alarm").addEventListener("click", () => raiseAlarm("test", me ? me.username : ""));
+
+/* ---------------- Login screen ---------------- */
+let practiceTimer = null, scanUser = null;
+function gateMsg(t) { $("gate-msg").textContent = t || ""; }
+
+$("setup-toggle").addEventListener("click", () => {
+  const show = $("setup-form").hidden;
+  $("setup-form").hidden = !show; $("login-form").hidden = show;
+  $("setup-toggle").textContent = show ? "Back to log in" : "Seb or Freddie, first time here?";
+  gateMsg("");
+});
+
+$("setup-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const u = $("setup-who").value, p1 = $("setup-pass").value, p2 = $("setup-pass2").value;
+  if (p1 !== p2) { gateMsg("The two passwords are different. Try again."); shake(); return; }
+  if (p1.length < 6) { gateMsg("The password needs 6 or more letters or numbers."); return; }
+  gateMsg("Making your login…");
+  try {
+    await createUserWithEmailAndPassword(auth, emailOf(u), p1);
+    $("setup-pass").value = ""; $("setup-pass2").value = "";
+  } catch (err) {
+    gateMsg(err.code === "auth/email-already-in-use" ? "That login is already made. Go back and log in." :
+      err.code === "auth/weak-password" ? "Pick a longer password." : "Couldn't make the login (" + (err.code || "error") + ").");
+  }
+});
+
+$("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (practiceTimer) { clearTimeout(practiceTimer); practiceTimer = null; }
+  const u = cleanUser($("login-user").value), p = $("login-pass").value;
+  if (!u) { gateMsg("Type your username."); return; }
+  $("login-btn").disabled = true; gateMsg("Checking…");
+  try {
+    await signInWithEmailAndPassword(auth, emailOf(u), p);
+    local.set("wrong:" + u, "0");
+    $("login-pass").value = "";
+  } catch (err) {
+    const wrongCodes = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found", "auth/invalid-email", "auth/invalid-login-credentials"];
+    if (wrongCodes.includes(err.code)) {
+      const n = Number(local.get("wrong:" + u) || 0) + 1; local.set("wrong:" + u, String(n));
+      const block = n % 6 === 0;
+      const rec = { username: u, at: Date.now(), count: n }; if (block) rec.blocked = true;
+      setDoc(doc(db, "attempts", u), rec, { merge: true }).catch(() => {});
+      if (block) {
+        raiseAlarm("real", u);
+        gateMsg("Wrong password 6 times. The alarm has gone off and \"" + u + "\" is BLOCKED!");
+        scanUser = u; $("scan").hidden = false;
+      } else {
+        gateMsg("Wrong username or password. Try again.");
+        if (n % 6 === 5) practiceTimer = setTimeout(() => { practiceTimer = null; local.set("wrong:" + u, "0"); raiseAlarm("practice", u); }, 30000);
+      }
+      shake(); $("login-pass").value = "";
+    } else if (err.code === "auth/too-many-requests") {
+      gateMsg("Too many tries. Wait a few minutes and try again.");
+    } else if (err.code === "auth/network-request-failed") {
+      gateMsg("No internet connection. Check your Wi-Fi.");
+    } else {
+      gateMsg("Couldn't log in (" + (err.code || "error") + ").");
+    }
+  }
+  $("login-btn").disabled = false;
+});
+$("login-user").addEventListener("input", () => { if (practiceTimer) { clearTimeout(practiceTimer); practiceTimer = null; } });
+
+$("scan-input").addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0]; e.target.value = "";
+  if (!f || !scanUser) return;
+  const frame = $("scan-frame"), status = $("scan-status");
+  try {
+    const bmp = await createImageBitmap(f);
+    const W = 240, H = 320, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const sc = Math.max(W / bmp.width, H / bmp.height), dw = bmp.width * sc, dh = bmp.height * sc;
+    cv.getContext("2d").drawImage(bmp, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    const photo = cv.toDataURL("image/jpeg", 0.7);
+    $("scan-img").src = photo; frame.classList.add("scanning");
+    status.className = "scan-status"; status.textContent = "SCANNING FACE…";
+    await new Promise((r) => setTimeout(r, 2500));
+    await setDoc(doc(db, "attempts", scanUser), { username: scanUser, photo, photoAt: Date.now() }, { merge: true });
+    frame.classList.remove("scanning"); status.className = "scan-status ok"; status.textContent = "FACE SAVED TO FILE";
+  } catch (err) {
+    frame.classList.remove("scanning"); status.className = "scan-status"; status.textContent = "SCAN FAILED. TRY AGAIN.";
+  }
+});
+
+$("logout").addEventListener("click", () => signOut(auth));
+
+/* ---------------- After login ---------------- */
+onAuthStateChanged(auth, async (u) => {
+  unsubs.forEach((f) => { try { f(); } catch (e) {} }); unsubs = [];
+  hideAlarm(); me = null; users = {}; members = []; removeMode = false;
+  if (!u) {
+    $("site").hidden = true; $("gate").hidden = false;
+    if ($("gate-msg").textContent === "Loading…") gateMsg("");
+    return;
+  }
+  const username = (u.email || "").split("@")[0];
+  const isAdmin = ADMINS.includes(username);
+  // Check this login is allowed in (made by Seb/Freddie, not turned off, not blocked)
+  let profile = null;
+  try {
+    const snap = await getDoc(doc(db, "users", u.uid));
+    profile = snap.exists() ? snap.data() : null;
+    if (!isAdmin && (!profile || profile.disabled)) throw new Error("not member");
+  } catch (err) {
+    if (!isAdmin) {
+      await signOut(auth);
+      gateMsg("This login is BLOCKED or turned off. Ask Seb or Freddie to let you back in.");
+      return;
+    }
+  }
+  if (isAdmin && (!profile || profile.username !== username)) {
+    try { await setDoc(doc(db, "users", u.uid), { username, name: username === "seb" ? "Seb" : "Freddie", disabled: false, createdAt: Date.now() }, { merge: true }); } catch (e) {}
+  }
+  me = { uid: u.uid, username, name: (profile && profile.name) || username, isAdmin, isSeb: username === "seb" };
+  local.set("wrong:" + username, "0");
+  $("me-name").textContent = me.name + " (" + username + ")";
+  $("gate").hidden = true; $("site").hidden = false; $("scan").hidden = true;
+  startSite();
+});
+
+function nameOf(uid, fallback) { return (users[uid] && users[uid].name) || fallback || "Someone"; }
+
+function startSite() {
+  const A = me.isAdmin;
+  $("test-alarm").hidden = !me.isSeb;
+  $("add-form").hidden = !A; $("remove-box").hidden = !A;
+  $("boss-call").hidden = !A; $("boss-call-addr").hidden = !A;
+  $("boss-chat").hidden = !A; $("logins-sec").hidden = !A; $("intr-sec").hidden = !A;
+
+  // Alarm
+  unsubs.push(onSnapshot(doc(db, "alarm", "current"), (d) => {
+    const a = d.exists() ? d.data() : null; alarmDoc = a;
+    if (a && typeof a.at === "number" && !a.stopped && a.at > Date.now() - 6 * 60000) showAlarm(a);
+    else if (alarmOn) hideAlarm();
+  }, () => {}));
+
+  // Logins (names for messages)
+  unsubs.push(onSnapshot(collection(db, "users"), (snap) => {
+    users = {}; snap.docs.forEach((d) => { users[d.id] = d.data(); });
+    if (A) renderLogins();
+  }, () => {}));
+
+  // Team
+  unsubs.push(onSnapshot(query(collection(db, "members"), orderBy("order", "asc")), (snap) => {
+    members = snap.docs.map((d) => ({ id: d.id, ...d.data() })); renderRoster();
+  }, () => { $("roster-hint").textContent = "The team list could not load."; }));
+
+  // Chats
+  listenChat("chat_all", "log-all");
+  if (A) listenChat("chat_boss", "log-boss");
+
+  // Intruder log
+  if (A) unsubs.push(onSnapshot(query(collection(db, "attempts"), orderBy("at", "desc"), limit(50)), renderIntruders, () => {}));
+}
+
+/* ---------------- Team ---------------- */
+for (let i = 10; i >= 1; i--) { const o = new Option("Level " + i, String(i)); if (i === 3) o.selected = true; $("add-level").append(o); }
+function renderRoster() {
+  const box = $("roster"); box.replaceChildren();
+  if (!members.length) box.append(el("div", "hint", me && me.isAdmin ? "No one on the team yet. Add the first person below." : "No one on the team yet."));
+  members.forEach((m) => {
+    const c = el("div", "card"), top = el("div", "top");
+    const lv = Math.max(1, Math.min(10, Number(m.level) || 1));
+    top.append(el("div", "name", m.name || "?"), el("span", "lvl" + (lv >= 9 ? " top1" : ""), "LEVEL " + lv));
+    c.append(top, el("div", "stars", "★".repeat(lv)), el("div", "job", m.job || ""));
+    if (me && me.isAdmin && removeMode) {
+      const a = el("div", "actions");
+      if (confirmDel.has(m.id)) {
+        const yes = el("button", "btn small danger", "Yes, remove " + m.name); yes.type = "button";
+        yes.onclick = async () => { confirmDel.delete(m.id); try { await deleteDoc(doc(db, "members", m.id)); } catch (e) { flash("Could not remove."); } };
+        const no = el("button", "btn small", "Keep"); no.type = "button"; no.onclick = () => { confirmDel.delete(m.id); renderRoster(); };
+        a.append(yes, no);
+      } else {
+        const del = el("button", "btn small danger", "Remove"); del.type = "button"; del.onclick = () => { confirmDel.add(m.id); renderRoster(); };
+        a.append(del);
+      }
+      c.append(a);
+    }
+    box.append(c);
+  });
+  $("roster-hint").textContent = members.length + (members.length === 1 ? " person" : " people");
+}
+$("add-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = $("add-name").value.trim(); if (!name) return;
+  const order = members.reduce((mx, m) => Math.max(mx, Number(m.order) || 0), 0) + 1;
+  try { await addDoc(collection(db, "members"), { name, job: $("add-job").value.trim(), level: Number($("add-level").value), order }); $("add-name").value = ""; $("add-job").value = ""; }
+  catch (err) { flash("Could not add that person."); }
+});
+function resetRemove() {
+  removeMode = false; confirmDel.clear(); $("remove-form").hidden = true; $("remove-start").hidden = false;
+  $("remove-start").textContent = "Remove someone"; $("remove-code").value = ""; $("remove-msg").textContent = ""; renderRoster();
+}
+$("remove-start").addEventListener("click", () => { if (removeMode) return resetRemove(); $("remove-start").hidden = true; $("remove-form").hidden = false; $("remove-code").focus(); });
+$("remove-cancel").addEventListener("click", resetRemove);
+$("remove-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if ($("remove-code").value === REMOVE_CODE) {
+    removeMode = true; $("remove-form").hidden = true; $("remove-start").hidden = false; $("remove-start").textContent = "Done removing";
+    $("remove-msg").textContent = "Remove buttons are on the cards."; $("remove-code").value = ""; renderRoster();
+  } else { $("remove-msg").textContent = "Wrong remove code."; $("remove-code").value = ""; }
+});
+
+/* ---------------- Calls ---------------- */
+document.querySelectorAll(".copy-call").forEach((b) => b.addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(b.dataset.url); b.textContent = "Copied!"; }
+  catch (e) {
+    const addr = b.closest(".call-line").nextElementSibling;
+    const r = document.createRange(); r.selectNodeContents(addr); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    b.textContent = "Copy the address below";
+  }
+  setTimeout(() => { b.textContent = "Copy link"; }, 3000);
+}));
+
+/* ---------------- Chats ---------------- */
+function listenChat(coll, boxId) {
+  unsubs.push(onSnapshot(query(collection(db, coll), orderBy("at", "asc"), limit(200)), (snap) => {
+    const box = $(boxId); const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.replaceChildren();
+    if (snap.empty) { box.append(el("div", "empty", "No messages yet. Say hi!")); return; }
+    snap.docs.forEach((d) => {
+      const m = d.data();
+      const row = el("div", "msg" + (m.uid === me.uid ? " mine" : ""));
+      const meta = el("div", "meta");
+      meta.append(el("b", null, nameOf(m.uid, m.username)));
+      meta.append(el("span", null, new Date(m.at || 0).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })));
+      if (me.isAdmin) {
+        const x = el("button", "del", "delete"); x.type = "button"; x.setAttribute("aria-label", "Delete message");
+        x.onclick = () => deleteDoc(doc(db, coll, d.id)).catch(() => flash("Could not delete."));
+        meta.append(x);
+      }
+      row.append(meta, el("div", "text", m.text || "")); box.append(row);
+    });
+    if (atBottom || !box.dataset.loaded) box.scrollTop = box.scrollHeight;
+    box.dataset.loaded = "1";
+  }, () => { $(boxId).replaceChildren(el("div", "empty", "Messages could not load.")); }));
+}
+function hookSend(formId, inputId, coll) {
+  $(formId).addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $(inputId).value.trim(); if (!text || !me) return;
+    $(inputId).value = "";
+    try { await addDoc(collection(db, coll), { uid: me.uid, username: me.username, name: me.name, text: text.slice(0, 500), at: Date.now() }); }
+    catch (err) { $(inputId).value = text; flash("Message didn't send. Try again."); }
+  });
+}
+hookSend("send-all", "in-all", "chat_all");
+hookSend("send-boss", "in-boss", "chat_boss");
+
+/* ---------------- Logins (bosses) ---------------- */
+function renderLogins() {
+  const body = $("logins-body"); body.replaceChildren();
+  const list = Object.entries(users).sort((a, b) => (a[1].username || "").localeCompare(b[1].username || ""));
+  if (!list.length) { const tr = el("tr"), td = el("td", "hint", "No logins yet."); td.colSpan = 4; tr.append(td); body.append(tr); return; }
+  list.forEach(([uid, u]) => {
+    const tr = el("tr");
+    tr.append(el("td", null, u.username || "?"), el("td", null, u.name || ""));
+    tr.append(el("td", u.disabled ? "bad" : null, u.disabled ? "Turned off" : "Can log in"));
+    const td = el("td");
+    if (!ADMINS.includes(u.username)) {
+      const b = el("button", "btn small" + (u.disabled ? "" : " danger"), u.disabled ? "Turn on" : "Turn off"); b.type = "button";
+      b.onclick = () => updateDoc(doc(db, "users", uid), { disabled: !u.disabled }).catch(() => flash("Couldn't change that login."));
+      td.append(b);
+    }
+    tr.append(td); body.append(tr);
+  });
+}
+$("newlogin-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const u = cleanUser($("nl-user").value), name = $("nl-name").value.trim() || u, p = $("nl-pass").value;
+  const msg = (t) => { $("nl-msg").textContent = t; };
+  if (!u) { msg("Usernames can only use letters, numbers, - and _."); return; }
+  if (ADMINS.includes(u)) { msg("That username is for Seb or Freddie."); return; }
+  if (p.length < 6) { msg("The password needs 6 or more letters or numbers."); return; }
+  msg("Making the login…");
+  try {
+    const cred = await createUserWithEmailAndPassword(maker, emailOf(u), p);
+    await setDoc(doc(db, "users", cred.user.uid), { username: u, name, disabled: false, createdAt: Date.now() });
+    await signOut(maker);
+    msg("Done! Tell " + name + ": username \"" + u + "\" and the password you picked.");
+    $("nl-user").value = ""; $("nl-name").value = ""; $("nl-pass").value = "";
+  } catch (err) {
+    msg(err.code === "auth/email-already-in-use" ? "That username is already taken. Pick another one." :
+      err.code === "auth/weak-password" ? "Pick a longer password." : "Couldn't make the login (" + (err.code || "error") + ").");
+  }
+});
+
+/* ---------------- Intruder log (bosses) ---------------- */
+function renderIntruders(snap) {
+  const body = $("intr-body"); body.replaceChildren();
+  if (snap.empty) { const tr = el("tr"), td = el("td", "hint", "No wrong passwords yet."); td.colSpan = 5; tr.append(td); body.append(tr); return; }
+  snap.docs.forEach((d) => {
+    const r = d.data(), tr = el("tr"), fc = el("td");
+    if (typeof r.photo === "string" && r.photo.startsWith("data:image/jpeg;base64,")) {
+      const im = document.createElement("img"); im.className = "face"; im.src = r.photo; im.alt = "Face scan"; fc.append(im);
+    } else fc.append(el("span", "hint", "No scan"));
+    tr.append(fc, el("td", null, r.username || d.id));
+    tr.append(el("td", null, new Date(r.at || 0).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })));
+    tr.append(el("td", null, String(r.count || 0)));
+    const st = el("td");
+    if (r.blocked) {
+      st.append(el("span", "bad", "BLOCKED "));
+      const ub = el("button", "btn small", "Let back in"); ub.type = "button";
+      ub.onclick = () => updateDoc(doc(db, "attempts", d.id), { blocked: false, count: 0 }).catch(() => flash("Couldn't unblock."));
+      st.append(ub);
+    } else st.append(el("span", "hint", "Not blocked"));
+    const clear = el("button", "btn small", "Delete"); clear.type = "button"; clear.style.marginLeft = "6px";
+    clear.onclick = () => deleteDoc(doc(db, "attempts", d.id)).catch(() => flash("Couldn't delete."));
+    st.append(clear);
+    tr.append(st); body.append(tr);
+  });
+}
+</script>
+</body>
+</html>
