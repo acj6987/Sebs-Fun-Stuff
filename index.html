@@ -120,8 +120,23 @@ form.send input { flex: 1; }
 .intruders th { font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
 .intruders .bad { color: var(--stamp); font-weight: 700; }
 
+/* Face scan */
+.scan { display: grid; gap: 8px; justify-items: center; }
+.scan-frame { position: relative; width: 160px; aspect-ratio: 3 / 4; max-width: 100%; border: 3px solid var(--stamp); border-radius: 8px; overflow: hidden; background: #0b0d09; }
+.scan-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-frame img:not([src]) { display: none; }
+.scan-face { position: absolute; inset: 18% 22% 22%; border: 2px dashed #6dff8a; border-radius: 50% 50% 45% 45%; }
+.scan-line { position: absolute; left: 0; right: 0; height: 3px; background: #6dff8a; box-shadow: 0 0 12px #6dff8a; top: 0; opacity: 0; }
+.scan-frame.scanning .scan-line { opacity: 1; animation: sweep 1s ease-in-out infinite alternate; }
+@keyframes sweep { to { top: calc(100% - 3px); } }
+@media (prefers-reduced-motion: reduce) { .scan-frame.scanning .scan-line { animation: none; top: 50%; } }
+.scan-status { font-family: var(--mono); font-weight: 600; letter-spacing: .1em; color: var(--stamp); }
+.scan-status.ok { color: var(--olive); }
+.scan-btn { cursor: pointer; }
+.intruders img.face { width: 48px; height: 64px; object-fit: cover; border-radius: 4px; display: block; border: 1px solid var(--line); }
+
 /* Code lock */
-.lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-items: center;
+.lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-items: center; overflow-y: auto;
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .lock-box { width: min(360px, 100%); display: grid; gap: 14px; text-align: center; }
 .lock-box h2 { font-size: 2.4rem; }
@@ -169,6 +184,17 @@ form.send input { flex: 1; }
     <div>Type your secret code to get in.</div>
     <div class="dots" id="dots"><span></span><span></span><span></span><span></span></div>
     <div class="lock-msg" id="lock-msg" role="status"></div>
+    <div class="scan" id="scan" hidden>
+      <div class="scan-frame" id="scan-frame">
+        <img id="scan-img" alt="Your face scan">
+        <div class="scan-line" id="scan-line"></div>
+        <div class="scan-face" id="scan-face" aria-hidden="true"></div>
+      </div>
+      <div class="scan-status" id="scan-status">FACE SCAN NEEDED</div>
+      <label class="btn danger scan-btn" for="scan-input">Scan my face</label>
+      <input id="scan-input" type="file" accept="image/*" capture="user" hidden>
+      <div class="hint">Take a photo of your face. Seb and Freddie will see it in the Intruder Log.</div>
+    </div>
     <div class="keys" id="keys"></div>
   </div>
 </div>
@@ -221,8 +247,8 @@ form.send input { flex: 1; }
       <span class="hint">Every wrong code typed, newest first. Only Freddie and Seb see this.</span>
     </div>
     <div class="intruders">
-      <table><thead><tr><th>Who</th><th>When</th><th>Wrong tries</th><th>Status</th></tr></thead>
-      <tbody id="intr-body"><tr><td colspan="4" class="hint">No wrong codes yet.</td></tr></tbody></table>
+      <table><thead><tr><th>Face</th><th>Who</th><th>When</th><th>Wrong tries</th><th>Status</th></tr></thead>
+      <tbody id="intr-body"><tr><td colspan="5" class="hint">No wrong codes yet.</td></tr></tbody></table>
     </div>
   </section>
 
@@ -391,7 +417,30 @@ form.send input { flex: 1; }
     let typed = "";
     // Blocked after 6 wrong tries: only Seb's or Freddie's code works until they unblock
     let blocked = store.get("crew-blocked") === "1";
-    const showBlocked = () => { $("lock-msg").textContent = blocked ? "You are BLOCKED. Seb or Freddie has to let you back in." : ""; };
+    const showBlocked = () => {
+      $("lock-msg").textContent = blocked ? "You are BLOCKED. Seb or Freddie has to let you back in." : "";
+      $("scan").hidden = !(blocked && db && uid);
+    };
+    // Face scan: the blocked person takes a photo, it is shrunk and saved with their Intruder Log entry
+    $("scan-input").addEventListener("change", async (e) => {
+      const f = e.target.files && e.target.files[0]; e.target.value = "";
+      if (!f || !db || !uid) return;
+      const frame = $("scan-frame"), status = $("scan-status");
+      try {
+        const bmp = await createImageBitmap(f);
+        const W = 240, H = 320, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+        const sc = Math.max(W / bmp.width, H / bmp.height), dw = bmp.width * sc, dh = bmp.height * sc;
+        cv.getContext("2d").drawImage(bmp, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        const photo = cv.toDataURL("image/jpeg", 0.7);
+        $("scan-img").src = photo; frame.classList.add("scanning");
+        status.className = "scan-status"; status.textContent = "SCANNING FACE...";
+        await new Promise((r) => setTimeout(r, 2500));
+        await db.collection("attempts").doc(uid).update({ photo, photoAt: Date.now() });
+        frame.classList.remove("scanning"); status.className = "scan-status ok"; status.textContent = "FACE SAVED TO FILE";
+      } catch (err) {
+        frame.classList.remove("scanning"); status.className = "scan-status"; status.textContent = "SCAN FAILED. TRY AGAIN.";
+      }
+    });
     showBlocked();
     if (db && uid) {
       db.collection("attempts").doc(uid).onSnapshot((d) => {
@@ -595,10 +644,15 @@ form.send input { flex: 1; }
       const ids = [...new Set(rows.map((r) => r.uid).filter((x) => typeof x === "string"))].slice(0, 64);
       let ps = {}; try { if (ids.length && user?.profiles) ps = await user.profiles(ids); } catch (e) {}
       const body = $("intr-body"); body.replaceChildren();
-      if (!rows.length) { const tr = el("tr"); const td = el("td", "hint", "No wrong codes yet."); td.colSpan = 4; tr.append(td); body.append(tr); return; }
+      if (!rows.length) { const tr = el("tr"); const td = el("td", "hint", "No wrong codes yet."); td.colSpan = 5; tr.append(td); body.append(tr); return; }
       rows.forEach((r) => {
         const tr = el("tr");
         const name = (r.uid && ps[r.uid] && ps[r.uid].name) || "Unknown person";
+        const fc = el("td");
+        if (typeof r.photo === "string" && r.photo.startsWith("data:image/jpeg;base64,")) {
+          const im = document.createElement("img"); im.className = "face"; im.src = r.photo; im.alt = "Face scan of " + name; fc.append(im);
+        } else fc.append(el("span", "hint", "No scan"));
+        tr.append(fc);
         tr.append(el("td", null, name));
         tr.append(el("td", null, new Date(r.at || 0).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })));
         tr.append(el("td", (Number(r.count) % 6 === 0) ? "bad" : null, String(r.count || 1) + ((Number(r.count) % 6 === 0) ? " · ALARM" : "")));
