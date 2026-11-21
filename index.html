@@ -311,7 +311,7 @@ form.send input { flex: 1; }
       o1.connect(comp); o2.connect(comp); comp.connect(g); g.connect(ctx.destination); o1.start(); o2.start();
       let up = true;
       const t = setInterval(() => { const f = up ? 1250 : 650; o1.frequency.setTargetAtTime(f, ctx.currentTime, 0.12); o2.frequency.setTargetAtTime(f, ctx.currentTime, 0.12); up = !up; }, 400);
-      const safety = setTimeout(() => siren && siren(), 180000);
+      const safety = setTimeout(() => { if (siren) siren(); $("alarm").hidden = true; alarmOn = false; }, 360000);
       siren = () => { clearInterval(t); clearTimeout(safety); try { o1.stop(); o2.stop(); ctx.close(); } catch (e) {} siren = null; };
     } catch (e) {}
   }
@@ -367,7 +367,7 @@ form.send input { flex: 1; }
   if (db) {
     db.doc("alarm/current").onSnapshot((d) => {
       const a = d.exists ? d.data() : null; alarmDoc = a;
-      if (a && typeof a.at === "number" && !a.stopped && a.at > Date.now() - 10 * 60000) showAlarm(a);
+      if (a && typeof a.at === "number" && !a.stopped && a.at > Date.now() - 6 * 60000) showAlarm(a);
       else if (alarmOn) stopAlarmHere();
     }, () => {});
   }
