@@ -26,6 +26,7 @@
   --olive: #7d9446; --olive-ink: #14170f; --stamp: #e0614b; --me: #34402a; color-scheme: dark }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; }
 .wrap { max-width: 1100px; margin: 0 auto; padding-block: 24px 56px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -70,6 +71,8 @@ input, select { font: 1rem var(--body); color: var(--ink); background: var(--pan
 
 /* Who are you */
 .whoami { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel); border: 1px dashed var(--olive); border-radius: 6px; padding: 10px 12px; }
+.whoami.need { border: 3px solid var(--stamp); }
+.whoami.need #who-hint { color: var(--stamp); font-weight: 700; }
 .whoami label { font-family: var(--mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 
 /* Chats */
@@ -155,6 +158,7 @@ form.send input { flex: 1; }
 .call { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .call .chat-head { background: var(--ink); color: var(--bg); }
 .call-lines { display: grid; gap: 12px; padding: 14px; }
+.call-help { font-size: .9rem; color: var(--ink); background: var(--me); border-radius: 6px; padding: 10px 12px; }
 .call-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
   padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
 .talk { font: 700 1rem var(--body); background: var(--stamp); color: var(--panel); border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; text-decoration: none; display: inline-block; }
@@ -260,7 +264,7 @@ form.send input { flex: 1; }
     <div class="whoami">
       <label for="who">I am</label>
       <select id="who"><option value="">Pick your name</option></select>
-      <span class="hint">So everyone knows who sent the message.</span>
+      <span class="hint" id="who-hint">So everyone knows who sent the message.</span>
     </div>
     <div class="call">
       <div class="chat-head"><h3>Calls</h3><span class="freq">VOICE &amp; VIDEO</span></div>
@@ -279,7 +283,10 @@ form.send input { flex: 1; }
           </div>
           <a class="talk" id="call-boss" href="#" target="_blank" rel="noopener">Join the call</a>
         </div>
-        <div class="hint">The call opens in a new tab. Allow your microphone (and camera if you want) when it asks. Everyone who presses the same button ends up in the same call.</div>
+        <div class="call-help">
+          <b>If the call stops or says "waiting for moderator":</b> the first person in the call has to press <b>Log in</b> and sign in with Google or GitHub. After that, everyone else can join without signing in.
+          Open it in Chrome, Edge or Safari (not inside another app), and say yes when it asks for your microphone.
+        </div>
       </div>
     </div>
     <div class="chats">
@@ -535,8 +542,16 @@ form.send input { flex: 1; }
     sel.replaceChildren(new Option("Pick your name", ""));
     members.forEach((m) => sel.append(new Option(m.name, m.id)));
     if (saved && members.some((m) => m.id === saved)) sel.value = saved;
+    else {
+      // Pick the name automatically for Seb (1407) and Freddie (5897)
+      let code = null; try { code = sessionStorage.getItem("crew-code"); } catch (e) {}
+      const want = code === "1407" ? "seb" : code === "5897" ? "freddie" : null;
+      const m = want && members.find((x) => (x.name || "").trim().toLowerCase().startsWith(want));
+      if (m) { sel.value = m.id; store.set("crew-who", m.id); }
+    }
+    document.querySelector(".whoami").classList.toggle("need", !sel.value);
   }
-  $("who").addEventListener("change", (e) => store.set("crew-who", e.target.value));
+  $("who").addEventListener("change", (e) => { store.set("crew-who", e.target.value); document.querySelector(".whoami").classList.toggle("need", !e.target.value); });
 
   function flash(t) { $("status").textContent = t; setTimeout(() => { if ($("status").textContent === t) $("status").textContent = ""; }, 5000); }
 
@@ -578,7 +593,10 @@ form.send input { flex: 1; }
       e.preventDefault();
       const text = $(inputId).value.trim(); if (!text) return;
       const whoId = $("who").value;
-      if (!whoId) { flash("Pick your name first (next to “I am”)."); $("who").focus(); return; }
+      if (!whoId) {
+        const w = document.querySelector(".whoami"); w.classList.add("need"); w.scrollIntoView({ block: "center", behavior: "smooth" });
+        $("who-hint").textContent = "Pick your name here first, then press Send again."; $("who").focus(); return;
+      }
       const who = members.find((m) => m.id === whoId);
       $(inputId).value = "";
       try { await db.collection(coll).add({ who: whoId, name: who ? who.name : "Someone", text, at: Date.now(), uid }); }
