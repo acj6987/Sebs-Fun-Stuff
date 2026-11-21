@@ -158,6 +158,8 @@ form.send input { flex: 1; }
 .call { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .call .chat-head { background: var(--ink); color: var(--bg); }
 .call-lines { display: grid; gap: 12px; padding: 14px; }
+.call-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.call-addr { font-family: var(--mono); font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; user-select: all; margin-top: -6px; padding: 0 14px; }
 .call-help { font-size: .9rem; color: var(--ink); background: var(--me); border-radius: 6px; padding: 10px 12px; }
 .call-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
   padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
@@ -274,17 +276,25 @@ form.send input { flex: 1; }
             <div class="name">Everyone call</div>
             <div class="hint">Real voice and video call for the whole crew.</div>
           </div>
-          <a class="talk" id="call-all" href="#" target="_blank" rel="noopener">Join the call</a>
+          <div class="call-btns">
+            <a class="talk" id="call-all" href="https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835" target="_blank" rel="noopener noreferrer">Join the call</a>
+            <button class="btn copy-call" type="button" data-url="https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835">Copy link</button>
+          </div>
         </div>
+        <div class="call-addr" id="call-all-addr">https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835</div>
         <div class="call-line" id="boss-call-line" hidden>
           <div>
             <div class="name">Freddie &amp; Seb call</div>
             <div class="hint">Private call for the two bosses.</div>
           </div>
-          <a class="talk" id="call-boss" href="#" target="_blank" rel="noopener">Join the call</a>
+          <div class="call-btns">
+            <a class="talk" id="call-boss" href="https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163" target="_blank" rel="noopener noreferrer">Join the call</a>
+            <button class="btn copy-call" type="button" data-url="https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163">Copy link</button>
+          </div>
         </div>
+        <div class="call-addr" id="call-boss-addr" hidden>https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163</div>
         <div class="call-help">
-          <b>No account needed.</b> Press <b>Join the call</b>, type your name, press <b>Join meeting</b>, and say yes when it asks for your microphone (and camera if you want).
+          <b>No account needed.</b> Press <b>Join the call</b>. If nothing happens, press <b>Copy link</b>, open Chrome, Edge or Safari, paste it in the address bar and press Enter. Then type your name, press <b>Join meeting</b>, and say yes when it asks for your microphone (and camera if you want).
           Everyone who presses the same button is in the same call. Use Chrome, Edge or Safari. On a phone it may ask you to get the free Jitsi Meet app, or you can choose to stay in the browser.
         </div>
       </div>
@@ -494,9 +504,18 @@ form.send input { flex: 1; }
   // ---- Real calls (open in a new tab) ----
   const CALL_ALL = "https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835";
   const CALL_BOSS = "https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163";
-  $("call-all").href = CALL_ALL;
+  document.querySelectorAll(".copy-call").forEach((b) => b.addEventListener("click", async () => {
+    const url = b.dataset.url;
+    try { await navigator.clipboard.writeText(url); b.textContent = "Copied!"; }
+    catch (e) {
+      const addr = b.closest(".call-line").nextElementSibling;
+      const r = document.createRange(); r.selectNodeContents(addr); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      b.textContent = "Copy the address below";
+    }
+    setTimeout(() => { b.textContent = "Copy link"; }, 3000);
+  }));
   if (isSebHere()) $("test-alarm").hidden = false;
-  if (codeLevel === "boss") { $("call-boss").href = CALL_BOSS; $("boss-call-line").hidden = false; }
+  if (codeLevel === "boss") { $("boss-call-line").hidden = false; $("call-boss-addr").hidden = false; }
   const confirmDel = new Set();
 
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
