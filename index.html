@@ -1,0 +1,307 @@
+<title>The Crew HQ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a field-dossier board. Header strip, roster of personnel cards, then two radio channels side by side. */
+:root {
+  --bg: #e9e4d4;          /* map-paper sand */
+  --panel: #f6f2e6;
+  --ink: #23271c;
+  --muted: #646b55;
+  --line: #c9c2a8;
+  --olive: #4b5a2a;       /* army olive */
+  --olive-ink: #f3f0e2;
+  --stamp: #b8321f;       /* classified red */
+  --me: #dfe6c8;
+  --display: "Saira Stencil One", "Impact", "Arial Narrow", sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1b1e16; --panel: #252a1e; --ink: #e8e5d6; --muted: #a3a98f; --line: #3b4230;
+  --olive: #7d9446; --olive-ink: #14170f; --stamp: #e0614b; --me: #34402a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1b1e16; --panel: #252a1e; --ink: #e8e5d6; --muted: #a3a98f; --line: #3b4230;
+  --olive: #7d9446; --olive-ink: #14170f; --stamp: #e0614b; --me: #34402a; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.45; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-block: 24px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 32px; }
+
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px;
+  border-bottom: 3px solid var(--ink); padding-bottom: 14px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2.4rem, 7vw, 4rem); line-height: .95; margin: 0; letter-spacing: .02em; }
+.sub { font-family: var(--mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-top: 6px; }
+.stamp { font-family: var(--display); color: var(--stamp); border: 3px solid var(--stamp); padding: 4px 12px; transform: rotate(-4deg);
+  font-size: 1.2rem; letter-spacing: .08em; border-radius: 4px; }
+
+h2 { font-family: var(--display); font-weight: 400; font-size: 1.7rem; margin: 0; letter-spacing: .03em; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
+.hint { color: var(--muted); font-size: .9rem; }
+
+/* Roster */
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 14px 12px; display: grid; gap: 6px; position: relative; min-width: 0; }
+.card .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.name { font-weight: 700; font-size: 1.15rem; overflow-wrap: anywhere; }
+.job { color: var(--ink); overflow-wrap: anywhere; }
+.lvl { font-family: var(--mono); font-size: .75rem; font-weight: 600; background: var(--olive); color: var(--olive-ink);
+  padding: 2px 8px; border-radius: 3px; white-space: nowrap; letter-spacing: .06em; }
+.lvl.top1 { background: var(--stamp); }
+.stars { color: var(--olive); letter-spacing: 2px; font-size: .9rem; }
+.card .actions { display: flex; gap: 6px; margin-top: 4px; }
+
+.btn { font: 600 .85rem var(--body); border: 1px solid var(--ink); background: transparent; color: var(--ink);
+  border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { background: var(--ink); color: var(--bg); }
+.btn.solid { background: var(--olive); color: var(--olive-ink); border-color: var(--olive); }
+.btn.solid:hover { filter: brightness(1.1); background: var(--olive); color: var(--olive-ink); }
+.btn.small { padding: 3px 8px; font-size: .75rem; }
+.btn.danger { color: var(--stamp); border-color: var(--stamp); }
+.btn.danger:hover { background: var(--stamp); color: var(--panel); }
+.btn:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--stamp); outline-offset: 2px; }
+
+form.add { display: grid; grid-template-columns: 1.2fr 2fr 110px auto; gap: 8px; margin-top: 12px; }
+input, select { font: 1rem var(--body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; min-width: 0; }
+@media (max-width: 640px) { form.add { grid-template-columns: 1fr 1fr; } form.add .job-in { grid-column: 1 / -1; order: 2; } }
+
+/* Who are you */
+.whoami { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel); border: 1px dashed var(--olive); border-radius: 6px; padding: 10px 12px; }
+.whoami label { font-family: var(--mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+
+/* Chats */
+.chats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .chats { grid-template-columns: 1fr; } }
+.chat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.chat-head { background: var(--olive); color: var(--olive-ink); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.chat-head h3 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 1.25rem; letter-spacing: .04em; }
+.chat-head .freq { font-family: var(--mono); font-size: .72rem; opacity: .85; }
+.chat.secret .chat-head { background: var(--stamp); color: var(--panel); }
+.log { height: 340px; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.msg { max-width: 85%; background: var(--bg); border-radius: 6px; padding: 6px 10px; align-self: flex-start; min-width: 0; }
+.msg.mine { align-self: flex-end; background: var(--me); }
+.msg .meta { font-family: var(--mono); font-size: .7rem; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.msg .meta b { color: var(--ink); font-weight: 600; }
+.msg .text { overflow-wrap: anywhere; white-space: pre-wrap; }
+.msg .del { border: 0; background: none; color: var(--stamp); cursor: pointer; font-size: .75rem; padding: 0; margin-left: auto; }
+.empty { color: var(--muted); text-align: center; margin: auto; padding: 20px; font-size: .95rem; }
+form.send { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+form.send input { flex: 1; }
+.locked { padding: 28px 18px; text-align: center; color: var(--muted); margin: auto; }
+.locked strong { display: block; font-family: var(--display); font-weight: 400; color: var(--stamp); font-size: 1.4rem; margin-bottom: 6px; }
+.note { font-size: .85rem; color: var(--muted); padding: 0 12px 10px; }
+.status { font-family: var(--mono); font-size: .8rem; color: var(--stamp); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>The Crew HQ</h1>
+      <div class="sub">Personnel file &middot; Levels &middot; Radio</div>
+    </div>
+    <div class="stamp">Top Secret</div>
+  </header>
+
+  <section aria-labelledby="roster-h">
+    <div class="sec-head">
+      <h2 id="roster-h">The Team</h2>
+      <span class="hint" id="roster-hint">Loading the team&hellip;</span>
+    </div>
+    <div class="roster" id="roster"></div>
+    <form class="add" id="add-form" hidden>
+      <input id="add-name" placeholder="Name" required maxlength="40" aria-label="Name">
+      <input id="add-job" class="job-in" placeholder="What they do" maxlength="120" aria-label="What they do">
+      <select id="add-level" aria-label="Level">
+        <option value="5">Level 5</option><option value="4">Level 4</option><option value="3" selected>Level 3</option>
+        <option value="2">Level 2</option><option value="1">Level 1</option>
+      </select>
+      <button class="btn solid" type="submit">Add person</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="radio-h" style="display:grid; gap:14px">
+    <div class="sec-head" style="margin:0">
+      <h2 id="radio-h">Radio</h2>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="whoami">
+      <label for="who">I am</label>
+      <select id="who"><option value="">Pick your name</option></select>
+      <span class="hint">So everyone knows who sent the message.</span>
+    </div>
+    <div class="chats">
+      <div class="chat secret">
+        <div class="chat-head"><h3>Freddie &amp; Seb</h3><span class="freq">PRIVATE CHANNEL</span></div>
+        <div class="log" id="log-boss"><div class="empty">Checking your clearance&hellip;</div></div>
+        <form class="send" id="send-boss" hidden>
+          <input id="in-boss" placeholder="Message Freddie &amp; Seb" maxlength="500" autocomplete="off" aria-label="Private message">
+          <button class="btn solid" type="submit">Send</button>
+        </form>
+      </div>
+      <div class="chat">
+        <div class="chat-head"><h3>Everyone</h3><span class="freq">ALL CREW</span></div>
+        <div class="log" id="log-all"><div class="empty">Tuning in&hellip;</div></div>
+        <form class="send" id="send-all" hidden>
+          <input id="in-all" placeholder="Message everyone" maxlength="500" autocomplete="off" aria-label="Message everyone">
+          <button class="btn solid" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  let members = [];
+  let isBoss = false, canWrite = true, uid = null;
+  const confirmDel = new Set();
+
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function renderRoster() {
+    const box = $("roster"); box.replaceChildren();
+    if (!members.length) {
+      box.append(el("div", "hint", isBoss ? "No one on the team yet. Add the first person below." : "No one on the team yet."));
+    }
+    members.forEach((m) => {
+      const c = el("div", "card");
+      const top = el("div", "top");
+      top.append(el("div", "name", m.name || "?"));
+      const lv = Number(m.level) || 1;
+      top.append(el("span", "lvl" + (lv >= 5 ? " top1" : ""), "LEVEL " + lv));
+      c.append(top);
+      c.append(el("div", "stars", "★".repeat(lv) + "☆".repeat(Math.max(0, 5 - lv))));
+      c.append(el("div", "job", m.job || ""));
+      if (isBoss) {
+        const a = el("div", "actions");
+        if (confirmDel.has(m.id)) {
+          const yes = el("button", "btn small danger", "Yes, remove " + m.name);
+          yes.type = "button";
+          yes.onclick = async () => { confirmDel.delete(m.id); try { await db.collection("members").doc(m.id).delete(); } catch (e) { flash("Could not remove. Try again."); } };
+          const no = el("button", "btn small", "Keep");
+          no.type = "button"; no.onclick = () => { confirmDel.delete(m.id); renderRoster(); };
+          a.append(yes, no);
+        } else {
+          const del = el("button", "btn small danger", "Remove");
+          del.type = "button"; del.onclick = () => { confirmDel.add(m.id); renderRoster(); };
+          a.append(del);
+        }
+        c.append(a);
+      }
+      box.append(c);
+    });
+    $("roster-hint").textContent = members.length + (members.length === 1 ? " person" : " people") + (isBoss ? " · you can add and remove names" : "");
+    renderWho();
+  }
+
+  function renderWho() {
+    const sel = $("who"); const saved = store.get("crew-who");
+    sel.replaceChildren(new Option("Pick your name", ""));
+    members.forEach((m) => sel.append(new Option(m.name, m.id)));
+    if (saved && members.some((m) => m.id === saved)) sel.value = saved;
+  }
+  $("who").addEventListener("change", (e) => store.set("crew-who", e.target.value));
+
+  function flash(t) { $("status").textContent = t; setTimeout(() => { if ($("status").textContent === t) $("status").textContent = ""; }, 5000); }
+
+  function renderLog(boxId, docs, coll) {
+    const box = $(boxId); const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.replaceChildren();
+    if (!docs.length) { box.append(el("div", "empty", "No messages yet. Say hi!")); return; }
+    const me = $("who").value;
+    docs.forEach((d) => {
+      const m = d.data();
+      const row = el("div", "msg" + (m.who && m.who === me ? " mine" : ""));
+      const meta = el("div", "meta");
+      meta.append(el("b", null, m.name || "Someone"));
+      const t = new Date(m.at || 0);
+      meta.append(el("span", null, t.toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })));
+      if (isBoss) {
+        const x = el("button", "del", "delete"); x.type = "button"; x.setAttribute("aria-label", "Delete message");
+        x.onclick = () => db.collection(coll).doc(d.id).delete().catch(() => flash("Could not delete."));
+        meta.append(x);
+      }
+      row.append(meta, el("div", "text", m.text || ""));
+      box.append(row);
+    });
+    if (atBottom || !box.dataset.loaded) box.scrollTop = box.scrollHeight;
+    box.dataset.loaded = "1";
+  }
+
+  function listen(coll, boxId) {
+    let done = false;
+    const timer = setTimeout(() => { if (!done) $(boxId).replaceChildren(el("div", "empty", "Can't reach the radio yet. It will connect by itself.")); }, 10000);
+    db.collection(coll).orderBy("at", "asc").limit(200).onSnapshot((snap) => {
+      if (!snap.metadata.fromCache) { done = true; clearTimeout(timer); }
+      renderLog(boxId, snap.docs, coll);
+    }, () => { done = true; clearTimeout(timer); $(boxId).replaceChildren(el("div", "empty", "The radio went quiet. Reload the page to reconnect.")); });
+  }
+
+  function hookSend(formId, inputId, coll) {
+    $(formId).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = $(inputId).value.trim(); if (!text) return;
+      const whoId = $("who").value;
+      if (!whoId) { flash("Pick your name first (next to “I am”)."); $("who").focus(); return; }
+      const who = members.find((m) => m.id === whoId);
+      $(inputId).value = "";
+      try { await db.collection(coll).add({ who: whoId, name: who ? who.name : "Someone", text, at: Date.now(), uid }); }
+      catch (err) { $(inputId).value = text; flash("Message didn't send. Try again."); }
+    });
+  }
+
+  const db = await window.claude?.use("db");
+  const user = await window.claude?.use("user");
+  if (!db) {
+    $("roster-hint").textContent = "Sign in to see the team.";
+    $("log-all").replaceChildren(el("div", "empty", "Sign in to use the radio."));
+    $("log-boss").replaceChildren(el("div", "empty", "Sign in to use the radio."));
+    return;
+  }
+  isBoss = (await user?.canEdit()) ?? false;
+  const w = await user?.can("data.write"); canWrite = w !== false;
+  uid = (await user?.id()) ?? null;
+
+  // Team list
+  let rosterDone = false;
+  const rt = setTimeout(() => { if (!rosterDone) $("roster-hint").textContent = "Can't reach the team list yet."; }, 10000);
+  db.collection("members").orderBy("order", "asc").onSnapshot((snap) => {
+    if (!snap.metadata.fromCache) { rosterDone = true; clearTimeout(rt); }
+    members = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderRoster();
+  }, () => { rosterDone = true; clearTimeout(rt); $("roster-hint").textContent = "The team list could not load."; });
+
+  if (isBoss) {
+    $("add-form").hidden = false;
+    $("add-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = $("add-name").value.trim(); if (!name) return;
+      const order = members.reduce((mx, m) => Math.max(mx, Number(m.order) || 0), 0) + 1;
+      try {
+        await db.collection("members").add({ name, job: $("add-job").value.trim(), level: Number($("add-level").value), order });
+        $("add-name").value = ""; $("add-job").value = "";
+      } catch (err) { flash("Could not add that person."); }
+    });
+  }
+
+  // Everyone chat
+  listen("chat_all", "log-all");
+  if (canWrite) { $("send-all").hidden = false; hookSend("send-all", "in-all", "chat_all"); }
+  else { $("log-all").after(el("div", "note", "You can read messages. Ask Seb to make you a Contributor to send them.")); }
+
+  // Private chat: only Editors (Seb and Freddie) can read or write it
+  if (isBoss) { listen("chat_boss", "log-boss"); $("send-boss").hidden = false; hookSend("send-boss", "in-boss", "chat_boss"); }
+  else {
+    const l = el("div", "locked"); l.append(el("strong", null, "Classified"), document.createTextNode("Only Freddie and Seb can open this channel."));
+    $("log-boss").replaceChildren(l);
+  }
+})();
+</script>
