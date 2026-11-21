@@ -284,8 +284,8 @@ form.send input { flex: 1; }
           <a class="talk" id="call-boss" href="#" target="_blank" rel="noopener">Join the call</a>
         </div>
         <div class="call-help">
-          <b>If the call stops or says "waiting for moderator":</b> the first person in the call has to press <b>Log in</b> and sign in with Google or GitHub. After that, everyone else can join without signing in.
-          Open it in Chrome, Edge or Safari (not inside another app), and say yes when it asks for your microphone.
+          <b>No account needed.</b> Press <b>Join the call</b>, type your name, press <b>Join meeting</b>, and say yes when it asks for your microphone (and camera if you want).
+          Everyone who presses the same button is in the same call. Use Chrome, Edge or Safari. On a phone it may ask you to get the free Jitsi Meet app, or you can choose to stay in the browser.
         </div>
       </div>
     </div>
@@ -492,8 +492,8 @@ form.send input { flex: 1; }
   });
 
   // ---- Real calls (open in a new tab) ----
-  const CALL_ALL = "https://meet.jit.si/CodeCodeCrew-17ec4d67e835#config.prejoinConfig.enabled=true";
-  const CALL_BOSS = "https://meet.jit.si/CodeCodeBosses-e860d4cf4163#config.prejoinConfig.enabled=true";
+  const CALL_ALL = "https://meet.ffmuc.net/CodeCodeCrew-17ec4d67e835";
+  const CALL_BOSS = "https://meet.ffmuc.net/CodeCodeBosses-e860d4cf4163";
   $("call-all").href = CALL_ALL;
   if (isSebHere()) $("test-alarm").hidden = false;
   if (codeLevel === "boss") { $("call-boss").href = CALL_BOSS; $("boss-call-line").hidden = false; }
