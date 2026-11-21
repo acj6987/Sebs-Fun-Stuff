@@ -554,7 +554,22 @@ function startSite() {
 for (let i = 10; i >= 1; i--) { const o = new Option("Level " + i, String(i)); if (i === 3) o.selected = true; $("add-level").append(o); }
 function renderRoster() {
   const box = $("roster"); box.replaceChildren();
-  if (!members.length) box.append(el("div", "hint", me && me.isAdmin ? "No one on the team yet. Add the first person below." : "No one on the team yet."));
+  if (!members.length) {
+    box.append(el("div", "hint", me && me.isAdmin ? "No one on the team yet. Add people below, or fill in the starter team." : "No one on the team yet."));
+    if (me && me.isAdmin) {
+      const fill = el("button", "btn solid", "Fill in the starter team"); fill.type = "button";
+      fill.onclick = async () => {
+        fill.disabled = true;
+        const team = [
+          ["Freddie", "Head of the place. The boss of everyone.", 10], ["Seb", "In charge of every computer, all computing stuff, equipment and websites.", 9],
+          ["Josh Clark", "In charge of war.", 4], ["Samson", "Makes sure companies don't steal our secrets.", 4],
+          ["Joe Kuma", "In charge of war, with Josh Clark.", 3], ["Karen", "On the war team with Josh and Joe.", 3], ["Andreas Carly Carpu", "One of the army people.", 2]];
+        try { for (let i = 0; i < team.length; i++) await addDoc(collection(db, "members"), { name: team[i][0], job: team[i][1], level: team[i][2], order: i + 1 }); }
+        catch (e) { flash("Could not add the team."); fill.disabled = false; }
+      };
+      box.append(fill);
+    }
+  }
   members.forEach((m) => {
     const c = el("div", "card"), top = el("div", "top");
     const lv = Math.max(1, Math.min(10, Number(m.level) || 1));
