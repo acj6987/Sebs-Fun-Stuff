@@ -114,22 +114,12 @@ form.send input { flex: 1; }
 /* Call */
 .call { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .call .chat-head { background: var(--ink); color: var(--bg); }
-.call-body { display: grid; grid-template-columns: 220px 1fr; min-height: 260px; }
-@media (max-width: 680px) { .call-body { grid-template-columns: 1fr; } }
-.incall { border-right: 1px solid var(--line); padding: 12px; display: grid; gap: 8px; align-content: start; }
-@media (max-width: 680px) { .incall { border-right: 0; border-bottom: 1px solid var(--line); } }
-.incall .who { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.incall .who i { width: 10px; height: 10px; border-radius: 50%; background: var(--olive); flex: none; }
-.incall .who.talking i { background: var(--stamp); box-shadow: 0 0 0 4px color-mix(in srgb, var(--stamp) 30%, transparent); }
-.call-main { display: flex; flex-direction: column; min-width: 0; }
-.call-log { height: 200px; }
-.call-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border-top: 1px solid var(--line); align-items: center; }
-.talk { font: 700 1rem var(--body); background: var(--stamp); color: var(--panel); border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; }
-.talk.on { background: var(--olive); color: var(--olive-ink); }
-.talk:disabled { opacity: .5; cursor: default; }
-.call-controls form { display: flex; gap: 8px; flex: 1; min-width: 200px; }
-.call-controls input { flex: 1; }
-.live { font-family: var(--mono); font-size: .8rem; color: var(--muted); padding: 0 12px 8px; min-height: 1.4em; overflow-wrap: anywhere; }
+.call-lines { display: grid; gap: 12px; padding: 14px; }
+.call-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.talk { font: 700 1rem var(--body); background: var(--stamp); color: var(--panel); border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; text-decoration: none; display: inline-block; }
+.talk:hover { filter: brightness(1.1); }
+.talk:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 </style>
 
 <div class="lock" id="lock">
@@ -182,24 +172,23 @@ form.send input { flex: 1; }
       <span class="hint">So everyone knows who sent the message.</span>
     </div>
     <div class="call">
-      <div class="chat-head"><h3>Call</h3><span class="freq" id="call-count">EVERYONE &middot; LIVE</span></div>
-      <div class="call-body">
-        <div class="incall">
-          <div class="hint">In the call now</div>
-          <div id="incall-list" style="display:grid; gap:6px"><div class="hint">Nobody yet.</div></div>
-        </div>
-        <div class="call-main">
-          <div class="log call-log" id="call-log"><div class="empty">Press Join call. When someone talks, you'll hear it read out loud.</div></div>
-          <div class="live" id="call-live"></div>
-          <div class="call-controls">
-            <button class="talk" id="join-btn" type="button">Join call</button>
-            <button class="talk" id="talk-btn" type="button" hidden>Talk</button>
-            <form id="call-type" hidden>
-              <input id="call-in" placeholder="Or type and it gets read out" maxlength="300" autocomplete="off" aria-label="Say something in the call">
-              <button class="btn" type="submit">Say it</button>
-            </form>
+      <div class="chat-head"><h3>Calls</h3><span class="freq">VOICE &amp; VIDEO</span></div>
+      <div class="call-lines">
+        <div class="call-line">
+          <div>
+            <div class="name">Everyone call</div>
+            <div class="hint">Real voice and video call for the whole crew.</div>
           </div>
+          <a class="talk" id="call-all" href="#" target="_blank" rel="noopener">Join the call</a>
         </div>
+        <div class="call-line" id="boss-call-line" hidden>
+          <div>
+            <div class="name">Freddie &amp; Seb call</div>
+            <div class="hint">Private call for the two bosses.</div>
+          </div>
+          <a class="talk" id="call-boss" href="#" target="_blank" rel="noopener">Join the call</a>
+        </div>
+        <div class="hint">The call opens in a new tab. Allow your microphone (and camera if you want) when it asks. Everyone who presses the same button ends up in the same call.</div>
       </div>
     </div>
     <div class="chats">
@@ -264,6 +253,12 @@ form.send input { flex: 1; }
     function onKey(e) { if (/^[0-9]$/.test(e.key)) press(e.key); else if (e.key === "Backspace") press("del"); }
     document.addEventListener("keydown", onKey);
   });
+
+  // ---- Real calls (open in a new tab) ----
+  const CALL_ALL = "https://meet.jit.si/CodeCodeCrew-17ec4d67e835#config.prejoinConfig.enabled=true";
+  const CALL_BOSS = "https://meet.jit.si/CodeCodeBosses-e860d4cf4163#config.prejoinConfig.enabled=true";
+  $("call-all").href = CALL_ALL;
+  if (codeLevel === "boss") { $("call-boss").href = CALL_BOSS; $("boss-call-line").hidden = false; }
   const confirmDel = new Set();
 
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
@@ -406,93 +401,5 @@ form.send input { flex: 1; }
     $("log-boss").replaceChildren(l);
   }
 
-  // ---- Call: talk (or type), everyone in the call hears it read out loud ----
-  const room = await window.claude?.use("room");
-  const tts = await window.claude?.use("tts");
-  const dict = await window.claude?.use("dictation");
-  let inCall = false, talking = false, heard = "";
-  const myName = () => { const m = members.find((x) => x.id === $("who").value); return m ? m.name : ""; };
-
-  if (!room) {
-    $("join-btn").disabled = true;
-    $("call-log").replaceChildren(el("div", "empty", "Calling can't connect here. Try opening the page while signed in to Claude."));
-    return;
-  }
-
-  function renderPeers() {
-    const list = $("incall-list"); list.replaceChildren();
-    const ppl = room.peers().filter((p) => p.presence && p.presence.inCall);
-    if (!ppl.length) list.append(el("div", "hint", "Nobody yet."));
-    ppl.forEach((p) => {
-      const n = typeof p.presence.name === "string" && p.presence.name ? p.presence.name.slice(0, 40) : "Someone";
-      const r = el("div", "who" + (p.presence.talking ? " talking" : ""));
-      r.append(el("i"), el("span", null, n + (p.isMe ? " (you)" : "")));
-      list.append(r);
-    });
-    $("call-count").textContent = ppl.length + " IN CALL";
-  }
-  room.onPeers(renderPeers, () => {});
-
-  function addLine(name, text, mine) {
-    const box = $("call-log");
-    if (box.querySelector(".empty")) box.replaceChildren();
-    const row = el("div", "msg" + (mine ? " mine" : ""));
-    const meta = el("div", "meta"); meta.append(el("b", null, name), el("span", null, new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })));
-    row.append(meta, el("div", "text", text));
-    box.append(row); box.scrollTop = box.scrollHeight;
-  }
-
-  room.on("talk", (m) => {
-    if (!inCall || !m.data || typeof m.data.text !== "string") return;
-    const name = typeof m.data.name === "string" && m.data.name ? m.data.name.slice(0, 40) : "Someone";
-    const text = m.data.text.slice(0, 300);
-    addLine(name, text, m.isMe);
-    if (!m.isMe && tts) tts.add([{ text: name + " says: " + text }]).catch(() => {});
-  });
-
-  async function say(text) {
-    text = text.trim(); if (!text) return;
-    try { await room.emit("talk", { name: myName() || "Someone", text: text.slice(0, 300) }); }
-    catch (e) { flash("Couldn't send that to the call."); }
-  }
-
-  $("join-btn").addEventListener("click", async () => {
-    if (!inCall) {
-      if (!myName()) { flash("Pick your name first (next to “I am”)."); $("who").focus(); return; }
-      inCall = true;
-      if (tts) tts.speak("You joined the call.").catch(() => {});
-      room.presence({ inCall: true, name: myName(), talking: false }).catch(() => {});
-      $("join-btn").textContent = "Leave call"; $("join-btn").classList.add("on");
-      $("call-type").hidden = false; $("talk-btn").hidden = !dict;
-      $("call-log").replaceChildren(el("div", "empty", dict ? "Press Talk, say something, then press Done." : "Type below and everyone in the call hears it."));
-    } else {
-      inCall = false;
-      if (talking && dict) dict.stop().catch(() => {});
-      if (tts) tts.stop().catch(() => {});
-      room.presence({ inCall: null, name: null, talking: null }).catch(() => {});
-      $("join-btn").textContent = "Join call"; $("join-btn").classList.remove("on");
-      $("call-type").hidden = true; $("talk-btn").hidden = true;
-    }
-  });
-
-  $("call-type").addEventListener("submit", (e) => { e.preventDefault(); const t = $("call-in").value; $("call-in").value = ""; say(t); });
-
-  if (dict) {
-    dict.onPartial(({ text }) => { $("call-live").textContent = (heard + " " + text).trim(); });
-    dict.onFinal(({ text }) => { heard = (heard + " " + text).trim(); $("call-live").textContent = heard; });
-    dict.onState(({ state }) => {
-      talking = state !== "idle";
-      $("talk-btn").textContent = talking ? "Done" : "Talk";
-      $("talk-btn").classList.toggle("on", talking);
-      if (inCall) room.presence({ talking }).catch(() => {});
-      if (state === "idle" && heard) { say(heard); heard = ""; setTimeout(() => { $("call-live").textContent = ""; }, 1500); }
-    });
-    $("talk-btn").addEventListener("click", () => {
-      if (!talking) {
-        heard = ""; $("call-live").textContent = "Listening…";
-        dict.start().catch((err) => { $("call-live").textContent = err && err.code === "not_granted" ? "Microphone is off. You can type instead." : ""; if (err && err.code === "not_granted") $("talk-btn").hidden = true; });
-      } else dict.stop().catch(() => {});
-    });
-  }
 })();
 </script>
