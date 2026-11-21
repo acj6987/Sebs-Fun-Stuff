@@ -108,14 +108,10 @@ form.send input { flex: 1; }
 .alarm-box { display: grid; gap: 12px; text-align: center; max-width: 420px; font-size: 1.1rem; }
 .alarm-title { font-family: var(--display); font-size: clamp(3rem, 14vw, 6rem); line-height: 1; letter-spacing: .06em; }
 .alarm .btn { justify-self: center; border-color: #fff; color: #fff; font-size: 1rem; padding: 10px 18px; }
+.alarm-who { font-family: var(--display); font-size: 1.8rem; }
 .alarm-form { display: grid; gap: 8px; justify-items: center; }
 .alarm-form input { width: 120px; background: #fff; color: #222; border: 0; }
 .alarm .btn:hover { background: #fff; color: #5a0d04; }
-
-/* Camera */
-.cam { position: relative; background: #0b0d09; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
-.cam canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; max-width: 100%; }
-.alarm .cam { width: min(420px, 100%); justify-self: center; border-color: #fff; }
 
 /* Intruder log */
 .intruders { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
@@ -155,7 +151,7 @@ form.send input { flex: 1; }
   <div class="alarm-box">
     <div class="alarm-title" id="alarm-title">ALARM</div>
     <div id="alarm-text"></div>
-    <div class="cam"><canvas id="cam-alarm" width="640" height="360" aria-label="Pretend security camera"></canvas></div>
+    <div class="alarm-who" id="alarm-who"></div>
     <div>Freddie and Seb can see who it was in the Intruder Log.</div>
     <button class="btn" id="alarm-off" type="button" hidden>Stop the alarm</button>
     <form id="alarm-code-form" class="alarm-form">
@@ -217,14 +213,6 @@ form.send input { flex: 1; }
       </form>
       <span class="status" id="remove-msg"></span>
     </div>
-  </section>
-
-  <section aria-labelledby="cam-h">
-    <div class="sec-head">
-      <h2 id="cam-h">Camera</h2>
-      <span class="hint">CAM 01 &middot; front of the house (pretend camera)</span>
-    </div>
-    <div class="cam"><canvas id="cam-main" width="640" height="360" aria-label="Pretend security camera showing a house"></canvas></div>
   </section>
 
   <section aria-labelledby="intr-h" id="intr-sec" hidden>
@@ -309,51 +297,6 @@ form.send input { flex: 1; }
   const user = await window.claude?.use("user");
   uid = (await user?.id()) ?? null;
 
-  // ---- Pretend security camera: a drawn house scene with a CCTV look ----
-  function drawCam(cv, t) {
-    const c = cv.getContext("2d"), W = cv.width, H = cv.height;
-    const hr = new Date().getHours(), night = hr < 7 || hr >= 19;
-    // sky and ground
-    c.fillStyle = night ? "#10162a" : "#7fa6c9"; c.fillRect(0, 0, W, H);
-    if (night) { c.fillStyle = "#e9e6c8"; c.beginPath(); c.arc(540, 60, 22, 0, 7); c.fill();
-      c.fillStyle = "#cfd3e6"; for (let i = 0; i < 30; i++) { const x = (i * 97) % W, y = (i * 53) % 150; if ((i + Math.floor(t / 700)) % 7) c.fillRect(x, y, 2, 2); } }
-    else { c.fillStyle = "#fff6c2"; c.beginPath(); c.arc(560, 60, 26, 0, 7); c.fill();
-      c.fillStyle = "rgba(255,255,255,.85)"; const cx = (t / 60) % (W + 200) - 100; c.beginPath(); c.ellipse(cx, 70, 50, 16, 0, 0, 7); c.ellipse(cx + 40, 60, 36, 18, 0, 0, 7); c.fill(); }
-    c.fillStyle = night ? "#1d2a17" : "#5d8a3c"; c.fillRect(0, 270, W, 90);
-    c.fillStyle = night ? "#3a3a3a" : "#a9a396"; c.beginPath(); c.moveTo(300, 360); c.lineTo(340, 360); c.lineTo(330, 300); c.lineTo(310, 300); c.fill();
-    // tree swaying
-    const sway = Math.sin(t / 900) * 6;
-    c.fillStyle = "#4a3320"; c.fillRect(95, 200, 16, 80);
-    c.fillStyle = night ? "#183018" : "#2f6b2a"; c.beginPath(); c.arc(103 + sway, 180, 48, 0, 7); c.arc(80 + sway, 205, 34, 0, 7); c.arc(128 + sway, 205, 34, 0, 7); c.fill();
-    // house
-    c.fillStyle = night ? "#6b5a4a" : "#c9a27a"; c.fillRect(210, 170, 220, 130);
-    c.fillStyle = night ? "#3b2420" : "#8b3a2b"; c.beginPath(); c.moveTo(195, 172); c.lineTo(320, 95); c.lineTo(445, 172); c.fill();
-    c.fillStyle = "#5a3a22"; c.fillRect(305, 230, 30, 70);
-    const lit = (k) => night ? (Math.floor(t / 4000 + k) % 3 ? "#ffd970" : "#2a2a35") : "#bfe0f2";
-    [[230, 195], [370, 195], [230, 240], [370, 240]].forEach(([x, y], k) => { c.fillStyle = lit(k); c.fillRect(x, y, 40, 30); c.strokeStyle = "#fff"; c.lineWidth = 2; c.strokeRect(x, y, 40, 30); });
-    // someone walking past now and then
-    const cyc = (t / 25) % 1400;
-    if (cyc < W + 40) { const x = cyc - 20, y = 300, step = Math.sin(t / 120) * 5;
-      c.fillStyle = "#1b1b1b"; c.beginPath(); c.arc(x, y - 42, 8, 0, 7); c.fill(); c.fillRect(x - 7, y - 34, 14, 24);
-      c.fillRect(x - 6 + step, y - 10, 5, 14); c.fillRect(x + 1 - step, y - 10, 5, 14); }
-    // cat on the path
-    const cat = (t / 40 + 500) % 2200; if (cat < W) { c.fillStyle = "#222"; c.fillRect(W - cat, 335, 18, 8); c.fillRect(W - cat - 4, 330, 7, 7); }
-    // CCTV look: grey tint, grain, scanlines, text
-    c.fillStyle = "rgba(120,140,120,.22)"; c.fillRect(0, 0, W, H);
-    for (let i = 0; i < 500; i++) { c.fillStyle = Math.random() < .5 ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.12)"; c.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
-    c.fillStyle = "rgba(0,0,0,.18)"; for (let y = 0; y < H; y += 3) c.fillRect(0, y, W, 1);
-    c.font = "bold 16px 'IBM Plex Mono', monospace"; c.fillStyle = "#e8ffe0";
-    c.fillText("CAM 01  FRONT", 14, 26);
-    const d = new Date(); c.fillText(d.toLocaleDateString() + "  " + d.toLocaleTimeString(), 14, H - 14);
-    if (Math.floor(t / 600) % 2) { c.fillStyle = "#ff3b30"; c.beginPath(); c.arc(W - 64, 21, 7, 0, 7); c.fill(); c.fillStyle = "#e8ffe0"; c.fillText("REC", W - 50, 26); }
-  }
-  const camReduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function camLoop(t) {
-    ["cam-main", "cam-alarm"].forEach((id) => { const cv = $(id); if (cv && cv.offsetParent !== null) drawCam(cv, t); });
-    if (camReduced) setTimeout(() => requestAnimationFrame(camLoop), 1000); else requestAnimationFrame(camLoop);
-  }
-  drawCam($("cam-main"), 0); requestAnimationFrame(camLoop);
-
   // ---- Alarm: goes off on every open screen. Only Seb can stop it. ----
   const SEB_CODE = "1407";
   const isSebHere = () => { try { return sessionStorage.getItem("crew-code") === SEB_CODE; } catch (e) { return false; } };
@@ -373,7 +316,18 @@ form.send input { flex: 1; }
     } catch (e) {}
   }
   function stopAlarmHere() { alarmOn = false; $("alarm").hidden = true; if (siren) siren(); }
-  function showAlarm(a) {
+  let tts = null; (window.claude?.use("tts") || Promise.resolve(null)).then((t) => { tts = t; }).catch(() => {});
+  function sayWarning(text) {
+    if (tts) { tts.speak(text, { voice: "glassy", rate: 1.1 }).catch(() => fallbackSay(text)); return; }
+    fallbackSay(text);
+  }
+  function fallbackSay(text) { try { const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} }
+  async function whoName(id) {
+    if (!id || !user?.profiles) return "";
+    try { const ps = await user.profiles([id]); return (ps[id] && ps[id].name) || ""; } catch (e) { return ""; }
+  }
+  let lastWarned = 0;
+  async function showAlarm(a) {
     const kind = a.kind === "practice" ? "PRACTICE" : a.kind === "test" ? "TEST" : "";
     $("alarm-title").textContent = kind ? kind + " ALARM" : "ALARM";
     const when = new Date(a.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -384,6 +338,15 @@ form.send input { flex: 1; }
     $("alarm-off").hidden = !seb; $("alarm-code-form").hidden = seb;
     $("alarm-msg").textContent = "";
     $("alarm").hidden = false; alarmOn = true; if (!siren) startSiren();
+    const name = await whoName(a.uid);
+    $("alarm-who").textContent = name ? "It was: " + name : "We don't know who it was.";
+    if (lastWarned !== a.at) {
+      lastWarned = a.at;
+      const who = name ? name + " is" : "Someone is";
+      sayWarning(a.kind === "test" ? "Warning. This is a test of the alarm." :
+        a.kind === "practice" ? "Warning. Practice alarm. " + who + " doing a practice." :
+        "Warning! Warning! " + who + " trying to break in to Code Code. Seb, come quickly!");
+    }
   }
   let alarmDoc = null;
   async function stopAlarmEverywhere() {
