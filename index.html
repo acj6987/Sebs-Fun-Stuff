@@ -313,7 +313,7 @@ form.send input { flex: 1; }
   }
   function logAttempt(count) {
     if (!db) return;
-    db.collection("attempts").add({ uid, at: Date.now(), count }).catch(() => {});
+    if (uid) db.collection("attempts").doc(uid).set({ uid, at: Date.now(), count }).catch(() => {});
     if (count % 6 === 0) db.doc("alarm/current").set({ at: Date.now(), uid }).catch(() => {});
   }
 
