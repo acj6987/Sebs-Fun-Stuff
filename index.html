@@ -99,6 +99,24 @@ form.send input { flex: 1; }
 .remove-box label { font-family: var(--mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 .remove-box input { width: 120px; }
 
+/* Alarm */
+.alarm { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--stamp); color: #fff;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  animation: flash .6s steps(2) infinite; }
+@keyframes flash { 50% { background: #5a0d04; } }
+@media (prefers-reduced-motion: reduce) { .alarm { animation: none; } }
+.alarm-box { display: grid; gap: 12px; text-align: center; max-width: 420px; font-size: 1.1rem; }
+.alarm-title { font-family: var(--display); font-size: clamp(3rem, 14vw, 6rem); line-height: 1; letter-spacing: .06em; }
+.alarm .btn { justify-self: center; border-color: #fff; color: #fff; font-size: 1rem; padding: 10px 18px; }
+.alarm .btn:hover { background: #fff; color: #5a0d04; }
+
+/* Intruder log */
+.intruders { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+.intruders table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.intruders th, .intruders td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.intruders th { font-family: var(--mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.intruders td.bad { color: var(--stamp); font-weight: 700; }
+
 /* Code lock */
 .lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-items: center;
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
@@ -125,6 +143,15 @@ form.send input { flex: 1; }
 .talk:hover { filter: brightness(1.1); }
 .talk:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 </style>
+
+<div class="alarm" id="alarm" hidden role="alert">
+  <div class="alarm-box">
+    <div class="alarm-title">ALARM</div>
+    <div>Someone typed the wrong code 6 times at <b id="alarm-when"></b>.</div>
+    <div>Freddie and Seb can see who it was in the Intruder Log.</div>
+    <button class="btn" id="alarm-off" type="button">Turn off alarm</button>
+  </div>
+</div>
 
 <div class="lock" id="lock">
   <div class="lock-box" id="lock-box">
@@ -175,6 +202,17 @@ form.send input { flex: 1; }
         <button class="btn" id="remove-cancel" type="button">Cancel</button>
       </form>
       <span class="status" id="remove-msg"></span>
+    </div>
+  </section>
+
+  <section aria-labelledby="intr-h" id="intr-sec" hidden>
+    <div class="sec-head">
+      <h2 id="intr-h">Intruder Log</h2>
+      <span class="hint">Every wrong code typed, newest first. Only Freddie and Seb see this.</span>
+    </div>
+    <div class="intruders">
+      <table><thead><tr><th>Who</th><th>When</th><th>Wrong tries</th></tr></thead>
+      <tbody id="intr-body"><tr><td colspan="3" class="hint">No wrong codes yet.</td></tr></tbody></table>
     </div>
   </section>
 
@@ -245,8 +283,42 @@ form.send input { flex: 1; }
     location.reload();
   });
 
-  // ---- Code lock: 5468 for the crew, 5897 for Freddie and Seb ----
-  const CODES = { "5468": "crew", "5897": "boss" };
+  const db = await window.claude?.use("db");
+  const user = await window.claude?.use("user");
+  uid = (await user?.id()) ?? null;
+
+  // ---- Alarm: goes off on every open screen after 6 wrong codes ----
+  const loadedAt = Date.now();
+  let siren = null;
+  function startSiren() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      const ctx = new AC(); const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = "sawtooth"; g.gain.value = 0.15; o.connect(g); g.connect(ctx.destination); o.start();
+      let up = true; const t = setInterval(() => { o.frequency.setTargetAtTime(up ? 1100 : 600, ctx.currentTime, 0.15); up = !up; }, 450);
+      siren = () => { clearInterval(t); try { o.stop(); ctx.close(); } catch (e) {} siren = null; };
+      setTimeout(() => siren && siren(), 20000);
+    } catch (e) {}
+  }
+  function showAlarm(a) {
+    $("alarm-when").textContent = new Date(a.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    $("alarm").hidden = false; if (!siren) startSiren();
+  }
+  $("alarm-off").addEventListener("click", () => { $("alarm").hidden = true; if (siren) siren(); });
+  if (db) {
+    db.doc("alarm/current").onSnapshot((d) => {
+      const a = d.exists ? d.data() : null;
+      if (a && typeof a.at === "number" && a.at > loadedAt - 60000) showAlarm(a);
+    }, () => {});
+  }
+  function logAttempt(count) {
+    if (!db) return;
+    db.collection("attempts").add({ uid, at: Date.now(), count }).catch(() => {});
+    if (count % 6 === 0) db.doc("alarm/current").set({ at: Date.now(), uid }).catch(() => {});
+  }
+
+  // ---- Code lock: 5468 for the crew, 5897 for Freddie, 1407 for Seb ----
+  const CODES = { "5468": "crew", "5897": "boss", "1407": "boss" };
   const codeLevel = await new Promise((resolve) => {
     let saved = null; try { saved = sessionStorage.getItem("crew-code"); } catch (e) {}
     if (saved && CODES[saved]) { $("lock").hidden = true; return resolve(CODES[saved]); }
@@ -259,9 +331,12 @@ form.send input { flex: 1; }
       if (typed.length === 4) {
         if (CODES[typed]) {
           try { sessionStorage.setItem("crew-code", typed); } catch (e) {}
+          store.set("crew-wrong", "0");
           $("lock").hidden = true; document.removeEventListener("keydown", onKey); resolve(CODES[typed]);
         } else {
-          $("lock-msg").textContent = "Wrong code. Try again.";
+          let wrong = Number(store.get("crew-wrong") || 0) + 1; store.set("crew-wrong", String(wrong));
+          logAttempt(wrong);
+          $("lock-msg").textContent = wrong % 6 === 0 ? "Too many wrong codes. The alarm has gone off!" : "Wrong code. Try again.";
           const b = $("lock-box"); b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
           typed = ""; setTimeout(dots, 250);
         }
@@ -378,8 +453,6 @@ form.send input { flex: 1; }
     });
   }
 
-  const db = await window.claude?.use("db");
-  const user = await window.claude?.use("user");
   if (!db) {
     $("roster-hint").textContent = "Sign in to see the team.";
     $("log-all").replaceChildren(el("div", "empty", "Sign in to use the radio."));
@@ -388,7 +461,6 @@ form.send input { flex: 1; }
   }
   isBoss = codeLevel === "boss" && ((await user?.canEdit()) ?? false);
   const w = await user?.can("data.write"); canWrite = w !== false;
-  uid = (await user?.id()) ?? null;
 
   // Team list
   let rosterDone = false;
@@ -429,6 +501,26 @@ form.send input { flex: 1; }
         $("add-name").value = ""; $("add-job").value = "";
       } catch (err) { flash("Could not add that person."); }
     });
+  }
+
+  // Intruder log (bosses only)
+  if (isBoss) {
+    $("intr-sec").hidden = false;
+    db.collection("attempts").orderBy("at", "desc").limit(50).onSnapshot(async (snap) => {
+      const rows = snap.docs.map((d) => d.data());
+      const ids = [...new Set(rows.map((r) => r.uid).filter((x) => typeof x === "string"))].slice(0, 64);
+      let ps = {}; try { if (ids.length && user?.profiles) ps = await user.profiles(ids); } catch (e) {}
+      const body = $("intr-body"); body.replaceChildren();
+      if (!rows.length) { const tr = el("tr"); const td = el("td", "hint", "No wrong codes yet."); td.colSpan = 3; tr.append(td); body.append(tr); return; }
+      rows.forEach((r) => {
+        const tr = el("tr");
+        const name = (r.uid && ps[r.uid] && ps[r.uid].name) || "Unknown person";
+        tr.append(el("td", null, name));
+        tr.append(el("td", null, new Date(r.at || 0).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })));
+        tr.append(el("td", (Number(r.count) % 6 === 0) ? "bad" : null, String(r.count || 1) + ((Number(r.count) % 6 === 0) ? " · ALARM" : "")));
+        body.append(tr);
+      });
+    }, () => {});
   }
 
   // Everyone chat
