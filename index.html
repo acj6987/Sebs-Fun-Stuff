@@ -94,6 +94,10 @@ form.send input { flex: 1; }
 .locked strong { display: block; font-family: var(--display); font-weight: 400; color: var(--stamp); font-size: 1.4rem; margin-bottom: 6px; }
 .note { font-size: .85rem; color: var(--muted); padding: 0 12px 10px; }
 .status { font-family: var(--mono); font-size: .8rem; color: var(--stamp); }
+.remove-box { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.remove-box form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.remove-box label { font-family: var(--mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.remove-box input { width: 120px; }
 
 /* Code lock */
 .lock { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-items: center;
@@ -139,7 +143,10 @@ form.send input { flex: 1; }
       <h1>Code Code</h1>
       <div class="sub">Personnel file &middot; Levels &middot; Radio</div>
     </div>
-    <div class="stamp">Top Secret</div>
+    <div style="display:flex; align-items:center; gap:16px">
+      <div class="stamp">Top Secret</div>
+      <button class="btn" id="logout" type="button">Log out</button>
+    </div>
   </header>
 
   <section aria-labelledby="roster-h">
@@ -159,6 +166,16 @@ form.send input { flex: 1; }
       </select>
       <button class="btn solid" type="submit">Add person</button>
     </form>
+    <div class="remove-box" id="remove-box" hidden>
+      <button class="btn danger" id="remove-start" type="button">Remove someone</button>
+      <form id="remove-form" hidden>
+        <label for="remove-code">Remove code</label>
+        <input id="remove-code" type="password" inputmode="numeric" maxlength="8" autocomplete="off">
+        <button class="btn danger" type="submit">Unlock</button>
+        <button class="btn" id="remove-cancel" type="button">Cancel</button>
+      </form>
+      <span class="status" id="remove-msg"></span>
+    </div>
   </section>
 
   <section aria-labelledby="radio-h" style="display:grid; gap:14px">
@@ -220,7 +237,13 @@ form.send input { flex: 1; }
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
   let members = [];
-  let isBoss = false, canWrite = true, uid = null;
+  let isBoss = false, canWrite = true, uid = null, removeMode = false;
+  const REMOVE_CODE = "5159";
+
+  $("logout").addEventListener("click", () => {
+    try { sessionStorage.removeItem("crew-code"); } catch (e) {}
+    location.reload();
+  });
 
   // ---- Code lock: 5468 for the crew, 5897 for Freddie and Seb ----
   const CODES = { "5468": "crew", "5897": "boss" };
@@ -277,7 +300,7 @@ form.send input { flex: 1; }
       c.append(top);
       c.append(el("div", "stars", "★".repeat(Math.min(lv, 10))));
       c.append(el("div", "job", m.job || ""));
-      if (isBoss) {
+      if (isBoss && removeMode) {
         const a = el("div", "actions");
         if (confirmDel.has(m.id)) {
           const yes = el("button", "btn small danger", "Yes, remove " + m.name);
@@ -377,6 +400,25 @@ form.send input { flex: 1; }
   }, () => { rosterDone = true; clearTimeout(rt); $("roster-hint").textContent = "The team list could not load."; });
 
   if (isBoss) {
+    $("remove-box").hidden = false;
+    const resetRemove = () => {
+      removeMode = false; confirmDel.clear();
+      $("remove-form").hidden = true; $("remove-start").hidden = false; $("remove-start").textContent = "Remove someone";
+      $("remove-code").value = ""; $("remove-msg").textContent = ""; renderRoster();
+    };
+    $("remove-start").addEventListener("click", () => {
+      if (removeMode) return resetRemove();
+      $("remove-start").hidden = true; $("remove-form").hidden = false; $("remove-code").focus();
+    });
+    $("remove-cancel").addEventListener("click", resetRemove);
+    $("remove-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if ($("remove-code").value === REMOVE_CODE) {
+        removeMode = true; $("remove-form").hidden = true; $("remove-start").hidden = false;
+        $("remove-start").textContent = "Done removing"; $("remove-msg").textContent = "Remove buttons are on the cards.";
+        $("remove-code").value = ""; renderRoster();
+      } else { $("remove-msg").textContent = "Wrong remove code."; $("remove-code").value = ""; }
+    });
     $("add-form").hidden = false;
     $("add-form").addEventListener("submit", async (e) => {
       e.preventDefault();
