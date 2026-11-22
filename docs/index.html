@@ -59,6 +59,7 @@ input, select { font: 1rem var(--body); color: var(--ink); background: var(--pan
 .gate-msg { min-height: 1.4em; color: var(--stamp); font-weight: 600; }
 .gate-box.shake { animation: shake .35s; }
 @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.setup-title { font-family: var(--display); font-size: 1.4rem; color: var(--stamp); text-align: center; }
 .linkish { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; font-size: .9rem; }
 
 /* Face scan */
@@ -174,13 +175,14 @@ form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px
     </form>
 
     <form id="setup-form" hidden>
-      <div class="hint">First time for Seb or Freddie: choose your password.</div>
+      <div class="setup-title">Make your first login</div>
+      <div class="hint">Only for Seb or Freddie, the very first time. Everyone else: press "Back to log in" below.</div>
       <label for="setup-who">Who are you?</label>
       <select id="setup-who"><option value="seb">Seb</option><option value="freddie">Freddie</option></select>
       <label for="setup-pass">New password (6 or more letters/numbers)</label>
-      <input id="setup-pass" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
+      <input id="setup-pass" type="password" autocomplete="new-password" maxlength="64" required>
       <label for="setup-pass2">Type it again</label>
-      <input id="setup-pass2" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
+      <input id="setup-pass2" type="password" autocomplete="new-password" maxlength="64" required>
       <button class="btn solid" type="submit">Make my login</button>
     </form>
 
@@ -291,7 +293,7 @@ form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px
     <form class="newlogin" id="newlogin-form">
       <input id="nl-user" placeholder="Username (like josh)" required maxlength="20" autocapitalize="none" spellcheck="false" aria-label="New username">
       <input id="nl-name" placeholder="Name to show (like Josh Clark)" maxlength="40" aria-label="Name to show">
-      <input id="nl-pass" placeholder="Password (6+ letters)" required minlength="6" maxlength="64" aria-label="New password" autocomplete="off">
+      <input id="nl-pass" placeholder="Password (6+ letters)" required maxlength="64" aria-label="New password" autocomplete="off">
       <button class="btn solid" type="submit">Make login</button>
     </form>
     <div class="status" id="nl-msg" style="margin-top:8px"></div>
@@ -433,18 +435,20 @@ $("login-form").addEventListener("submit", async (e) => {
     $("login-pass").value = "";
   } catch (err) {
     const wrongCodes = ["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found", "auth/invalid-email", "auth/invalid-login-credentials"];
-    if (wrongCodes.includes(err.code)) {
+    // Firebase's own lock-out after several wrong tries also counts as a wrong try
+    if (wrongCodes.includes(err.code) || err.code === "auth/too-many-requests") {
       const n = Number(local.get("wrong:" + u) || 0) + 1; local.set("wrong:" + u, String(n));
       const block = n % 6 === 0;
       const rec = { username: u, at: Date.now(), count: n }; if (block) rec.blocked = true;
       setDoc(doc(db, "attempts", u), rec, { merge: true }).catch(() => {});
       if (block) {
         raiseAlarm("real", u);
+        showAlarm({ at: Date.now(), kind: "real", username: u });
         gateMsg("Wrong password 6 times. The alarm has gone off and \"" + u + "\" is BLOCKED!");
         scanUser = u; $("scan").hidden = false;
       } else {
-        gateMsg("Wrong username or password. Try again.");
-        if (n % 6 === 5) practiceTimer = setTimeout(() => { practiceTimer = null; local.set("wrong:" + u, "0"); raiseAlarm("practice", u); }, 30000);
+        gateMsg(err.code === "auth/too-many-requests" ? "Wrong again. Too many tries, so this login is paused for a few minutes." : "Wrong username or password. Try again.");
+        if (n % 6 === 5) practiceTimer = setTimeout(() => { practiceTimer = null; local.set("wrong:" + u, "0"); raiseAlarm("practice", u); showAlarm({ at: Date.now(), kind: "practice", username: u }); }, 30000);
       }
       shake(); $("login-pass").value = "";
     } else if (err.code === "auth/too-many-requests") {
