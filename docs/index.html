@@ -60,6 +60,11 @@ input, select { font: 1rem var(--body); color: var(--ink); background: var(--pan
 .gate-box.shake { animation: shake .35s; }
 @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 .setup-title { font-family: var(--display); font-size: 1.4rem; color: var(--stamp); text-align: center; }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.keys button { font: 600 1.4rem var(--mono); padding: 12px 0; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.keys button:active { background: var(--olive); color: var(--olive-ink); }
+.pin-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.pin-panel input { width: 170px; }
 .linkish { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; font-size: .9rem; }
 
 /* Face scan */
@@ -169,20 +174,21 @@ form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px
     <form id="login-form" autocomplete="on">
       <label for="login-user">Username</label>
       <input id="login-user" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="30">
-      <label for="login-pass">Password</label>
-      <input id="login-pass" type="password" autocomplete="current-password" required maxlength="64">
+      <label for="login-pass">Secret number (PIN)</label>
+      <input id="login-pass" type="password" inputmode="numeric" autocomplete="current-password" required maxlength="64">
+      <div class="keys" id="keys"></div>
       <button class="btn solid" type="submit" id="login-btn">Log in</button>
     </form>
 
     <form id="setup-form" hidden>
       <div class="setup-title">Make your first login</div>
-      <div class="hint">Only for Seb or Freddie, the very first time. Everyone else: press "Back to log in" below.</div>
+      <div class="hint">Only for Seb or Freddie, the very first time.</div>
       <label for="setup-who">Who are you?</label>
       <select id="setup-who"><option value="seb">Seb</option><option value="freddie">Freddie</option></select>
-      <label for="setup-pass">New password (6 or more letters/numbers)</label>
-      <input id="setup-pass" type="password" autocomplete="new-password" maxlength="64" required>
+      <label for="setup-pass">Choose a 6-number PIN</label>
+      <input id="setup-pass" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
       <label for="setup-pass2">Type it again</label>
-      <input id="setup-pass2" type="password" autocomplete="new-password" maxlength="64" required>
+      <input id="setup-pass2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6" required>
       <button class="btn solid" type="submit">Make my login</button>
     </form>
 
@@ -200,7 +206,6 @@ form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px
       <div class="hint">Take a photo of your face. Seb and Freddie will see it in the Intruder Log.</div>
     </div>
 
-    <button class="linkish" id="setup-toggle" type="button">Seb or Freddie, first time here?</button>
   </div>
 </div>
 
@@ -214,9 +219,18 @@ form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px
     <div class="head-right">
       <div class="stamp">Top Secret</div>
       <button class="btn danger" id="test-alarm" type="button" hidden>Test alarm</button>
+      <button class="btn" id="pin-btn" type="button">Change my PIN</button>
       <button class="btn" id="logout" type="button">Log out</button>
     </div>
   </header>
+
+  <form class="pin-panel" id="pin-form" hidden>
+    <b>Change my PIN</b>
+    <input id="pin-new" type="password" inputmode="numeric" maxlength="6" placeholder="New 6-number PIN" aria-label="New PIN" autocomplete="new-password">
+    <input id="pin-new2" type="password" inputmode="numeric" maxlength="6" placeholder="Type it again" aria-label="New PIN again" autocomplete="new-password">
+    <button class="btn solid" type="submit">Save PIN</button>
+    <span class="status" id="pin-msg"></span>
+  </form>
 
   <section aria-labelledby="roster-h">
     <div class="sec-head"><h2 id="roster-h">The Team</h2><span class="hint" id="roster-hint">Loading the team&hellip;</span></div>
@@ -288,12 +302,12 @@ form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px
   </section>
 
   <section aria-labelledby="logins-h" id="logins-sec" hidden>
-    <div class="sec-head"><h2 id="logins-h">Logins</h2><span class="hint">Only Seb and Freddie see this. Make a username and password for each friend.</span></div>
+    <div class="sec-head"><h2 id="logins-h">Logins</h2><span class="hint">Only Seb and Freddie see this. Make a username and 6-number PIN for each friend. Only you two can make logins.</span></div>
     <div class="table"><table><thead><tr><th>Username</th><th>Name</th><th>Status</th><th></th></tr></thead><tbody id="logins-body"></tbody></table></div>
     <form class="newlogin" id="newlogin-form">
       <input id="nl-user" placeholder="Username (like josh)" required maxlength="20" autocapitalize="none" spellcheck="false" aria-label="New username">
       <input id="nl-name" placeholder="Name to show (like Josh Clark)" maxlength="40" aria-label="Name to show">
-      <input id="nl-pass" placeholder="Password (6+ letters)" required maxlength="64" aria-label="New password" autocomplete="off">
+      <input id="nl-pass" placeholder="6-number PIN" required maxlength="6" inputmode="numeric" aria-label="New PIN" autocomplete="off">
       <button class="btn solid" type="submit">Make login</button>
     </form>
     <div class="status" id="nl-msg" style="margin-top:8px"></div>
@@ -308,7 +322,7 @@ form.newlogin { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, browserLocalPersistence, setPersistence, inMemoryPersistence }
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updatePassword, onAuthStateChanged, browserLocalPersistence, setPersistence, inMemoryPersistence }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, onSnapshot, query, orderBy, limit }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -401,22 +415,28 @@ $("test-alarm").addEventListener("click", () => raiseAlarm("test", me ? me.usern
 let practiceTimer = null, scanUser = null;
 function gateMsg(t) { $("gate-msg").textContent = t || ""; }
 
-$("setup-toggle").addEventListener("click", () => {
-  const show = $("setup-form").hidden;
-  $("setup-form").hidden = !show; $("login-form").hidden = show;
-  $("setup-toggle").textContent = show ? "Back to log in" : "Seb or Freddie, first time here?";
-  gateMsg("");
+// The first-time setup form only appears at the secret address ending in #setup
+function showSetup() { const on = location.hash === "#setup"; $("setup-form").hidden = !on; $("login-form").hidden = on; }
+showSetup(); window.addEventListener("hashchange", showSetup);
+const isPin = (p) => /^[0-9]{6}$/.test(p);
+// Number keypad for the PIN
+["1","2","3","4","5","6","7","8","9","del","0","ok"].forEach((k) => {
+  const b = el("button", null, k === "del" ? "⌫" : k === "ok" ? "✓" : k); b.type = k === "ok" ? "submit" : "button";
+  if (k === "del") b.setAttribute("aria-label", "Delete");
+  if (k === "ok") b.setAttribute("aria-label", "Log in");
+  if (k !== "ok") b.onclick = () => { const f = $("login-pass"); f.value = k === "del" ? f.value.slice(0, -1) : (f.value + k).slice(0, 64); };
+  $("keys").append(b);
 });
 
 $("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const u = $("setup-who").value, p1 = $("setup-pass").value, p2 = $("setup-pass2").value;
-  if (p1 !== p2) { gateMsg("The two passwords are different. Try again."); shake(); return; }
-  if (p1.length < 6) { gateMsg("The password needs 6 or more letters or numbers."); return; }
+  if (!isPin(p1)) { gateMsg("The PIN must be exactly 6 numbers."); shake(); return; }
+  if (p1 !== p2) { gateMsg("The two PINs are different. Try again."); shake(); return; }
   gateMsg("Making your login…");
   try {
     await createUserWithEmailAndPassword(auth, emailOf(u), p1);
-    $("setup-pass").value = ""; $("setup-pass2").value = "";
+    $("setup-pass").value = ""; $("setup-pass2").value = ""; history.replaceState(null, "", location.pathname); showSetup();
   } catch (err) {
     gateMsg(err.code === "auth/email-already-in-use" ? "That login is already made. Go back and log in." :
       err.code === "auth/weak-password" ? "Pick a longer password." : "Couldn't make the login (" + (err.code || "error") + ").");
@@ -444,10 +464,10 @@ $("login-form").addEventListener("submit", async (e) => {
       if (block) {
         raiseAlarm("real", u);
         showAlarm({ at: Date.now(), kind: "real", username: u });
-        gateMsg("Wrong password 6 times. The alarm has gone off and \"" + u + "\" is BLOCKED!");
+        gateMsg("Wrong PIN 6 times. The alarm has gone off and \"" + u + "\" is BLOCKED!");
         scanUser = u; $("scan").hidden = false;
       } else {
-        gateMsg(err.code === "auth/too-many-requests" ? "Wrong again. Too many tries, so this login is paused for a few minutes." : "Wrong username or password. Try again.");
+        gateMsg(err.code === "auth/too-many-requests" ? "Wrong again. Too many tries, so this login is paused for a few minutes." : "Wrong username or PIN. Try again.");
         if (n % 6 === 5) practiceTimer = setTimeout(() => { practiceTimer = null; local.set("wrong:" + u, "0"); raiseAlarm("practice", u); showAlarm({ at: Date.now(), kind: "practice", username: u }); }, 30000);
       }
       shake(); $("login-pass").value = "";
@@ -484,6 +504,15 @@ $("scan-input").addEventListener("change", async (e) => {
 });
 
 $("logout").addEventListener("click", () => signOut(auth));
+$("pin-btn").addEventListener("click", () => { $("pin-form").hidden = !$("pin-form").hidden; $("pin-msg").textContent = ""; });
+$("pin-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const a = $("pin-new").value, b = $("pin-new2").value, msg = (t) => { $("pin-msg").textContent = t; };
+  if (!isPin(a)) { msg("The PIN must be exactly 6 numbers."); return; }
+  if (a !== b) { msg("The two PINs are different."); return; }
+  try { await updatePassword(auth.currentUser, a); msg("PIN changed!"); $("pin-new").value = ""; $("pin-new2").value = ""; setTimeout(() => { $("pin-form").hidden = true; }, 2000); }
+  catch (err) { msg(err.code === "auth/requires-recent-login" ? "Log out, log in again, then change your PIN straight away." : "Couldn't change the PIN (" + (err.code || "error") + ")."); }
+});
 
 /* ---------------- After login ---------------- */
 onAuthStateChanged(auth, async (u) => {
@@ -687,13 +716,13 @@ $("newlogin-form").addEventListener("submit", async (e) => {
   const msg = (t) => { $("nl-msg").textContent = t; };
   if (!u) { msg("Usernames can only use letters, numbers, - and _."); return; }
   if (ADMINS.includes(u)) { msg("That username is for Seb or Freddie."); return; }
-  if (p.length < 6) { msg("The password needs 6 or more letters or numbers."); return; }
+  if (!isPin(p)) { msg("The PIN must be exactly 6 numbers."); return; }
   msg("Making the login…");
   try {
     const cred = await createUserWithEmailAndPassword(maker, emailOf(u), p);
     await setDoc(doc(db, "users", cred.user.uid), { username: u, name, disabled: false, createdAt: Date.now() });
     await signOut(maker);
-    msg("Done! Tell " + name + ": username \"" + u + "\" and the password you picked.");
+    msg("Done! Tell " + name + ": username \"" + u + "\" and their PIN.");
     $("nl-user").value = ""; $("nl-name").value = ""; $("nl-pass").value = "";
   } catch (err) {
     msg(err.code === "auth/email-already-in-use" ? "That username is already taken. Pick another one." :

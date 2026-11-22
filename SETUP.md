@@ -24,9 +24,9 @@ in the page is meant to be public.
 
 ## 3. First logins
 
-1. Open the website and press **"Seb or Freddie, first time here?"**.
-2. Seb picks **Seb** and chooses a password. Freddie does the same on his device. Do this straight away.
-3. Logged in as Seb or Freddie, scroll to **Logins** to make a username and password for each friend.
+1. Open the website address with `#setup` on the end (e.g. `https://acj6987.github.io/Sebs-Fun-Stuff/#setup`).
+2. Seb picks **Seb** and chooses a 6-number PIN. Freddie does the same on his device. Do this straight away.
+3. Logged in as Seb or Freddie, scroll to **Logins** to make a username and 6-number PIN for each friend.
    Friends don't need an email address or any account of their own.
 
 ## Notes
