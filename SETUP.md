@@ -35,3 +35,12 @@ in the page is meant to be public.
 - To stop a friend logging in, press **Turn off** next to their login.
 - 6 wrong passwords for a username sets off the alarm and blocks that username until a boss presses **Let back in**.
 - Calls use https://meet.ffmuc.net (free, no account).
+
+## Member cards
+
+- When Seb or Freddie makes a login, a **member card** with a QR code appears. Press **Print card**.
+- On the login screen, **Scan my member card** opens the camera; holding the card up logs that person in.
+  If the camera is blocked, **Take a photo of the card instead** works too.
+- The QR code holds the username and PIN, so a card is like a key. If a card is lost, press **Turn off**
+  next to that login and make a new one.
+- Changing your own PIN (**Change my PIN**) shows a fresh card for you.
