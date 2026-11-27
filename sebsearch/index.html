@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SebSearch</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="#" class="logo-small" id="homeLink">Seb<span>Search</span></a>
+    <nav>
+      <button class="tab active" data-view="search">🔎 Search</button>
+      <button class="tab" data-view="call">📞 Calls <span class="pro-tag">PRO</span></button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
+    </nav>
+  </header>
+
+  <!-- SEARCH VIEW -->
+  <main id="searchView" class="view">
+    <section id="hero" class="hero">
+      <h1 class="logo">Seb<span>Search</span></h1>
+      <p class="tagline">Ask anything. Get answers, videos and websites.</p>
+      <form id="searchForm" class="search-box">
+        <input id="q" type="search" placeholder="Ask a question… e.g. How do volcanoes work?" autocomplete="off" required>
+        <button type="submit">Search</button>
+      </form>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section id="results" class="results hidden">
+      <div id="answer" class="card answer"></div>
+      <h2>▶️ Videos</h2>
+      <div id="videos" class="video-grid"></div>
+      <h2>🌐 Websites</h2>
+      <div id="sites" class="sites"></div>
+    </section>
+  </main>
+
+  <!-- CALL VIEW -->
+  <main id="callView" class="view hidden">
+    <section id="paywall" class="card paywall">
+      <h2>📞 Calling Area</h2>
+      <p>Video and voice call your friends right from SebSearch. Calling is a <b>Pro</b> feature.</p>
+      <div class="price">£2.99<small>/month</small></div>
+      <ul>
+        <li>✅ Video calls</li>
+        <li>✅ Voice calls</li>
+        <li>✅ Your own call ID to share</li>
+      </ul>
+      <button id="buyBtn" class="big-btn">Get Pro</button>
+      <p class="fine" id="payNote"></p>
+    </section>
+
+    <section id="callRoom" class="card hidden">
+      <h2>📞 Calling Area <span class="pro-tag">PRO</span></h2>
+      <p>Your call ID: <b id="myId">connecting…</b> <button id="copyId" class="small-btn">Copy</button></p>
+      <p class="fine">Give this ID to a friend. They open SebSearch, go to Calls, and type it in.</p>
+      <form id="callForm" class="call-form">
+        <input id="friendId" placeholder="Friend's call ID" required>
+        <button type="submit" data-mode="video">🎥 Video call</button>
+        <button type="button" id="voiceBtn">🎙️ Voice call</button>
+      </form>
+      <div id="incoming" class="incoming hidden">
+        <span>📲 Incoming call from <b id="callerId"></b></span>
+        <button id="answerBtn">Answer</button>
+        <button id="declineBtn" class="danger">Decline</button>
+      </div>
+      <div class="videos-wrap">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+      </div>
+      <div class="call-controls">
+        <button id="muteBtn" disabled>🔇 Mute</button>
+        <button id="hangupBtn" class="danger" disabled>❌ Hang up</button>
+      </div>
+      <p id="callStatus" class="fine">Ready.</p>
+    </section>
+  </main>
+
+  <!-- SETTINGS -->
+  <dialog id="settings">
+    <form method="dialog">
+      <h2>⚙️ Settings</h2>
+      <label>YouTube API key (optional)
+        <input id="ytKey" placeholder="Paste key to show real videos inside SebSearch">
+      </label>
+      <p class="fine">Without a key, SebSearch shows video buttons that open YouTube. With a free key from Google Cloud (YouTube Data API v3), videos play right here.</p>
+      <div class="row">
+        <button value="save" id="saveSettings">Save</button>
+        <button value="cancel" class="secondary">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer>Made by Seb · SebSearch</footer>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
