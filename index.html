@@ -214,7 +214,7 @@
       </div>
       <div class="chips" data-for="webPrompt">
         <span class="chip">a website about sharks with a quiz</span><span class="chip">a football fan page with a score counter</span>
-        <span class="chip">a cookie clicker game</span><span class="chip">a dinosaur fact machine</span><span class="chip">a page about me and my pets</span>
+        <span class="chip">a cookie clicker game</span><span class="chip">a dinosaur fact machine</span><span class="chip">a page about me and my pets</span><span class="chip">a space adventure game</span><span class="chip">a superhero quiz</span>
       </div>
       <div class="muted small" id="webStatus" style="margin-top:10px"></div>
       <div id="webResult" class="hidden">
@@ -224,6 +224,7 @@
         <div class="row" style="margin-top:10px; flex-wrap:wrap">
           <button class="btn alt" id="webFull">⛶ Full screen</button>
           <button class="btn ghost" id="webDl">⬇ Download website</button>
+          <button class="btn ghost hidden" id="webUndo">↩️ Undo change</button>
         </div>
         <div class="row composer" style="margin-top:12px">
           <input type="text" id="webChange" placeholder="Change it! e.g. make the background blue and add a joke button">
@@ -805,75 +806,97 @@ $("musPrompt").onkeydown = e => { if (e.key === "Enter") makeMusic(); };
 
 
 /* ================== WEBSITE MAKER ================== */
-// The free AI gives short replies (about 5,000 letters) and reads up to 16,000 letters,
-// so we ask for small websites and, if it gets cut off, ask it to keep going.
-const WEB_SYS = "You are an expert web designer who builds fun, colourful, kid-friendly websites. " +
-  "Reply with ONLY one complete HTML file with inline <style> and <script>. No explanation, no markdown fences. " +
-  "Do not use external images or files (use emoji, CSS shapes and gradients instead). It must work on phones. " +
-  "It MUST be short: under 110 lines and under 4500 characters, so it is never cut off. Always end with </html>.";
+// The free AI only gives short replies (about 5,000 letters), so Buddy builds each website in 3 parts:
+// 1) the page, 2) the style, 3) the game code. That makes websites about 3 times bigger and better.
+const WEB_SYS = "You are an expert web designer who builds amazing, colourful, kid-friendly websites. " +
+  "Output ONLY code: no explanation, no markdown fences. Never use external images, fonts or files: use emoji, CSS gradients and shapes. " +
+  "Everything must work on phones.";
 let currentSite = null;
 // The preview runs in a locked box (so a made website can never see your key or memory).
 // Inside that box real saving isn't allowed, so give made websites a pretend one that works until you leave.
 const STORAGE_SHIM = "<script>(function(){function M(){var d={};return{getItem:function(k){return k in d?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}" +
   "['localStorage','sessionStorage'].forEach(function(n){try{window[n].length}catch(e){Object.defineProperty(window,n,{value:M(),configurable:true})}})})();<\/script>";
 
-function cleanHtml(t) {
-  t = t.replace(/```(?:html)?/gi, "");
-  const i = t.search(/<!doctype|<html/i); if (i > 0) t = t.slice(i);
-  const j = t.toLowerCase().lastIndexOf("</html>"); if (j >= 0) t = t.slice(0, j + 7);
-  return t.trim();
+const stripFences = t => t.replace(/```[a-z]*\n?/gi, "").trim();
+function cleanBody(t) {
+  t = stripFences(t);
+  const b = t.match(/<body[^>]*>([\s\S]*?)(<\/body>|$)/i); if (b) t = b[1];
+  return t.replace(/<script[\s\S]*?(<\/script>|$)/gi, "").replace(/<style[\s\S]*?(<\/style>|$)/gi, "")
+          .replace(/<\/?(html|head|body)[^>]*>|<!doctype[^>]*>|<meta[^>]*>|<title>[\s\S]*?<\/title>/gi, "").trim();
 }
+const cleanCss = t => stripFences(t).replace(/<\/?style[^>]*>/gi, "").trim();
+const cleanJs = t => stripFences(t).replace(/<\/?script[^>]*>/gi, "").trim();
+function jsOk(js) { try { new Function(js); return true; } catch { return false; } } // only checks spelling of the code, never runs it
+
 async function askAIRetry(messages) {
   try { return await askAI(messages); }
   catch { await new Promise(r => setTimeout(r, 15000)); return await askAI(messages); } // free AI sometimes needs a short rest
 }
-async function buildSite(userMsg, onPart) {
-  let out = "";
-  for (let i = 0; i < 4; i++) {
-    const msgs = i === 0 ? [{ role: "system", content: WEB_SYS }, { role: "user", content: userMsg }]
-      : [{ role: "system", content: WEB_SYS }, { role: "user", content: userMsg.slice(0, 4000) },
-         { role: "assistant", content: out.slice(-7000) },
-         { role: "user", content: "You were cut off. Continue EXACTLY where you stopped, even mid-line. Do not repeat anything. No fences, no explanation." }];
-    out += await askAIRetry(msgs);
-    if (/<\/html>/i.test(out)) break;
-    onPart(i + 1);
-  }
-  const html = cleanHtml(out);
-  if (!/<html|<body|<div/i.test(html)) throw new Error("not a website");
-  return html;
+const ask1 = text => askAIRetry([{ role: "system", content: WEB_SYS }, { role: "user", content: text }]);
+
+async function buildSite(idea, old, change, step) {
+  const ctx = "Website idea: " + idea + (change ? "\nThe user wants this change: " + change : "") + "\n\n";
+  // 1) Page
+  step(1, change ? "Changing the page" : "Building the page");
+  const body = cleanBody(await ask1(ctx + (old
+    ? "Here is the current page HTML (inside <body>):\n" + old.body.slice(0, 6000) + "\n\nRewrite it with the change applied (if the change is only about colours or style, return it unchanged). "
+    : "") + "Write ONLY the HTML that goes inside <body> (no <html>, <head>, <style> or <script> tags, no onclick attributes). " +
+    "Make it rich and fun: a big header, several sections, cards, and interactive parts (games, quizzes, buttons, counters) where they fit the idea. " +
+    "Give every interactive element a clear id. Use short class names. Maximum 4000 characters."));
+  if (body.length < 40) throw new Error("empty page");
+  // 2) Style
+  step(2, "Making it look amazing");
+  const css = cleanCss(await ask1(ctx + "Here is the page HTML:\n" + body.slice(0, 6000) + "\n\n" + (old ? "Here is the old CSS:\n" + old.css.slice(0, 4000) + "\n\nUpdate it for the change. " : "") +
+    "Write ONLY the CSS (no <style> tags) to make this page look amazing: a bold theme that suits the idea, gradients, rounded cards, hover effects, " +
+    "small animations, and a phone-friendly layout. Style every class and id used. Maximum 4000 characters."));
+  // 3) Game code (checked; if the AI makes a mistake, ask again once)
+  step(3, "Making the buttons and games work");
+  const jsAsk = ctx + "Here is the page HTML:\n" + body.slice(0, 6000) + "\n\n" + (old && old.js ? "Here is the old JavaScript:\n" + old.js.slice(0, 4000) + "\n\nUpdate it so it matches the new page. " : "") +
+    "Write ONLY the JavaScript (no <script> tags) that makes every button, game, quiz and interactive element in this HTML work, using their ids. " +
+    "Check each element exists before using it. Add fun touches like little animations or emoji confetti. Make sure there are no errors. Maximum 4000 characters.";
+  let js = cleanJs(await ask1(jsAsk));
+  if (!jsOk(js)) { step(3, "Fixing a little mistake"); js = cleanJs(await ask1(jsAsk + " Keep it under 3000 characters so it is complete.")); }
+  if (!jsOk(js)) js = "";
+  return { body, css, js };
+}
+function assemble(site) {
+  return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" +
+    esc(site.name) + "</title>\n<style>\n" + site.css + "\n</style>\n</head>\n<body>\n" + site.body + "\n<script>\n" + site.js + "\n<\/script>\n</body>\n</html>\n";
 }
 function showSite(site) {
   currentSite = site;
   $("webResult").classList.remove("hidden");
-  $("webFrame").srcdoc = STORAGE_SHIM + site.html;
+  $("webFrame").srcdoc = STORAGE_SHIM + (site.body ? assemble(site) : site.html);
+  $("webUndo").classList.toggle("hidden", !site.prev);
   renderSites();
 }
-function siteName(html, fallback) {
-  const m = html.match(/<title>([^<]{1,60})<\/title>/i);
-  return (m ? m[1] : fallback).trim();
+function siteTitle(site, idea) {
+  const h = (site.body.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) || [])[1];
+  const t = h ? h.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim() : "";
+  return (t && t.length <= 40 ? t : idea.slice(0, 40)).trim() || "My website";
 }
-async function makeSite(changeReq) {
-  const p = $("webPrompt").value.trim();
-  if (!changeReq && !p) return;
+async function makeSite(change) {
+  const idea = change && currentSite ? currentSite.idea : $("webPrompt").value.trim();
+  if (!idea) return;
   $("webBtn").disabled = $("webChangeBtn").disabled = true;
-  const started = Date.now();
-  const tick = setInterval(() => { $("webStatus").textContent = (changeReq ? "✏️ Changing your website… " : "🛠️ Building your website… ") + Math.floor((Date.now() - started) / 1000) + "s"; }, 300);
+  const started = Date.now(); let label = "";
+  const tick = setInterval(() => { $("webStatus").textContent = label + " … " + Math.floor((Date.now() - started) / 1000) + "s"; }, 300);
+  const step = (n, what) => { label = "🛠️ Step " + n + " of 3: " + what; };
   try {
-    let msg;
-    if (changeReq && currentSite) {
-      msg = "Here is my website:\n\n" + currentSite.html.slice(0, 9000) + "\n\nChange it like this: " + changeReq +
-            "\nReply with the whole new HTML file (keep it under 4500 characters).";
-    } else msg = "Make this website: " + p;
-    const html = await buildSite(msg, n => { $("webStatus").textContent = "🛠️ Nearly there, adding the last bits (" + n + ")…"; });
-    const site = { name: siteName(html, changeReq ? (currentSite.name || "My website") : p.slice(0, 40)), html, t: Date.now() };
-    S.sites = [site, ...(S.sites || []).filter(x => !(changeReq && currentSite && x.t === currentSite.t))].slice(0, 8);
-    save(); showSite(site);
+    const old = change && currentSite && currentSite.body ? currentSite : null;
+    const parts = await buildSite(idea, old, change, step);
+    const site = Object.assign(parts, { idea, t: Date.now() });
+    site.name = siteTitle(site, idea);
+    if (change && currentSite) site.prev = { body: currentSite.body, css: currentSite.css, js: currentSite.js, html: currentSite.html, name: currentSite.name };
+    S.sites = [site, ...(S.sites || []).filter(x => !(change && currentSite && x.t === currentSite.t))].slice(0, 8);
+    try { save(); } catch {}
+    showSite(site);
     $("webStatus").textContent = "Done! 🎉 Try it below. Want something different? Type a change underneath.";
     $("webChange").value = "";
   } catch (e) {
-    $("webStatus").textContent = /couldn't reach|fetch|Failed/i.test(String(e)) && /^(localhost|127\.)/.test(location.hostname)
+    $("webStatus").textContent = /^(localhost|127\.)/.test(location.hostname) || location.protocol === "file:"
       ? "Oops! The website maker only works when Buddy is on a real website."
-      : "Oops, the website maker got stuck 😵 Try again, or describe a smaller website.";
+      : "Oops, the website maker got stuck 😵 Try again in a moment.";
   }
   clearInterval(tick);
   $("webBtn").disabled = $("webChangeBtn").disabled = false;
@@ -888,11 +911,16 @@ $("webBtn").onclick = () => makeSite(null);
 $("webPrompt").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); makeSite(null); } };
 $("webChangeBtn").onclick = () => { const c = $("webChange").value.trim(); if (c && currentSite) makeSite(c); };
 $("webChange").onkeydown = e => { if (e.key === "Enter") $("webChangeBtn").click(); };
+$("webUndo").onclick = () => {
+  if (!currentSite || !currentSite.prev) return;
+  Object.assign(currentSite, currentSite.prev, { prev: null }); save(); showSite(currentSite);
+  $("webStatus").textContent = "↩️ Gone back to how it was before.";
+};
 $("webFull").onclick = () => { const w = $("webFrameWrap"); (w.requestFullscreen || w.webkitRequestFullscreen || (() => {})).call(w); };
 $("webDl").onclick = () => {
   if (!currentSite) return;
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([currentSite.html], { type: "text/html" }));
+  a.href = URL.createObjectURL(new Blob([currentSite.body ? assemble(currentSite) : currentSite.html], { type: "text/html" }));
   a.download = (currentSite.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "my-website") + ".html";
   a.click();
 };
