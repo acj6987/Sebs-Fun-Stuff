@@ -41,7 +41,10 @@ button.gold{background:var(--gold)}
 #minimap{width:150px;height:150px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.25);background:#7cc55a;pointer-events:none}
 #zoneToast{position:fixed;top:22%;left:50%;transform:translateX(-50%);z-index:11;color:#fff;font-size:clamp(26px,5vw,44px);font-weight:700;text-shadow:0 3px 0 rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .5s;text-align:center;white-space:nowrap}
 #toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:60;background:#fff;border-radius:16px;padding:10px 18px;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.25);pointer-events:none;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center}
-#prompt{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:12;background:rgba(29,35,64,.85);color:#fff;border-radius:14px;padding:8px 16px;font-weight:600;cursor:pointer;white-space:nowrap}
+#prompt{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:13;background:#ff5a3c;color:#fff;border-radius:20px;padding:14px 24px;font-size:20px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 5px 0 #b83a22,0 8px 18px rgba(0,0,0,.25);animation:pulse 1.2s ease-in-out infinite;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+#prompt:active{transform:translateX(-50%) translateY(4px);box-shadow:0 1px 0 #b83a22}
+@keyframes pulse{0%,100%{scale:1}50%{scale:1.06}}
+@media (prefers-reduced-motion:reduce){#prompt{animation:none}}
 #prompt kbd{background:#fff;color:var(--ink);border-radius:6px;padding:0 6px;margin-right:6px}
 /* touch controls */
 #joy{position:fixed;left:22px;bottom:22px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.25);border:3px solid rgba(255,255,255,.6);z-index:12;touch-action:none}
@@ -631,7 +634,7 @@ let nearest=null;
 function checkInteract(){nearest=null;let bd=1e9;
  for(const n of npcs){const d=Math.hypot(n.x-player.x,n.z-player.z);if(d<3&&d<bd){bd=d;nearest={label:'Talk to '+n.def.name,act:()=>openChat(n)}}}
  for(const it of interactables){if(it.chest&&S.chests.includes(it.chest.id))continue;if(it.y!=null&&Math.abs(it.y-player.y)>2)continue;const d=Math.hypot(it.x-player.x,it.z-player.z);if(d<it.r&&d<bd){bd=d;nearest=it}}
- const pr=$('prompt');if(nearest){pr.innerHTML=`<kbd>E</kbd>${esc(nearest.label)}`;pr.classList.remove('hidden');$('btnAct').textContent=nearest.label.startsWith('Talk')?'Talk':'Go'}else{pr.classList.add('hidden');$('btnAct').textContent='Talk'}}
+ const pr=$('prompt');if(nearest){const txt=`👆 ${nearest.label}`;if(pr.textContent!==txt)pr.textContent=txt;pr.classList.remove('hidden');$('btnAct').textContent=nearest.label.startsWith('Talk')?'Talk':'Go'}else{pr.classList.add('hidden');$('btnAct').textContent='Talk'}}
 function doInteract(){if(mode!=='world'||!nearest)return;sfx.click();nearest.act()}
 
 // ================= minimap =================
@@ -686,7 +689,7 @@ const QUESTS=[
 function checkQuests(){for(const q of QUESTS){if(!S.quests.includes(q.id)&&q.c()){S.quests.push(q.id);for(const k in q.r)S[k]+=q.r[k];toast(`🏆 Adventure complete: <b>${q.t}</b><br>Reward: ${q.rt}`,4200);sfx.win();updateHUD();save()}}}
 function currentQuest(){return QUESTS.find(q=>!S.quests.includes(q.id))}
 function openQuests(){if(mode!=='world'&&mode!=='menu')return;let h='';for(const q of QUESTS){const d=S.quests.includes(q.id);h+=`<div class="quest ${d?'done':''}"><span class="tick">${d?'✅':'⬜'}</span><div style="flex:1"><b>${q.t}</b><br><small>Reward: ${q.rt}</small></div></div>`}openPanel('🗺️ Adventures',h)}
-function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (or hold the arrow buttons in the corner) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
+function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (or hold the arrow buttons in the corner) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> or the blue Jump button &nbsp; <b>Talk / Go inside / Open:</b> tap the orange 👆 button that pops up (or press <kbd>E</kbd>)</p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
 $('bTeam').onclick=openTeam;$('bDex').onclick=openDex;$('bQuest').onclick=openQuests;$('bHelp').onclick=()=>{if(mode==='world'||mode==='menu')openHelp()};
 
 // insides
@@ -897,7 +900,7 @@ function beginGame(fresh){$('title').classList.add('hidden');$('starter').classL
  if(!S.caught.includes(JUMPSTAR))spawnJumpstar();
  player.yaw=Math.PI;camYaw=0;
  mode='world';showWorldUI();updateHUD();showZone(ZONES.town.name);
- if(fresh)setTimeout(()=>openInfo('🌟 Welcome, '+H.name+'!',`<p style="font-size:18px">Your adventure in <b>Jumpstone Town</b> begins with your partner <b>${SPECIES[S.party[0].sp].name}</b>!</p><p>🐾 Walk into wild monsters to battle and catch them.<br>💬 Your friends are around town and the lands — press <b>E</b> to chat!<br>🏟️ Win badges at the 4 Stadiums.<br>☁️ Find the legendary Jumpstar…</p><p><b>Move:</b> WASD / arrows · <b>Jump:</b> Space · <b>Talk:</b> E · <b>Look:</b> drag</p>`),400)}
+ if(fresh)setTimeout(()=>openInfo('🌟 Welcome, '+H.name+'!',`<p style="font-size:18px">Your adventure in <b>Jumpstone Town</b> begins with your partner <b>${SPECIES[S.party[0].sp].name}</b>!</p><p>🐾 Walk into wild monsters to battle and catch them.<br>💬 Your friends are around town and the lands — walk up to them and tap the orange 👆 button to chat!<br>🏟️ Win badges at the 4 Stadiums.<br>☁️ Find the legendary Jumpstar…</p><p><b>Move:</b> the ⬆️⬅️➡️⬇️ buttons in the corner · <b>Jump:</b> blue button · <b>Talk:</b> orange 👆 button · <b>Look:</b> drag the screen</p>`),400)}
 // nurse chat
 TALK.nurse_={greet:["Hello dear! Welcome to Jumpstone Town!"],intro:"I'm Nurse Penny! I run the Healing Center. Come inside whenever your monsters need a rest.",fav:"I love all monsters equally! But Snowbun is very cuddly.",mood:["I'm wonderful, thank you for asking!"],filler:["Remember, healing is always free!","Take care of your monsters and they'll take care of you.","The Healing Center is the pink-roofed building right behind me."],adv:"An adventure? Make sure to bring Potions!",team:[[19,0],[4,1]]};
 
