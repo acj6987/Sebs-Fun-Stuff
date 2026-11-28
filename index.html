@@ -215,6 +215,7 @@
         <span class="chip">happy summer song</span><span class="chip">spooky haunted house</span>
         <span class="chip">epic battle</span><span class="chip">chill and relaxing</span><span class="chip">sad rainy day</span>
       </div>
+      <div class="muted small" style="margin-top:8px">🎤 Want real songs with singing? Turn on Google Lyria in Memory → Owner settings.</div>
       <div class="muted small" id="musStatus" style="margin-top:10px"></div>
       <div class="media-out" id="musOut"></div>
     </div>
@@ -230,12 +231,16 @@
         <button class="btn ghost" id="lockBtn">Log out / lock</button>
       </div>
       <p class="muted small">Your memory is saved on this device and browser.</p>
-      <h4>⚙️ Owner settings: better pictures</h4>
-      <p class="muted small">Free pictures are basic. For much better ones (Google Gemini or ChatGPT pictures), a grown-up can get a key at
+      <h4>⚙️ Owner settings: better pictures, real videos & songs with singing</h4>
+      <p class="muted small">The free versions are basic. For Google Gemini / ChatGPT pictures, real AI videos and real songs with singing, a grown-up can get a key at
         <a href="https://enter.pollinations.ai" target="_blank" rel="noopener" style="color:var(--accent)">enter.pollinations.ai</a>
         (it can cost money). The key is only saved on this device, never in the website's code.</p>
       <label class="small">Picture AI</label>
       <select id="picModelSel" style="margin:4px 0 10px"></select>
+      <label class="small">Video AI</label>
+      <select id="vidModelSel" style="margin:4px 0 10px"></select>
+      <label class="small">Music AI</label>
+      <select id="musModelSel" style="margin:4px 0 10px"></select>
       <label class="small">Pollinations key</label>
       <div class="row" style="margin-top:4px">
         <input type="password" id="keyInput" placeholder="sk_… or pk_…" autocomplete="off">
@@ -418,7 +423,36 @@ const PIC_MODELS = {
   gptimage:    { label: "ChatGPT – GPT Image", key: true },
   zimage:      { label: "Z-Image Turbo (cheap & sharp)", key: true },
 };
+const MUSIC_MODELS = {
+  free:                    { label: "Free (simple beats, no singing)", key: false },
+  "google/lyria-3.5":      { label: "Google Gemini – Lyria (real songs with singing)", key: true },
+  "elevenlabs/music-v2":   { label: "ElevenLabs Music (real songs with singing)", key: true },
+};
+const VIDEO_MODELS = {
+  free:                    { label: "Free (moving picture slideshow)", key: false, secs: 10 },
+  "seedance-2.0-mini":     { label: "Seedance (real AI video, 10 seconds, with sound)", key: true, secs: 10 },
+  "veo":                   { label: "Google Gemini – Veo (real AI video, 8 seconds, with sound)", key: true, secs: 8 },
+};
 const hasKey = () => !!(S.apiKey || "").trim();
+const musModel = () => (hasKey() && MUSIC_MODELS[S.musModel] && S.musModel !== "free") ? S.musModel : "free";
+const vidModel = () => (hasKey() && VIDEO_MODELS[S.vidModel] && S.vidModel !== "free") ? S.vidModel : "free";
+
+// Ask the paid AIs (needs the owner's key). Returns a Blob.
+async function genFetch(kind, prompt, params, expect) {
+  const url = "https://gen.pollinations.ai/" + kind + "/" + encodeURIComponent(prompt) + "?" + new URLSearchParams(params);
+  let r;
+  try { r = await fetch(url, { headers: { Authorization: "Bearer " + S.apiKey.trim() } }); }
+  catch { throw new PicError("Couldn't reach the AI. Check the internet and try again."); }
+  if (!r.ok) {
+    let msg = ""; try { msg = (await r.json()).error.message || ""; } catch {}
+    if (r.status === 401 || r.status === 403) throw new PicError("🔑 The key didn't work. Check it in Memory → Owner settings. " + msg);
+    if (r.status === 402) throw new PicError("💷 The AI account has run out of credit. " + msg);
+    throw new PicError("The AI had a problem (" + r.status + "). Try again! " + msg);
+  }
+  const blob = await r.blob();
+  if (!blob.type.startsWith(expect)) throw new PicError("The AI sent back something unexpected. Try again!");
+  return blob;
+}
 const picModel = () => (hasKey() && S.picModel && S.picModel !== "free") ? S.picModel : "free";
 
 class PicError extends Error {}
@@ -485,7 +519,22 @@ async function makeVideo() {
   const p = $("vidPrompt").value.trim(); if (!p) return;
   $("vidBtn").disabled = true; $("vidOut").innerHTML = "";
   const bar = $("vidBar"), status = $("vidStatus");
-  bar.style.width = "3%";
+  bar.style.width = "3%"; status.textContent = "Starting…";
+  if (vidModel() !== "free") {
+    const m = vidModel(), started = Date.now();
+    const tick = setInterval(() => {
+      const s = Math.floor((Date.now() - started) / 1000);
+      status.textContent = "🎬 " + VIDEO_MODELS[m].label.split(" (")[0] + " is filming your video… " + s + "s (real AI videos take 1–3 minutes)";
+      bar.style.width = Math.min(95, 3 + s / 1.8) + "%";
+    }, 500);
+    try {
+      const blob = await genFetch("video", p, { model: m, duration: VIDEO_MODELS[m].secs, audio: "true", aspectRatio: "16:9", safe: "true" }, "video/");
+      const url = URL.createObjectURL(blob);
+      $("vidOut").innerHTML = '<video src="' + url + '" controls autoplay playsinline></video><br><a class="dl" href="' + url + '" download="buddy-video.mp4">⬇ Download video</a>';
+      status.textContent = "Done! Your AI video is ready 🎉 (press play for sound)"; bar.style.width = "100%";
+    } catch (e) { status.textContent = e instanceof PicError ? e.message : "Couldn't make the video. Try again!"; bar.style.width = "0"; }
+    clearInterval(tick); $("vidBtn").disabled = false; return;
+  }
   const seed = Math.floor(Math.random() * 1e6);
   // Free mode can only make 1 picture every 45s, so it films 3 "camera shots" from one big picture.
   // With a key it draws 3 different scenes.
@@ -505,7 +554,7 @@ async function makeVideo() {
   const cv = $("vidCanvas"), ctx = cv.getContext("2d");
   cv.classList.remove("hidden");
   const DUR = 10000, n = 3, seg = DUR / n, fade = 700;
-  const types = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"];
+  const types = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
   const mime = window.MediaRecorder ? types.find(t => MediaRecorder.isTypeSupported(t)) : null;
   let rec, chunks = [];
   if (mime) {
@@ -554,7 +603,7 @@ async function makeVideo() {
     const blob = new Blob(chunks, { type: mime.split(";")[0] });
     const url = URL.createObjectURL(blob), ext = mime.includes("mp4") ? "mp4" : "webm";
     cv.classList.add("hidden");
-    $("vidOut").innerHTML = '<video src="' + url + '" controls autoplay loop playsinline></video><br><a class="dl" href="' + url + '" download="buddy-video.' + ext + '">⬇ Download video</a>';
+    $("vidOut").innerHTML = '<video src="' + url + '" controls autoplay muted loop playsinline></video><br><a class="dl" href="' + url + '" download="buddy-video.' + ext + '">⬇ Download video</a>';
     status.textContent = "Done! Your 10-second video is ready 🎉";
   } else {
     status.textContent = "Done! (This browser can't save videos, but you watched it above.)";
@@ -586,42 +635,56 @@ function pickMood(p) {
 }
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 
-async function renderMusic(prompt) {
+// Pure-JavaScript synthesiser: writes the samples straight into arrays.
+// Much faster than building thousands of Web Audio nodes, and works the same on phones, tablets and computers.
+function renderMusic(prompt) {
   const moodName = pickMood(prompt), M = MOODS[moodName], R = rng(hash(prompt));
-  const SR = 44100, LEN = 60;
-  const ac = new OfflineAudioContext(2, SR * LEN, SR);
-  const master = ac.createGain(); master.gain.value = 0.8;
-  const comp = ac.createDynamicsCompressor(); master.connect(comp); comp.connect(ac.destination);
-  master.gain.setValueAtTime(0.8, LEN - 3); master.gain.linearRampToValueAtTime(0, LEN);
-
-  const noise = ac.createBuffer(1, SR, SR); const nd = noise.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const SR = 22050, LEN = 60, N = SR * LEN;
+  const L = new Float32Array(N), Rt = new Float32Array(N);
+  const TAU = Math.PI * 2;
+  const WAVES = {
+    sine: ph => Math.sin(TAU * ph),
+    square: ph => (ph % 1 < 0.5 ? 0.7 : -0.7),
+    sawtooth: ph => (2 * (ph % 1) - 1) * 0.7,
+    triangle: ph => 4 * Math.abs((ph % 1) - 0.5) - 1,
+  };
+  const noise = new Float32Array(SR); for (let i = 0; i < SR; i++) noise[i] = Math.random() * 2 - 1;
 
   const beat = 60 / M.bpm, bar = beat * 4, bars = Math.floor((LEN - 1) / bar);
   const deg = (d, oct = 0) => M.root + M.scale[((d % 7) + 7) % 7] + 12 * (Math.floor(d / 7) + oct);
 
   function tone(freq, t, dur, type, vol, pan = 0, attack = 0.01) {
-    if (t >= LEN) return;
-    const o = ac.createOscillator(), g = ac.createGain(), p = ac.createStereoPanner();
-    o.type = type; o.frequency.value = freq; p.pan.value = pan;
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + attack);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(p); p.connect(master); o.start(t); o.stop(t + dur + 0.05);
+    const s0 = Math.floor(t * SR); if (s0 >= N) return;
+    const w = WAVES[type], a = Math.max(1, attack * SR), total = Math.floor(dur * SR);
+    const k = Math.log(0.0001) / Math.max(1, total - a);
+    const gl = vol * Math.cos((pan + 1) * Math.PI / 4) * Math.SQRT2, gr = vol * Math.sin((pan + 1) * Math.PI / 4) * Math.SQRT2;
+    const step = freq / SR;
+    for (let i = 0; i < total && s0 + i < N; i++) {
+      const env = i < a ? i / a : Math.exp(k * (i - a));
+      const v = w(i * step) * env;
+      L[s0 + i] += v * gl; Rt[s0 + i] += v * gr;
+    }
   }
   function kick(t) {
-    const o = ac.createOscillator(), g = ac.createGain();
-    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.15);
-    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.35);
+    const s0 = Math.floor(t * SR), total = Math.floor(0.3 * SR); let ph = 0;
+    for (let i = 0; i < total && s0 + i < N; i++) {
+      const sec = i / SR, f = sec < 0.15 ? 150 * Math.pow(40 / 150, sec / 0.15) : 40;
+      ph += f / SR;
+      const v = Math.sin(TAU * ph) * 0.9 * Math.exp(-sec * 23);
+      L[s0 + i] += v; Rt[s0 + i] += v;
+    }
   }
-  function hit(t, freq, dur, vol) {
-    const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
-    s.buffer = noise; f.type = "highpass"; f.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    s.connect(f); f.connect(g); g.connect(master); s.start(t, R() * 0.5); s.stop(t + dur + 0.02);
+  function hit(t, cutoff, dur, vol) { // noise through a simple high-pass filter
+    const s0 = Math.floor(t * SR), total = Math.floor(dur * SR), off = Math.floor(R() * SR / 2);
+    const rc = 1 / (TAU * cutoff), al = rc / (rc + 1 / SR), k = Math.log(0.001) / total;
+    let y = 0, xp = 0;
+    for (let i = 0; i < total && s0 + i < N; i++) {
+      const x = noise[(off + i) % SR]; y = al * (y + x - xp); xp = x;
+      const v = y * vol * Math.exp(k * i);
+      L[s0 + i] += v; Rt[s0 + i] += v;
+    }
   }
 
-  // A melody "motif" that repeats with small changes
   const motif = Array.from({ length: 8 }, () => (R() < 0.2 ? null : Math.floor(R() * 7)));
   const melOct = M.bpm > 110 ? 1 : 0;
 
@@ -630,15 +693,12 @@ async function renderMusic(prompt) {
     const section = b < 4 ? "intro" : b < bars - 4 ? (Math.floor((b - 4) / 8) % 2 ? "B" : "A") : "outro";
     const drums = section !== "intro", melody = section === "A" || section === "B";
 
-    // Pads (chord)
     [0, 2, 4].forEach((s, i) => tone(mtof(deg(chord + s, -1)), t0, bar * 1.02, M.pad, 0.05, (i - 1) * 0.4, 0.3));
-    // Bass
     for (let q = 0; q < 4; q++) {
       if (section === "intro" && q % 2) continue;
       const n = q === 3 && R() < 0.4 ? deg(chord + 4, -2) : deg(chord, -2);
       tone(mtof(n), t0 + q * beat, beat * 0.9, "triangle", 0.28, 0, 0.005);
     }
-    // Drums
     if (drums) {
       for (let q = 0; q < 4; q++) {
         if (q === 0 || q === 2 || (moodName === "epic" || moodName === "happy")) kick(t0 + q * beat);
@@ -646,21 +706,28 @@ async function renderMusic(prompt) {
         hit(t0 + q * beat, 7000, 0.04, 0.12); hit(t0 + q * beat + beat / 2, 7000, 0.03, 0.08);
       }
     }
-    // Melody: 8 eighth notes per bar
     if (melody) {
       for (let e = 0; e < 8; e++) {
         let d = motif[e]; if (d === null) continue;
         if (section === "B") d += 2;
         if (R() < 0.15) d += R() < 0.5 ? 1 : -1;
-        tone(mtof(deg(chord + d, melOct)), t0 + e * beat / 2, beat * 0.45, M.lead, M.lead === "sawtooth" || M.lead === "square" ? 0.06 : 0.13, 0.15);
+        tone(mtof(deg(chord + d, melOct)), t0 + e * beat / 2, beat * 0.45, M.lead, M.lead === "sawtooth" || M.lead === "square" ? 0.07 : 0.13, 0.15);
       }
     }
-    // Sparkle arpeggio in the outro / intro
     if (section === "intro" || section === "outro") {
       for (let e = 0; e < 4; e++) tone(mtof(deg(chord + e * 2, 1)), t0 + e * beat, beat * 1.5, "sine", 0.07, e % 2 ? 0.5 : -0.5);
     }
   }
-  return { buf: await ac.startRendering(), mood: moodName, bpm: M.bpm };
+
+  // Master: make it loud but never distorted, and fade out over the last 3 seconds.
+  let peak = 0; for (let i = 0; i < N; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(Rt[i]));
+  const g = peak > 0 ? 0.89 / peak : 1, fadeFrom = (LEN - 3) * SR;
+  for (let i = 0; i < N; i++) {
+    const f = i > fadeFrom ? (N - i) / (N - fadeFrom) : 1;
+    L[i] *= g * f; Rt[i] *= g * f;
+  }
+  const buf = { numberOfChannels: 2, length: N, sampleRate: SR, getChannelData: c => (c ? Rt : L) };
+  return { buf, mood: moodName, bpm: M.bpm };
 }
 
 function toWav(buf) {
@@ -681,13 +748,25 @@ function toWav(buf) {
 async function makeMusic() {
   const p = $("musPrompt").value.trim(); if (!p) return;
   $("musBtn").disabled = true; $("musOut").innerHTML = "";
+  if (musModel() !== "free") {
+    const m = musModel(), started = Date.now();
+    const tick = setInterval(() => { $("musStatus").textContent = "🎤 " + MUSIC_MODELS[m].label.split(" (")[0] + " is writing and singing your song… " + Math.floor((Date.now() - started) / 1000) + "s (can take 1–2 minutes)"; }, 500);
+    try {
+      const blob = await genFetch("audio", p + ", a full song with catchy sung vocals and lyrics, suitable for kids", { model: m, duration: 60, safe: "true" }, "audio/");
+      const url = URL.createObjectURL(blob), ext = blob.type.includes("wav") ? "wav" : "mp3";
+      $("musStatus").textContent = "Done! Your song is ready 🎉";
+      $("musOut").innerHTML = '<audio src="' + url + '" controls playsinline></audio><a class="dl" href="' + url + '" download="buddy-song.' + ext + '">⬇ Download song</a>';
+    } catch (e) { $("musStatus").textContent = e instanceof PicError ? e.message : "Couldn't make the song. Try again!"; }
+    clearInterval(tick); $("musBtn").disabled = false; return;
+  }
   $("musStatus").innerHTML = '<span class="typing">Composing your song</span>';
   try {
-    const { buf, mood, bpm } = await renderMusic(p);
+    await new Promise(r => setTimeout(r, 50));
+    const { buf, mood, bpm } = renderMusic(p);
     const url = URL.createObjectURL(toWav(buf));
     const emoji = { happy: "😄", sad: "🌧️", spooky: "👻", epic: "⚔️", chill: "😎" }[mood];
     $("musStatus").textContent = "Done! A " + mood + " " + emoji + " song at " + bpm + " beats per minute.";
-    $("musOut").innerHTML = '<audio src="' + url + '" controls autoplay></audio><a class="dl" href="' + url + '" download="buddy-song.wav">⬇ Download song</a>';
+    $("musOut").innerHTML = '<audio src="' + url + '" controls playsinline></audio><a class="dl" href="' + url + '" download="buddy-song.wav">⬇ Download song</a>';
   } catch (e) { $("musStatus").textContent = "Couldn't make the music: " + e.message; }
   $("musBtn").disabled = false;
 }
@@ -706,14 +785,19 @@ $("forgetBtn").onclick = () => {
   if (!confirm("Really forget everything about you?")) return;
   S.history = []; S.facts = []; S.pics = []; S.name = ""; convo = []; $("chat").innerHTML = ""; save(); show();
 };
-function renderSettings() {
-  $("picModelSel").innerHTML = Object.entries(PIC_MODELS).map(([k, m]) =>
-    '<option value="' + k + '"' + ((S.picModel || "free") === k ? " selected" : "") + '>' + esc(m.label) + (m.key ? " (needs key)" : "") + '</option>').join("");
-  $("keyInput").value = S.apiKey || "";
-  $("keyMsg").textContent = hasKey() ? "✅ Key saved. Pictures use: " + PIC_MODELS[picModel()].label : "No key saved: using free pictures.";
+function fillSel(id, models, cur) {
+  $(id).innerHTML = Object.entries(models).map(([k, m]) =>
+    '<option value="' + k + '"' + ((cur || "free") === k ? " selected" : "") + '>' + esc(m.label) + (m.key ? " – needs key" : "") + '</option>').join("");
 }
-$("keyBtn").onclick = () => { S.apiKey = $("keyInput").value.trim(); S.picModel = $("picModelSel").value; save(); renderSettings(); };
-$("picModelSel").onchange = () => { S.picModel = $("picModelSel").value; save(); renderSettings(); };
+function renderSettings() {
+  fillSel("picModelSel", PIC_MODELS, S.picModel); fillSel("vidModelSel", VIDEO_MODELS, S.vidModel); fillSel("musModelSel", MUSIC_MODELS, S.musModel);
+  $("keyInput").value = S.apiKey || "";
+  $("keyMsg").textContent = hasKey() ? "✅ Key saved. Pictures: " + PIC_MODELS[picModel()].label + " · Video: " + VIDEO_MODELS[vidModel()].label + " · Music: " + MUSIC_MODELS[musModel()].label
+                                     : "No key saved: using the free versions.";
+}
+function readSettings() { S.picModel = $("picModelSel").value; S.vidModel = $("vidModelSel").value; S.musModel = $("musModelSel").value; }
+$("keyBtn").onclick = () => { S.apiKey = $("keyInput").value.trim(); readSettings(); save(); renderSettings(); };
+["picModelSel", "vidModelSel", "musModelSel"].forEach(id => $(id).onchange = () => { readSettings(); save(); renderSettings(); });
 $("lockBtn").onclick = () => { S.unlocked = false; save(); $("codeInput").value = ""; $("codeErr").textContent = ""; show(); };
 
 show();
