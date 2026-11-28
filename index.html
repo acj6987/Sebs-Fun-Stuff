@@ -105,7 +105,13 @@ button.gold{background:var(--gold)}
   #enemyCard{min-width:190px}
   #battleMsg{font-size:16px;min-height:70px}
 }
-@media (hover:hover) and (pointer:fine){#joy,#touchBtns{display:none}}
+#joy{display:none!important}
+#dpad{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,64px);gap:6px}
+#dpad button{width:64px;height:64px;padding:0;font-size:30px;border-radius:16px;background:rgba(255,255,255,.92);touch-action:none}
+#dpad button.down-on{background:#ffc83a;transform:translateY(3px)}
+#dpad .u{grid-column:2;grid-row:1}#dpad .l{grid-column:1;grid-row:2}#dpad .r{grid-column:3;grid-row:2}#dpad .d{grid-column:2;grid-row:3}
+#dpad .mid{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:center;font-size:24px}
+@media (max-width:640px){#dpad{grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:5px}#dpad button{width:54px;height:54px;font-size:26px}#touchBtns{flex-direction:column;align-items:flex-end;gap:8px}#touchBtns button{width:62px!important;height:62px!important}}
 </style>
 </head>
 <body>
@@ -129,6 +135,7 @@ button.gold{background:var(--gold)}
 <div id="toast"></div>
 <div id="prompt" class="hidden"></div>
 <div id="joy" class="hidden"><div id="knob"></div></div>
+<div id="dpad" class="hidden"><button class="u" data-x="0" data-z="1" aria-label="Walk forward">⬆️</button><button class="l" data-x="-1" data-z="0" aria-label="Walk left">⬅️</button><span class="mid">🚶</span><button class="r" data-x="1" data-z="0" aria-label="Walk right">➡️</button><button class="d" data-x="0" data-z="-1" aria-label="Walk backward">⬇️</button></div>
 <div id="touchBtns" class="hidden"><button id="btnAct">Talk</button><button id="btnJump">Jump</button></div>
 
 <!-- Title -->
@@ -575,6 +582,11 @@ $('btnJump').addEventListener('pointerdown',e=>{e.preventDefault();doJump()});
 $('btnAct').addEventListener('click',()=>doInteract());
 $('prompt').addEventListener('click',()=>doInteract());
 
+const dpad={x:0,z:0};
+document.querySelectorAll('#dpad button').forEach(b=>{const dx=+b.dataset.x,dz=+b.dataset.z;
+ const on=e=>{e.preventDefault();dpad.x=dx;dpad.z=dz;b.classList.add('down-on');try{b.setPointerCapture(e.pointerId)}catch(_){}};
+ const off=()=>{b.classList.remove('down-on');if(dpad.x===dx&&dpad.z===dz){dpad.x=0;dpad.z=0}};
+ b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);b.addEventListener('contextmenu',e=>e.preventDefault())});
 function doJump(){if(mode!=='world'||!player.onGround)return;player.vy=9.5*player.jumpMul;player.onGround=false;sfx.jump()}
 
 // ================= world update =================
@@ -585,8 +597,8 @@ function collide(px,pz,py){for(const o of obstacles){const dx=px-o.x,dz=pz-o.z,d
 function zoneAt(x,z){let best='town',bd=1e9;for(const k in ZONES){const Z=ZONES[k],d=Math.hypot(x-Z.x,z-Z.z)/Z.r;if(d<bd){bd=d;best=k}}return bd<1?best:'wilds'}
 let curZone='town',encounterCD=2,wTime=0;
 function updatePlayer(dt){
- let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x;
- let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y;
+ let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x+dpad.x;
+ let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y+dpad.z;
  const len=Math.hypot(ix,iz);if(len>1){ix/=len;iz/=len}
  const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=-fz,rz=fx;
  let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;
@@ -670,7 +682,7 @@ const QUESTS=[
 function checkQuests(){for(const q of QUESTS){if(!S.quests.includes(q.id)&&q.c()){S.quests.push(q.id);for(const k in q.r)S[k]+=q.r[k];toast(`🏆 Adventure complete: <b>${q.t}</b><br>Reward: ${q.rt}`,4200);sfx.win();updateHUD();save()}}}
 function currentQuest(){return QUESTS.find(q=>!S.quests.includes(q.id))}
 function openQuests(){if(mode!=='world'&&mode!=='menu')return;let h='';for(const q of QUESTS){const d=S.quests.includes(q.id);h+=`<div class="quest ${d?'done':''}"><span class="tick">${d?'✅':'⬜'}</span><div style="flex:1"><b>${q.t}</b><br><small>Reward: ${q.rt}</small></div></div>`}openPanel('🗺️ Adventures',h)}
-function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (joystick on phone) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
+function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (or hold the arrow buttons in the corner) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
 $('bTeam').onclick=openTeam;$('bDex').onclick=openDex;$('bQuest').onclick=openQuests;$('bHelp').onclick=()=>{if(mode==='world'||mode==='menu')openHelp()};
 
 // insides
@@ -797,7 +809,7 @@ function refreshCards(){const p=S.party[B.pi],e=B.enemyTeam[B.ei];const ps=stats
  $('pName').textContent=SPECIES[p.sp].name;$('pLv').textContent='Lv'+p.lvl;$('pType').innerHTML=typeTag(SPECIES[p.sp].type);const pf=p.hp/ps.maxHp;$('pHp').style.width=pf*100+'%';$('pHp').style.background=hpColor(pf);$('pHpTxt').textContent=`${p.hp}/${ps.maxHp}`;$('pXp').style.width=(p.xp/xpNeed(p)*100)+'%';
  $('eName').textContent=SPECIES[e.sp].name+(S.caught.includes(e.sp)&&B.wild?' 🔴':'');$('eLv').textContent='Lv'+e.lvl;$('eType').innerHTML=typeTag(SPECIES[e.sp].type);const ef=e.hp/es.maxHp;$('eHp').style.width=ef*100+'%';$('eHp').style.background=hpColor(ef)}
 function startWildBattle(w){const mon=makeMon(w.sp,w.lvl);startBattle({wild:mon,wobj:w,zone:w.zone})}
-async function startBattle(o){mode='battle';closeAll();mode='battle';$('prompt').classList.add('hidden');['hud','joy','touchBtns'].forEach(id=>$(id).classList.add('hidden'));$('battle').classList.remove('hidden');setMenu([]);
+async function startBattle(o){mode='battle';closeAll();mode='battle';$('prompt').classList.add('hidden');['hud','joy','touchBtns','dpad'].forEach(id=>$(id).classList.add('hidden'));$('battle').classList.remove('hidden');setMenu([]);
  setupBattleScene(o.zone,o.stadium);
  B={wild:o.wild,wobj:o.wobj,trainer:o.trainer,enemyTeam:o.trainer?o.trainer.team:[o.wild],ei:0,pi:S.party.findIndex(m=>m.hp>0),zone:o.zone,turn:0};
  const e=B.enemyTeam[0];markSeen(e.sp);
@@ -863,7 +875,7 @@ async function endBattle(res){for(const q of parts)bScene.remove(q.p);parts.leng
  B=null;updateHUD();save();checkQuests()}
 
 // ================= start / UI flow =================
-function showWorldUI(){$('hud').classList.remove('hidden');$('joy').classList.remove('hidden');$('touchBtns').classList.remove('hidden')}
+function showWorldUI(){$('hud').classList.remove('hidden');$('dpad').classList.remove('hidden');try{window.focus()}catch(e){}$('joy').classList.remove('hidden');$('touchBtns').classList.remove('hidden')}
 let selHero=null,selStarter=null;
 function buildTitle(){const hc=$('heroCards');for(const k in HEROES){const H=HEROES[k];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${H.img}"><b>${H.name}</b><small>${H.desc}</small><span class="perk">${H.perk}</span>`;c.onclick=()=>{selHero=k;[...hc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnHeroNext').disabled=false;sfx.click()};hc.appendChild(c)}
  const sc=$('starterCards');for(const i of STARTERS){const s=SPECIES[i];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${s.img}"><b>${s.name}</b>${typeTag(s.type)}<small>${s.desc}</small>`;c.onclick=()=>{selStarter=i;[...sc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnStart').disabled=false;sfx.click()};sc.appendChild(c)}
