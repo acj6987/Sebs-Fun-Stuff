@@ -98,6 +98,7 @@
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
   .modal .card { max-width: 420px; background: var(--card-solid); text-align: center; }
 
+  #webFrameWrap:fullscreen iframe { height: 100vh !important; }
   @media (max-width: 560px) {
     h1 { font-size: 21px; }
     .msg { max-width: 92%; }
@@ -124,7 +125,7 @@
       <div class="feat"><b>🧠</b>Remembers you</div>
       <div class="feat"><b>🎨</b>Makes pictures</div>
       <div class="feat"><b>🎬</b>10-second videos</div>
-      <div class="feat"><b>🎵</b>1-minute music</div>
+      <div class="feat"><b>🌐</b>Makes websites</div>
     </div>
     <button class="btn" id="payBtn">Pay £5 to unlock</button>
     <div class="codebox">
@@ -156,7 +157,7 @@
       <button data-tab="chat" class="on">💬 Ask</button>
       <button data-tab="pics">🎨 Pictures</button>
       <button data-tab="video">🎬 Video</button>
-      <button data-tab="music">🎵 Music</button>
+      <button data-tab="web">🌐 Websites</button>
       <button data-tab="memory">🧠 Memory</button>
     </nav>
 
@@ -204,7 +205,36 @@
       </div>
     </div>
 
-    <!-- Music -->
+    <!-- Websites -->
+    <div class="card tab hidden" id="tab-web">
+      <h3 style="margin-top:0">🌐 Make a website</h3>
+      <div class="row composer">
+        <textarea id="webPrompt" placeholder="Describe your website, e.g. a website about sharks with a quiz"></textarea>
+        <button class="btn" id="webBtn">Create</button>
+      </div>
+      <div class="chips" data-for="webPrompt">
+        <span class="chip">a website about sharks with a quiz</span><span class="chip">a football fan page with a score counter</span>
+        <span class="chip">a cookie clicker game</span><span class="chip">a dinosaur fact machine</span><span class="chip">a page about me and my pets</span>
+      </div>
+      <div class="muted small" id="webStatus" style="margin-top:10px"></div>
+      <div id="webResult" class="hidden">
+        <div id="webFrameWrap" style="margin-top:12px; background:#fff; border-radius:14px; overflow:hidden; border:1px solid var(--line)">
+          <iframe id="webFrame" sandbox="allow-scripts allow-modals allow-forms" title="Your website" style="width:100%; height:60vh; border:0; display:block; background:#fff"></iframe>
+        </div>
+        <div class="row" style="margin-top:10px; flex-wrap:wrap">
+          <button class="btn alt" id="webFull">⛶ Full screen</button>
+          <button class="btn ghost" id="webDl">⬇ Download website</button>
+        </div>
+        <div class="row composer" style="margin-top:12px">
+          <input type="text" id="webChange" placeholder="Change it! e.g. make the background blue and add a joke button">
+          <button class="btn" id="webChangeBtn">✏️ Change</button>
+        </div>
+      </div>
+      <h4>My websites</h4>
+      <div id="webList" class="chips"></div>
+    </div>
+
+    <!-- Music (hidden for now; the tab button was swapped for Websites) -->
     <div class="card tab hidden" id="tab-music">
       <h3 style="margin-top:0">🎵 Make 1 minute of music</h3>
       <div class="row composer">
@@ -231,16 +261,15 @@
         <button class="btn ghost" id="lockBtn">Log out / lock</button>
       </div>
       <p class="muted small">Your memory is saved on this device and browser.</p>
-      <h4>⚙️ Owner settings: better pictures, real videos & songs with singing</h4>
-      <p class="muted small">The free versions are basic. For Google Gemini / ChatGPT pictures, real AI videos and real songs with singing, a grown-up can get a key at
+      <h4>⚙️ Owner settings: better pictures & real AI videos</h4>
+      <p class="muted small">The free versions are basic. For Google Gemini / ChatGPT pictures and real AI videos, a grown-up can get a key at
         <a href="https://enter.pollinations.ai" target="_blank" rel="noopener" style="color:var(--accent)">enter.pollinations.ai</a>
         (it can cost money). The key is only saved on this device, never in the website's code.</p>
       <label class="small">Picture AI</label>
       <select id="picModelSel" style="margin:4px 0 10px"></select>
       <label class="small">Video AI</label>
       <select id="vidModelSel" style="margin:4px 0 10px"></select>
-      <label class="small">Music AI</label>
-      <select id="musModelSel" style="margin:4px 0 10px"></select>
+      <select id="musModelSel" class="hidden"></select>
       <label class="small">Pollinations key</label>
       <div class="row" style="margin-top:4px">
         <input type="password" id="keyInput" placeholder="sk_… or pk_…" autocomplete="off">
@@ -307,6 +336,7 @@ document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav.tabs button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("hidden", t.id !== "tab-" + b.dataset.tab));
   if (b.dataset.tab === "memory") { renderMemory(); renderSettings(); }
+  if (b.dataset.tab === "web") renderSites();
 });
 document.querySelectorAll(".chips").forEach(box => box.onclick = e => {
   if (e.target.classList.contains("chip")) $(box.dataset.for).value = e.target.textContent;
@@ -773,6 +803,100 @@ async function makeMusic() {
 $("musBtn").onclick = makeMusic;
 $("musPrompt").onkeydown = e => { if (e.key === "Enter") makeMusic(); };
 
+
+/* ================== WEBSITE MAKER ================== */
+// The free AI gives short replies (about 5,000 letters) and reads up to 16,000 letters,
+// so we ask for small websites and, if it gets cut off, ask it to keep going.
+const WEB_SYS = "You are an expert web designer who builds fun, colourful, kid-friendly websites. " +
+  "Reply with ONLY one complete HTML file with inline <style> and <script>. No explanation, no markdown fences. " +
+  "Do not use external images or files (use emoji, CSS shapes and gradients instead). It must work on phones. " +
+  "It MUST be short: under 110 lines and under 4500 characters, so it is never cut off. Always end with </html>.";
+let currentSite = null;
+// The preview runs in a locked box (so a made website can never see your key or memory).
+// Inside that box real saving isn't allowed, so give made websites a pretend one that works until you leave.
+const STORAGE_SHIM = "<script>(function(){function M(){var d={};return{getItem:function(k){return k in d?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}" +
+  "['localStorage','sessionStorage'].forEach(function(n){try{window[n].length}catch(e){Object.defineProperty(window,n,{value:M(),configurable:true})}})})();<\/script>";
+
+function cleanHtml(t) {
+  t = t.replace(/```(?:html)?/gi, "");
+  const i = t.search(/<!doctype|<html/i); if (i > 0) t = t.slice(i);
+  const j = t.toLowerCase().lastIndexOf("</html>"); if (j >= 0) t = t.slice(0, j + 7);
+  return t.trim();
+}
+async function askAIRetry(messages) {
+  try { return await askAI(messages); }
+  catch { await new Promise(r => setTimeout(r, 15000)); return await askAI(messages); } // free AI sometimes needs a short rest
+}
+async function buildSite(userMsg, onPart) {
+  let out = "";
+  for (let i = 0; i < 4; i++) {
+    const msgs = i === 0 ? [{ role: "system", content: WEB_SYS }, { role: "user", content: userMsg }]
+      : [{ role: "system", content: WEB_SYS }, { role: "user", content: userMsg.slice(0, 4000) },
+         { role: "assistant", content: out.slice(-7000) },
+         { role: "user", content: "You were cut off. Continue EXACTLY where you stopped, even mid-line. Do not repeat anything. No fences, no explanation." }];
+    out += await askAIRetry(msgs);
+    if (/<\/html>/i.test(out)) break;
+    onPart(i + 1);
+  }
+  const html = cleanHtml(out);
+  if (!/<html|<body|<div/i.test(html)) throw new Error("not a website");
+  return html;
+}
+function showSite(site) {
+  currentSite = site;
+  $("webResult").classList.remove("hidden");
+  $("webFrame").srcdoc = STORAGE_SHIM + site.html;
+  renderSites();
+}
+function siteName(html, fallback) {
+  const m = html.match(/<title>([^<]{1,60})<\/title>/i);
+  return (m ? m[1] : fallback).trim();
+}
+async function makeSite(changeReq) {
+  const p = $("webPrompt").value.trim();
+  if (!changeReq && !p) return;
+  $("webBtn").disabled = $("webChangeBtn").disabled = true;
+  const started = Date.now();
+  const tick = setInterval(() => { $("webStatus").textContent = (changeReq ? "✏️ Changing your website… " : "🛠️ Building your website… ") + Math.floor((Date.now() - started) / 1000) + "s"; }, 300);
+  try {
+    let msg;
+    if (changeReq && currentSite) {
+      msg = "Here is my website:\n\n" + currentSite.html.slice(0, 9000) + "\n\nChange it like this: " + changeReq +
+            "\nReply with the whole new HTML file (keep it under 4500 characters).";
+    } else msg = "Make this website: " + p;
+    const html = await buildSite(msg, n => { $("webStatus").textContent = "🛠️ Nearly there, adding the last bits (" + n + ")…"; });
+    const site = { name: siteName(html, changeReq ? (currentSite.name || "My website") : p.slice(0, 40)), html, t: Date.now() };
+    S.sites = [site, ...(S.sites || []).filter(x => !(changeReq && currentSite && x.t === currentSite.t))].slice(0, 8);
+    save(); showSite(site);
+    $("webStatus").textContent = "Done! 🎉 Try it below. Want something different? Type a change underneath.";
+    $("webChange").value = "";
+  } catch (e) {
+    $("webStatus").textContent = /couldn't reach|fetch|Failed/i.test(String(e)) && /^(localhost|127\.)/.test(location.hostname)
+      ? "Oops! The website maker only works when Buddy is on a real website."
+      : "Oops, the website maker got stuck 😵 Try again, or describe a smaller website.";
+  }
+  clearInterval(tick);
+  $("webBtn").disabled = $("webChangeBtn").disabled = false;
+}
+function renderSites() {
+  const list = S.sites || [];
+  $("webList").innerHTML = list.length ? list.map((x, i) => '<span class="chip" data-i="' + i + '"' + (currentSite && currentSite.t === x.t ? ' style="border-color:var(--accent)"' : "") + '>🌐 ' + esc(x.name) + '</span>').join("")
+    : '<span class="muted small">None yet. Make your first one above!</span>';
+  $("webList").querySelectorAll(".chip").forEach(c => c.onclick = () => showSite(list[+c.dataset.i]));
+}
+$("webBtn").onclick = () => makeSite(null);
+$("webPrompt").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); makeSite(null); } };
+$("webChangeBtn").onclick = () => { const c = $("webChange").value.trim(); if (c && currentSite) makeSite(c); };
+$("webChange").onkeydown = e => { if (e.key === "Enter") $("webChangeBtn").click(); };
+$("webFull").onclick = () => { const w = $("webFrameWrap"); (w.requestFullscreen || w.webkitRequestFullscreen || (() => {})).call(w); };
+$("webDl").onclick = () => {
+  if (!currentSite) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([currentSite.html], { type: "text/html" }));
+  a.download = (currentSite.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "my-website") + ".html";
+  a.click();
+};
+
 /* ================== MEMORY PAGE ================== */
 function renderMemory() {
   $("memFacts").innerHTML = '<div class="mem-item"><span class="mem-date">Your name</span><br>' + esc(S.name) + '</div>' +
@@ -783,7 +907,7 @@ function renderMemory() {
 }
 $("forgetBtn").onclick = () => {
   if (!confirm("Really forget everything about you?")) return;
-  S.history = []; S.facts = []; S.pics = []; S.name = ""; convo = []; $("chat").innerHTML = ""; save(); show();
+  S.history = []; S.facts = []; S.pics = []; S.sites = []; S.name = ""; convo = []; $("chat").innerHTML = ""; save(); show();
 };
 function fillSel(id, models, cur) {
   $(id).innerHTML = Object.entries(models).map(([k, m]) =>
