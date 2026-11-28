@@ -105,7 +105,7 @@ input[type=text]{font:inherit;font-weight:800;font-size:16px;padding:8px 10px;bo
 #meter i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#2fd36b,#ffd000,#ff3b1f)}
 #meter b{position:absolute;right:6%;top:0;bottom:0;width:3px;background:#fff}
 #launchBtn{font-size:24px;padding:14px 34px;font-family:Bungee,sans-serif}
-#bquit{position:fixed;left:12px;bottom:12px;padding:6px 12px;font-size:13px}
+#bquit{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));padding:6px 12px;font-size:13px}
 #dashBtn{position:fixed;right:22px;bottom:30px;width:96px;height:96px;border-radius:50%;font-family:Bungee,sans-serif;font-size:18px;background:linear-gradient(#ff5a2a,#c2200a)}
 #dashBtn.cd{opacity:.4}
 #keysHint{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);font-weight:800;color:#fffc;font-size:14px;text-shadow:0 1px 3px #000;white-space:nowrap}
@@ -205,6 +205,16 @@ const TOURNEYS = [
   {id:'nation', name:'National X League',  icon:'🥇', prize:600,  per:80,  matches:[['leo',.5],['F1',.55],['kai',.6],['F2',.62]]},
   {id:'world',  name:'X World Championship',icon:'🏆', prize:2000, per:120, matches:[['nina',.65],['tony',.7],['kai',.75],['F2',.78],['kaiser',.88]]},
 ];
+const RANK_PTS = {seb:160, freddie:150, josh:140, max:120, ava:180, tony:300, nina:350, leo:450, kai:600, kaiser:900};
+const TOUR_PTS = {local:50, city:100, nation:200, world:1000};
+function myPoints(){ return save.wins*10 + save.won.reduce((a,id)=>a+(TOUR_PTS[id]||0),0); }
+function rankings(){
+  const list=Object.keys(RANK_PTS).filter(k=>k!==save.char).map(k=>({id:k,name:(CHARS[k]||RIVALS[k]).name,blade:BLADES[(CHARS[k]||RIVALS[k]).blade].name,pts:RANK_PTS[k],you:false}));
+  list.push({id:save.char,name:CHARS[save.char].name,blade:save.loadout.nick||BLADES[save.loadout.blade].name,pts:myPoints(),you:true});
+  list.sort((a,b)=>b.pts-a.pts||(a.you?-1:1));
+  return list;
+}
+function myRank(){ return rankings().findIndex(r=>r.you)+1; }
 const COLORS = ['#ff3b1f','#ff7a00','#ffd000','#b4ff3a','#1fbf4a','#00ffd0','#7fe7ff','#2a6bff','#3a3aff','#a020ff','#ff2fb0','#ffffff','#9aa4b8','#30304a','#111111','#8a4a1a'];
 
 /* =========================================================
@@ -580,8 +590,8 @@ function go(){
   a.maxSpin=a.spin=70+40*pa; b.maxSpin=b.spin=70+40*pb;
   for(const [f,pw] of [[a,pa],[b,pb]]){ const r=Math.hypot(f.x,f.z); f.vx=-f.z/r*5*pw; f.vz=f.x/r*5*pw; }
   battle.phase='fight'; battle.roundT=0;
-  $('dashBtn').classList.toggle('hidden',!isTouch);
-  $('keysHint').textContent=isTouch?'Use the joystick to steer · DASH to smash!':'Steer with WASD / Arrows · SPACE to DASH';
+  $('dashBtn').classList.remove('hidden');
+  $('keysHint').textContent=isTouch?'Use the joystick to steer · DASH to smash!':'Steer with the joystick or WASD / Arrows · DASH or SPACE to smash!';
   shakeBurst(.4);
 }
 function shakeBurst(v){ battle.shake=Math.max(battle.shake,v); }
@@ -740,11 +750,12 @@ function endBattle(won){
   const b=battle; b.phase='done';
   $('launch').classList.add('hidden'); $('keysHint').classList.add('hidden');
   if(won){ save.wins++; sfx.win(); confetti(); if(!save.beaten.includes(b.opp.id)) save.beaten.push(b.opp.id); } else { save.losses++; sfx.lose(); }
-  const coinsWon=won?(b.opts.prize||0):0; save.coins+=coinsWon; writeSave(); updateHud();
+  const rankBefore=myRank(); const coinsWon=won?(b.opts.prize||0):0; save.coins+=coinsWon; writeSave(); updateHud(); const rankAfter=myRank();
   openPanel(`<h2>${won?'YOU WIN! 🎉':'YOU LOST 😢'}</h2>
     <div class="fun" style="font-size:44px;text-align:center;margin:10px 0">${b.score[0]} – ${b.score[1]}</div>
     <div class="quote">${won?`${b.opp.name}: "Wow… that was an amazing battle!"`:`${b.opp.name}: "Better luck next time! Train harder and come back!"`}</div>
     ${coinsWon?`<p style="font-weight:900;font-size:20px"><span class="coin"></span> +${coinsWon} coins</p>`:''}
+    ${won?`<p style="font-weight:900">Ranking points +10 · World rank <b style="color:var(--gold)">#${rankAfter}</b>${rankAfter<rankBefore?' ⬆️ You moved up!':''}</p>`:''}
     <div class="row" style="justify-content:flex-end"><button class="gold" data-a="afterBattle">Continue</button></div>`);
   panelHandlers.afterBattle=()=>{ const cb=b.opts.onEnd; battle=null; closePanel(); fadeTo(()=>{ setMode('hub'); cb&&cb(won); }); };
 }
@@ -757,7 +768,7 @@ let bannerTimer=null;
 function showBanner(t,sub='',dur=1.5){ const el=$('banner'); el.innerHTML=t+(sub?`<small>${sub}</small>`:''); el.classList.remove('hidden'); clearTimeout(bannerTimer); bannerTimer=setTimeout(()=>el.classList.add('hidden'),dur*1000); }
 let toastTimer=null;
 function toast(t,dur=3.5){ const el=$('toast'); el.innerHTML=t; el.classList.remove('hidden'); el.style.opacity=1; clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ el.style.opacity=0; setTimeout(()=>el.classList.add('hidden'),300); },dur*1000); }
-function updateHud(){ if(!save) return; $('coins').textContent=save.coins; const c=CHARS[save.char]; $('whoPill').innerHTML=`${c.name}${save.champion?' 👑':''} · ${save.loadout.nick||BLADES[save.loadout.blade].name}`; }
+function updateHud(){ if(!save) return; $('coins').textContent=save.coins; const c=CHARS[save.char]; $('whoPill').innerHTML=`#${myRank()} · ${c.name}${save.champion?' 👑':''} · ${save.loadout.nick||BLADES[save.loadout.blade].name}`; }
 const panelHandlers={};
 function openPanel(html,side=false){ const p=$('panel'); p.classList.toggle('side',side); $('panelBox').innerHTML=html; $('panelBox').scrollTop=0; p.classList.remove('hidden'); hidePrompt(); }
 function closePanel(){ $('panel').classList.add('hidden'); }
@@ -878,6 +889,9 @@ function openHall(){
     <p><b>${c.name}</b> ${save.champion?'– 👑 <b style="color:#ffd000">WORLD CHAMPION</b>':'– working towards World Champion!'}</p>
     <div class="row">${TOURNEYS.map(t=>`<div class="trophy" style="${save.won.includes(t.id)?'':'filter:grayscale(1);opacity:.35'}">${t.icon}<small>${t.name}</small></div>`).join('')}</div>
     <p style="font-weight:900">Wins: ${save.wins} · Losses: ${save.losses} · Blades: ${save.blades.length} · Bits: ${save.bits.length}</p>
+    <div class="label">World Rankings</div>
+    ${rankings().map((r,i)=>`<div class="match" style="${r.you?'background:#ffd00022;border:2px solid var(--gold)':''}"><b class="fun" style="width:42px;color:${i===0?'var(--gold)':i<3?'#dfe6f2':'var(--muted)'}">#${i+1}</b><b>${r.name}</b>${r.you?' <span class="chip" style="font-size:12px;padding:2px 8px">YOU</span>':''} <span class="muted" style="flex:1">· ${r.blade}</span><b style="font-variant-numeric:tabular-nums">${r.pts}</b></div>`).join('')}
+    <p class="muted" style="font-size:13px">Earn 10 points for every win, plus bonus points for each tournament you win. Win the World Championship to reach #1!</p>
     <div class="label">The Crew</div>
     ${Object.entries(CHARS).map(([k,ch])=>`<div class="match"><span class="dot" style="background:${ch.shirt}"></span><b>${ch.name}</b> <span class="muted">${ch.title} · ${BLADES[ch.blade].name}</span>${k===save.char?' <span class="chip" style="font-size:12px;padding:2px 8px">YOU</span>':''}</div>`).join('')}
     <div class="row" style="justify-content:space-between;margin-top:14px"><button class="ghost" data-a="switchChar">Change blader</button><button class="ghost" data-a="reset" style="background:#ff3b1f44">Reset game</button></div>`);
@@ -886,10 +900,10 @@ panelHandlers.switchChar=()=>{ closePanel(); showTitle(); };
 panelHandlers.reset=(v,el)=>{ if(el.dataset.sure){ try{localStorage.removeItem(SAVE_KEY);}catch(e){} save=null; closePanel(); showTitle(); } else { el.dataset.sure=1; el.textContent='Tap again to reset!'; } };
 function openHelp(){
   openPanel(`<button class="ghost x" data-a="close">✕</button><h2>How to play</h2>
-    <p><b>Walk:</b> ${isTouch?'joystick (bottom left)':'WASD or Arrow keys'}. <b>Enter / talk:</b> ${isTouch?'the yellow button':'E, Enter or Space'}.</p>
-    <p><b>Places:</b> 🛒 Blade Shop · 🎨 Design Lab · 🏟️ Practice Dome · 🗼 X Tournament Tower · 🏆 Hall of Champs. You can also walk up to your friends and battle them!</p>
+    <p><b>Walk / steer:</b> drag the joystick (bottom left)${isTouch?'':' with your mouse, or use WASD / Arrow keys'}. <b>Enter / talk:</b> the yellow button${isTouch?'':', or E / Enter / Space'}.</p>
+    <p><b>Places:</b> 🛒 Blade Shop · 🎨 Design Lab · 🏟️ Practice Dome · 🗼 X Tournament Tower · 🏆 Hall of Champs (see the World Rankings there). You can also walk up to your friends and battle them!</p>
     <div class="label">Battles</div>
-    <p>Press <b>LAUNCH</b> when the power bar is full. Then steer your blade and ${isTouch?'tap DASH':'press SPACE to DASH'} into your opponent! Ride the yellow rail around the edge for an <b>X-DASH</b>.</p>
+    <p>Press <b>LAUNCH</b> when the power bar is full. Then steer your blade and tap DASH${isTouch?'':' (or press SPACE)'} to smash into your opponent! Ride the yellow rail around the edge for an <b>X-DASH</b>.</p>
     <p>First to <b>4 points</b> wins:<br>Spin Finish (other blade stops) = 1 · Over Finish (knocked into an orange pocket) = 2 · Burst Finish (smashed apart!) = 2 · Xtreme Finish (knocked into the pink pocket) = 3</p>
     <div class="row" style="justify-content:flex-end"><button class="gold" data-a="close">Got it!</button></div>`);
 }
@@ -963,8 +977,8 @@ function updateHub(dt,t){
   for(const n of npcs){ const p=n.ch.group.position, d=Math.hypot(p.x-g.position.x,p.z-g.position.z); if(d<2.6&&d<bd){ bd=d; best={label:CHARS[n.id].name,verb:'TALK',action:()=>talkTo(n)}; } }
   if(best!==current && !(best&&current&&best.label===current.label)){
     current=best;
-    if(best){ $('prompt').innerHTML=isTouch?`${best.verb==='TALK'?'Talk to':'Enter'} <b>${best.label}</b>`:`<span class="key">E</span> ${best.verb==='TALK'?'Talk to':'Enter'} <b>${best.label}</b>`; $('prompt').classList.remove('hidden');
-      if(isTouch){ $('actBtn').textContent=best.verb; $('actBtn').classList.remove('hidden'); } }
+    if(best){ $('prompt').innerHTML=isTouch?`${best.verb==='TALK'?'Talk to':'Enter'} <b>${best.label}</b>`:`<span class="key">E</span> ${best.verb==='TALK'?'Talk to':'Enter'} <b>${best.label}</b>`; if(innerWidth<700) $('prompt').style.bottom='140px'; else $('prompt').style.bottom=''; $('prompt').classList.remove('hidden');
+      $('actBtn').textContent=best.verb; $('actBtn').classList.remove('hidden'); }
     else { $('prompt').classList.add('hidden'); $('actBtn').classList.add('hidden'); }
   } else if(best) current=best;
 }
@@ -978,7 +992,7 @@ function setMode(m){
   const inHub=m==='hub', inBattle=m==='battle';
   $('hud').classList.toggle('hidden',!(inHub||m==='preview')); document.querySelector('#hud .right').classList.toggle('hidden',m==='preview');
   $('bhud').classList.toggle('hidden',!inBattle); $('bquit').classList.toggle('hidden',!inBattle);
-  $('joy').classList.toggle('hidden',!(isTouch&&(inHub||inBattle)));
+  $('joy').classList.toggle('hidden',!(inHub||inBattle));
   if(!inBattle){ $('launch').classList.add('hidden'); $('dashBtn').classList.add('hidden'); $('keysHint').classList.add('hidden'); $('banner').classList.add('hidden'); }
   if(m!=='hub') hidePrompt(); else current=null;
   if(m==='preview') applyPvOffset();
@@ -1000,7 +1014,7 @@ $('continueBtn').addEventListener('click',()=>{ audio(); sfx.go(); save=loadSave
 function enterHub(first){
   $('title').classList.add('hidden'); buildPeople(); setMode('hub');
   hubCam.position.copy(player.group.position).add(camOff);
-  setTimeout(()=>toast(first?`Welcome, <b>${CHARS[save.char].name}</b>! ${isTouch?'Use the joystick to walk.':'Walk with WASD / Arrows.'} Visit the <b>X Tournament Tower</b> to start your journey to World Champion!`:`Welcome back, ${CHARS[save.char].name}!`,first?6:3),400);
+  setTimeout(()=>toast(first?`Welcome, <b>${CHARS[save.char].name}</b>! Drag the joystick (bottom left)${isTouch?'':' or use WASD / Arrows'} to walk. Visit the <b>X Tournament Tower</b> to start your journey to World Champion!`:`Welcome back, ${CHARS[save.char].name}!`,first?6:3),400);
 }
 
 /* =========================================================
