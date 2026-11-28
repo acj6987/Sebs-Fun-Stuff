@@ -106,6 +106,9 @@ button.gold{background:var(--gold)}
   #battleMsg{font-size:16px;min-height:70px}
 }
 @media (hover:hover) and (pointer:fine){#joy,#touchBtns{display:none}}
+body.pad #joy{display:block}body.pad #touchBtns{display:flex}
+#btnKart{background:#ffc83a;width:64px!important;height:64px!important;font-size:26px!important}
+#hudBtns button.on{background:#ffc83a}
 </style>
 </head>
 <body>
@@ -120,6 +123,8 @@ button.gold{background:var(--gold)}
       <button id="bTeam">🎒 Team</button>
       <button id="bDex">📖 Monster Book</button>
       <button id="bQuest">🗺️ Adventures</button>
+      <button id="bKart">🏎️ Go-Kart</button>
+      <button id="bPad">🕹️ Joystick</button>
       <button id="bHelp">❓</button>
     </div>
   </div>
@@ -129,7 +134,7 @@ button.gold{background:var(--gold)}
 <div id="toast"></div>
 <div id="prompt" class="hidden"></div>
 <div id="joy" class="hidden"><div id="knob"></div></div>
-<div id="touchBtns" class="hidden"><button id="btnAct">Talk</button><button id="btnJump">Jump</button></div>
+<div id="touchBtns" class="hidden"><button id="btnKart">🏎️</button><button id="btnAct">Talk</button><button id="btnJump">Jump</button></div>
 
 <!-- Title -->
 <div class="screen" id="title">
@@ -557,7 +562,7 @@ function removeWild(w){scene.remove(w.mesh);const i=wild.indexOf(w);if(i>=0)wild
 // ================= input =================
 const keys={};let mode='title';
 addEventListener('keydown',e=>{if(document.activeElement&&document.activeElement.tagName==='INPUT')return;const k=e.key.toLowerCase();keys[k]=true;
- if(mode==='world'){if(k==='e'||k==='enter')doInteract();if(k===' '){e.preventDefault();doJump()}if(k==='t')openTeam();if(k==='m')openDex();if(k==='q')openQuests()}
+ if(mode==='world'){if(k==='e'||k==='enter')doInteract();if(k===' '){e.preventDefault();doJump()}if(k==='t')openTeam();if(k==='k')toggleKart();if(k==='m')openDex();if(k==='q')openQuests()}
  else if(mode==='battle'&&(k===' '||k==='enter'))skipMsg();
  if(k==='escape')closeAll()});
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
@@ -584,9 +589,45 @@ function collide(px,pz,py){for(const o of obstacles){const dx=px-o.x,dz=pz-o.z,d
  const d=Math.hypot(px,pz);if(d>158){px*=158/d;pz*=158/d}return[px,pz]}
 function zoneAt(x,z){let best='town',bd=1e9;for(const k in ZONES){const Z=ZONES[k],d=Math.hypot(x-Z.x,z-Z.z)/Z.r;if(d<bd){bd=d;best=k}}return bd<1?best:'wilds'}
 let curZone='town',encounterCD=2,wTime=0;
+// ---------- go-kart ----------
+let kart=null,kartWheel=null,kartWheels=[],kartSpeed=0;
+function makeKart(col){const g=new THREE.Group();
+ g.add(P(G.box,col,[0,.45,0],[1.7,.45,2.6]));g.add(P(G.box,col,[0,.5,1.45],[1.2,.35,.6]));g.add(P(G.box,0x222222,[0,.72,-1.25],[1.9,.12,.4]));
+ g.add(P(G.box,0x333333,[0,.75,-.45],[.9,.25,.8]));g.add(P(G.box,0x333333,[0,1.05,-.82],[.9,.6,.15]));
+ for(const s of[-1,1])g.add(P(G.box,0xffffff,[s*.5,.6,1.76],[.3,.15,.05],null,{emissive:0xffffcc}));
+ const wg=new THREE.CylinderGeometry(.42,.42,.32,16);kartWheels=[];for(const x of[-1,1])for(const z of[-1,1]){const w=new THREE.Mesh(wg,M(0x1a1a1a));w.rotation.z=Math.PI/2;const piv=new THREE.Group();piv.position.set(x*.98,.42,z*.95);piv.add(w);w.add(P(G.cyl,0xcccccc,[0,0,0],[.2,1.05,.2]));g.add(piv);kartWheels.push({piv,w,front:z>0})}
+ g.add(P(G.cyl,0x555555,[0,.95,.35],[.05,.7,.05],[-.9,0,0]));
+ kartWheel=new THREE.Group();kartWheel.position.set(0,1.22,.2);kartWheel.rotation.x=-.6;kartWheel.add(P(G.ring,0x222222,[0,0,0],.3));kartWheel.add(P(G.box,0x222222,[0,0,0],[.55,.05,.05]));kartWheel.add(P(G.box,0xff3b30,[0,.29,0],[.08,.06,.06]));g.add(kartWheel);
+ const flag=P(G.box,0xffeb3b,[.55,1.9,-1.15],[.5,.3,.02]);g.add(flag);g.add(P(G.cyl,0x888888,[.35,1.45,-1.15],[.03,1.2,.03]));
+ return g}
+function toggleKart(){if(mode!=='world'||!player.mesh)return;const pm=player.mesh;
+ if(!kart){kart=makeKart(HEROES[S.hero].shirt);scene.add(kart);kart.add(pm);pm.position.set(0,-.1,-.4);pm.rotation.y=0;const u=pm.userData;u.legs.forEach(l=>l.rotation.x=-1.45);u.arms.forEach(a=>a.rotation.x=-1.1);kartSpeed=0;camYaw=player.yaw+Math.PI;sfx.level();toast('🏎️ Vroom! Steer with ⬅ ➡ (or A / D). Press K to hop out.')}
+ else{kart.remove(pm);scene.remove(kart);kart=null;scene.add(pm);pm.userData.arms.forEach(a=>a.rotation.x=0);sfx.click()}
+ $('bKart').classList.toggle('on',!!kart)}
+$('bKart').onclick=toggleKart;$('btnKart').addEventListener('click',toggleKart);
+// ---------- joystick toggle ----------
+function setPad(on){document.body.classList.toggle('pad',on);$('bPad').classList.toggle('on',on);try{localStorage.setItem('mq_pad',on?'1':'0')}catch(e){}}
+$('bPad').onclick=()=>setPad(!document.body.classList.contains('pad'));
+try{if(localStorage.getItem('mq_pad')==='1'||matchMedia('(pointer:coarse)').matches)setPad(true)}catch(e){}
+// ---------- game controllers & steering wheels ----------
+const pad={x:0,y:0,rx:0,ry:0,prev:[]};
+function pollPad(){pad.x=pad.y=pad.rx=pad.ry=0;let gps=[];try{gps=navigator.getGamepads?[...navigator.getGamepads()]:[]}catch(e){}
+ const gp=gps.find(g=>g&&g.connected);if(!gp)return;const dz=v=>Math.abs(v)<.15?0:v;
+ pad.x=dz(gp.axes[0]||0);pad.y=dz(gp.axes[1]||0);pad.rx=dz(gp.axes[2]||0);pad.ry=dz(gp.axes[3]||0);
+ const bv=i=>gp.buttons[i]?(gp.buttons[i].value||(gp.buttons[i].pressed?1:0)):0;
+ const gas=bv(7)-bv(6);if(Math.abs(gas)>.1)pad.y=-gas;
+ if(bv(12))pad.y=-1;if(bv(13))pad.y=1;if(bv(14))pad.x=-1;if(bv(15))pad.x=1;
+ const now=gp.buttons.map(b=>b.pressed);const hit=i=>now[i]&&!pad.prev[i];
+ if(mode==='world'){if(hit(0))doJump();if(hit(1)||hit(2))doInteract();if(hit(3))toggleKart()}
+ else if(mode==='battle'){if(hit(0))skipMsg()}
+ else if((mode==='menu'||mode==='chat')&&hit(1))closeAll();
+ pad.prev=now}
+addEventListener('gamepadconnected',()=>toast('🎮 Controller connected! Stick or wheel to steer, A to jump, B to talk, Y for the go-kart.',4000));
 function updatePlayer(dt){
- let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x;
- let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y;
+ let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x+pad.x;
+ let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y-pad.y;
+ if(pad.rx)camYaw-=pad.rx*2.5*dt;if(pad.ry)camPitch=clamp(camPitch+pad.ry*1.5*dt,.1,1.25);
+ if(kart){driveKart(dt,clamp(ix,-1,1),clamp(iz,-1,1));return}
  const len=Math.hypot(ix,iz);if(len>1){ix/=len;iz/=len}
  const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=-fz,rz=fx;
  let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;
@@ -599,6 +640,18 @@ function updatePlayer(dt){
  const m=player.mesh;m.position.set(player.x,player.y-(inWater?.45:0),player.z);m.rotation.y=player.yaw;animPerson(m,player.onGround?Math.min(1,mlen):.3,wTime);
  const z=zoneAt(player.x,player.z);if(z!==curZone){curZone=z;if(z!=='wilds'){showZone(ZONES[z].name);if(!S.visited.includes(z)){S.visited.push(z);save()}}}
 }
+function driveKart(dt,steer,gas){
+ const inWater=Math.hypot(player.x-ZONES.lake.x,player.z-ZONES.lake.z)<27&&player.y<.5;
+ const max=(keys['shift']?24:18)*player.speedMul*(inWater?.6:1);
+ const target=gas>0?gas*max:gas<0?gas*7:0;kartSpeed+=(target-kartSpeed)*Math.min(1,dt*(gas?1.6:2.2));
+ const grip=Math.min(1,Math.abs(kartSpeed)/4)*Math.sign(kartSpeed);player.yaw-=steer*2.3*dt*grip;
+ const wx=player.x+Math.sin(player.yaw)*kartSpeed*dt,wz=player.z+Math.cos(player.yaw)*kartSpeed*dt;
+ const[nx,nz]=collide(wx,wz,player.y);if(Math.hypot(nx-wx,nz-wz)>.02)kartSpeed*=.85;player.x=nx;player.z=nz;
+ player.vy-=24*dt;player.y+=player.vy*dt;const g=groundAt(player.x,player.z,player.y);if(player.y<=g){player.y=g;player.vy=0;player.onGround=true}else player.onGround=false;
+ kart.position.set(player.x,player.y-(inWater?.3:0),player.z);kart.rotation.y=player.yaw;kart.rotation.z=-steer*Math.min(1,Math.abs(kartSpeed)/18)*.06;
+ kartWheel.rotation.z=steer*.9;for(const w of kartWheels){w.w.rotation.x+=kartSpeed*dt/.42;if(w.front)w.piv.rotation.y=-steer*.45}
+ if(!drag){let d=player.yaw+Math.PI-camYaw;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;camYaw+=d*Math.min(1,dt*3)}
+ const z=zoneAt(player.x,player.z);if(z!==curZone){curZone=z;if(z!=='wilds'){showZone(ZONES[z].name);if(!S.visited.includes(z)){S.visited.push(z);save()}}}}
 function updateCamera(dt){const t=new THREE.Vector3(player.x,player.y+1.8,player.z);const cp=Math.cos(camPitch);const want=new THREE.Vector3(t.x+Math.sin(camYaw)*cp*camDist,t.y+Math.sin(camPitch)*camDist,t.z+Math.cos(camYaw)*cp*camDist);camera.position.lerp(want,Math.min(1,dt*8));if(camera.position.y<.8)camera.position.y=.8;camera.lookAt(t);
  sun.position.set(player.x+30,60,player.z+20);sun.target.position.set(player.x,0,player.z)}
 function updateWild(dt){if(encounterCD>0)encounterCD-=dt;
@@ -670,7 +723,7 @@ const QUESTS=[
 function checkQuests(){for(const q of QUESTS){if(!S.quests.includes(q.id)&&q.c()){S.quests.push(q.id);for(const k in q.r)S[k]+=q.r[k];toast(`🏆 Adventure complete: <b>${q.t}</b><br>Reward: ${q.rt}`,4200);sfx.win();updateHUD();save()}}}
 function currentQuest(){return QUESTS.find(q=>!S.quests.includes(q.id))}
 function openQuests(){if(mode!=='world'&&mode!=='menu')return;let h='';for(const q of QUESTS){const d=S.quests.includes(q.id);h+=`<div class="quest ${d?'done':''}"><span class="tick">${d?'✅':'⬜'}</span><div style="flex:1"><b>${q.t}</b><br><small>Reward: ${q.rt}</small></div></div>`}openPanel('🗺️ Adventures',h)}
-function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (joystick on phone) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
+function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (joystick on phone) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p>🏎️ <b>Go-Kart:</b> press <kbd>K</kbd> (or the Go-Kart button) to jump in. Steer with <kbd>A</kbd>/<kbd>D</kbd> or ⬅ ➡, go with <kbd>W</kbd>, brake with <kbd>S</kbd>.</p><p>🕹️ <b>Joystick:</b> tap the Joystick button to put a steering stick on the screen.</p><p>🎮 <b>Controllers &amp; steering wheels:</b> plug one in and press a button. Steer with the stick or wheel, A = jump, B = talk, Y = go-kart.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
 $('bTeam').onclick=openTeam;$('bDex').onclick=openDex;$('bQuest').onclick=openQuests;$('bHelp').onclick=()=>{if(mode==='world'||mode==='menu')openHelp()};
 
 // insides
@@ -888,6 +941,7 @@ TALK.nurse_={greet:["Hello dear! Welcome to Jumpstone Town!"],intro:"I'm Nurse P
 // ================= main loop =================
 const clock=new THREE.Clock();
 function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);wTime+=dt;
+pollPad();
  if(mode==='battle'){updateBattleScene(dt);renderer.render(bScene,bCam);return}
  if(mode==='world'){updatePlayer(dt);updateWild(dt);checkInteract()}
  else{$('prompt').classList.add('hidden')}
