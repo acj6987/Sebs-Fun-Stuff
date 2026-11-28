@@ -106,12 +106,12 @@ button.gold{background:var(--gold)}
   #battleMsg{font-size:16px;min-height:70px}
 }
 #joy{display:none!important}
-#dpad{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,64px);gap:6px}
-#dpad button{width:64px;height:64px;padding:0;font-size:30px;border-radius:16px;background:rgba(255,255,255,.92);touch-action:none}
+#dpad{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;display:grid;grid-template-columns:repeat(3,76px);grid-template-rows:repeat(3,76px);gap:6px;background:rgba(255,255,255,.3);border-radius:26px;padding:8px}
+#dpad button{width:76px;height:76px;padding:0;font-size:36px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;border-radius:16px;background:rgba(255,255,255,.92);touch-action:none}
 #dpad button.down-on{background:#ffc83a;transform:translateY(3px)}
 #dpad .u{grid-column:2;grid-row:1}#dpad .l{grid-column:1;grid-row:2}#dpad .r{grid-column:3;grid-row:2}#dpad .d{grid-column:2;grid-row:3}
-#dpad .mid{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:center;font-size:24px}
-@media (max-width:640px){#dpad{grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:5px}#dpad button{width:54px;height:54px;font-size:26px}#touchBtns{flex-direction:column;align-items:flex-end;gap:8px}#touchBtns button{width:62px!important;height:62px!important}}
+#dpad .mid{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;text-shadow:0 2px 3px rgba(0,0,0,.5)}
+@media (max-width:640px){#dpad{grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,60px);gap:5px;padding:6px}#dpad button{width:60px;height:60px;font-size:30px}#touchBtns{flex-direction:column;align-items:flex-end;gap:8px}#touchBtns button{width:62px!important;height:62px!important}}
 </style>
 </head>
 <body>
@@ -135,7 +135,7 @@ button.gold{background:var(--gold)}
 <div id="toast"></div>
 <div id="prompt" class="hidden"></div>
 <div id="joy" class="hidden"><div id="knob"></div></div>
-<div id="dpad" class="hidden"><button class="u" data-x="0" data-z="1" aria-label="Walk forward">⬆️</button><button class="l" data-x="-1" data-z="0" aria-label="Walk left">⬅️</button><span class="mid">🚶</span><button class="r" data-x="1" data-z="0" aria-label="Walk right">➡️</button><button class="d" data-x="0" data-z="-1" aria-label="Walk backward">⬇️</button></div>
+<div id="dpad" class="hidden"><button class="u" data-x="0" data-z="1" aria-label="Walk forward">⬆️</button><button class="l" data-x="-1" data-z="0" aria-label="Walk left">⬅️</button><span class="mid">MOVE</span><button class="r" data-x="1" data-z="0" aria-label="Walk right">➡️</button><button class="d" data-x="0" data-z="-1" aria-label="Walk backward">⬇️</button></div>
 <div id="touchBtns" class="hidden"><button id="btnAct">Talk</button><button id="btnJump">Jump</button></div>
 
 <!-- Title -->
@@ -582,11 +582,15 @@ $('btnJump').addEventListener('pointerdown',e=>{e.preventDefault();doJump()});
 $('btnAct').addEventListener('click',()=>doInteract());
 $('prompt').addEventListener('click',()=>doInteract());
 
-const dpad={x:0,z:0};
+const dpad={x:0,z:0},dtap={x:0,z:0,t:0};
 document.querySelectorAll('#dpad button').forEach(b=>{const dx=+b.dataset.x,dz=+b.dataset.z;
- const on=e=>{e.preventDefault();dpad.x=dx;dpad.z=dz;b.classList.add('down-on');try{b.setPointerCapture(e.pointerId)}catch(_){}};
+ const on=e=>{if(e.cancelable&&e.type!=='mousedown')e.preventDefault();dpad.x=dx;dpad.z=dz;b.classList.add('down-on')};
  const off=()=>{b.classList.remove('down-on');if(dpad.x===dx&&dpad.z===dz){dpad.x=0;dpad.z=0}};
- b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);b.addEventListener('contextmenu',e=>e.preventDefault())});
+ const tap=()=>{dtap.x=dx;dtap.z=dz;dtap.t=.45};
+ b.addEventListener('pointerdown',on);b.addEventListener('mousedown',on);b.addEventListener('touchstart',on,{passive:false});
+ for(const ev of['pointerup','pointercancel','pointerleave','mouseup','mouseleave','touchend','touchcancel'])b.addEventListener(ev,off);
+ b.addEventListener('touchend',tap);b.addEventListener('click',tap);b.addEventListener('contextmenu',e=>e.preventDefault())});
+addEventListener('blur',()=>{dpad.x=dpad.z=0});
 function doJump(){if(mode!=='world'||!player.onGround)return;player.vy=9.5*player.jumpMul;player.onGround=false;sfx.jump()}
 
 // ================= world update =================
@@ -597,8 +601,8 @@ function collide(px,pz,py){for(const o of obstacles){const dx=px-o.x,dz=pz-o.z,d
 function zoneAt(x,z){let best='town',bd=1e9;for(const k in ZONES){const Z=ZONES[k],d=Math.hypot(x-Z.x,z-Z.z)/Z.r;if(d<bd){bd=d;best=k}}return bd<1?best:'wilds'}
 let curZone='town',encounterCD=2,wTime=0;
 function updatePlayer(dt){
- let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x+dpad.x;
- let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y+dpad.z;
+ let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x+dpad.x+(dtap.t>0?dtap.x:0);
+ let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y+dpad.z+(dtap.t>0?dtap.z:0);if(dtap.t>0)dtap.t-=dt;
  const len=Math.hypot(ix,iz);if(len>1){ix/=len;iz/=len}
  const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=-fz,rz=fx;
  let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;
