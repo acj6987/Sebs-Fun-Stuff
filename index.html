@@ -105,8 +105,13 @@ button.gold{background:var(--gold)}
   #enemyCard{min-width:190px}
   #battleMsg{font-size:16px;min-height:70px}
 }
-@media (hover:hover) and (pointer:fine){#joy,#touchBtns{display:none}}
-body.pad #joy{display:block}body.pad #touchBtns{display:flex}
+#joy{display:none!important}
+#dpad{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:12;display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,64px);gap:6px}
+#dpad button{width:64px;height:64px;padding:0;font-size:30px;border-radius:16px;background:rgba(255,255,255,.92);touch-action:none}
+#dpad button.down-on{background:#ffc83a;transform:translateY(3px)}
+#dpad .u{grid-column:2;grid-row:1}#dpad .l{grid-column:1;grid-row:2}#dpad .r{grid-column:3;grid-row:2}#dpad .d{grid-column:2;grid-row:3}
+#dpad .mid{grid-column:2;grid-row:2;display:flex;align-items:center;justify-content:center;font-size:24px}
+@media (max-width:640px){#dpad{grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:5px}#dpad button{width:54px;height:54px;font-size:26px}#touchBtns{flex-direction:column;align-items:flex-end;gap:8px}#touchBtns button{width:62px!important;height:62px!important}}
 #btnKart{background:#ffc83a;width:64px!important;height:64px!important;font-size:26px!important}
 #hudBtns button.on{background:#ffc83a}
 </style>
@@ -124,7 +129,6 @@ body.pad #joy{display:block}body.pad #touchBtns{display:flex}
       <button id="bDex">📖 Monster Book</button>
       <button id="bQuest">🗺️ Adventures</button>
       <button id="bKart">🏎️ Go-Kart</button>
-      <button id="bPad">🕹️ Joystick</button>
       <button id="bHelp">❓</button>
     </div>
   </div>
@@ -134,6 +138,7 @@ body.pad #joy{display:block}body.pad #touchBtns{display:flex}
 <div id="toast"></div>
 <div id="prompt" class="hidden"></div>
 <div id="joy" class="hidden"><div id="knob"></div></div>
+<div id="dpad" class="hidden"><button class="u" data-x="0" data-z="1" aria-label="Walk forward">⬆️</button><button class="l" data-x="-1" data-z="0" aria-label="Walk left">⬅️</button><span class="mid">🚶</span><button class="r" data-x="1" data-z="0" aria-label="Walk right">➡️</button><button class="d" data-x="0" data-z="-1" aria-label="Walk backward">⬇️</button></div>
 <div id="touchBtns" class="hidden"><button id="btnKart">🏎️</button><button id="btnAct">Talk</button><button id="btnJump">Jump</button></div>
 
 <!-- Title -->
@@ -568,7 +573,7 @@ addEventListener('keydown',e=>{if(document.activeElement&&document.activeElement
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
 let drag=null;
 renderer.domElement.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,id:e.pointerId}});
-addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;camYaw-=(e.clientX-drag.x)*.006;camPitch=clamp(camPitch+(e.clientY-drag.y)*.004,.1,1.25);drag.x=e.clientX;drag.y=e.clientY});
+addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;camYaw-=(e.clientX-drag.x)*.006;camHold=3;camPitch=clamp(camPitch+(e.clientY-drag.y)*.004,.1,1.25);drag.x=e.clientX;drag.y=e.clientY});
 addEventListener('pointerup',e=>{if(drag&&drag.id===e.pointerId)drag=null});
 renderer.domElement.addEventListener('wheel',e=>{camDist=clamp(camDist+e.deltaY*.01,6,24)},{passive:true});
 // joystick
@@ -589,6 +594,7 @@ function collide(px,pz,py){for(const o of obstacles){const dx=px-o.x,dz=pz-o.z,d
  const d=Math.hypot(px,pz);if(d>158){px*=158/d;pz*=158/d}return[px,pz]}
 function zoneAt(x,z){let best='town',bd=1e9;for(const k in ZONES){const Z=ZONES[k],d=Math.hypot(x-Z.x,z-Z.z)/Z.r;if(d<bd){bd=d;best=k}}return bd<1?best:'wilds'}
 let curZone='town',encounterCD=2,wTime=0;
+let camHold=0;
 // ---------- go-kart ----------
 let kart=null,kartWheel=null,kartWheels=[],kartSpeed=0;
 function makeKart(col){const g=new THREE.Group();
@@ -606,9 +612,11 @@ function toggleKart(){if(mode!=='world'||!player.mesh)return;const pm=player.mes
  $('bKart').classList.toggle('on',!!kart)}
 $('bKart').onclick=toggleKart;$('btnKart').addEventListener('click',toggleKart);
 // ---------- joystick toggle ----------
-function setPad(on){document.body.classList.toggle('pad',on);$('bPad').classList.toggle('on',on);try{localStorage.setItem('mq_pad',on?'1':'0')}catch(e){}}
-$('bPad').onclick=()=>setPad(!document.body.classList.contains('pad'));
-try{if(localStorage.getItem('mq_pad')==='1'||matchMedia('(pointer:coarse)').matches)setPad(true)}catch(e){}
+const dpad={x:0,z:0};
+document.querySelectorAll('#dpad button').forEach(b=>{const dx=+b.dataset.x,dz=+b.dataset.z;
+ const on=e=>{e.preventDefault();dpad.x=dx;dpad.z=dz;b.classList.add('down-on');try{b.setPointerCapture(e.pointerId)}catch(_){}};
+ const off=()=>{b.classList.remove('down-on');if(dpad.x===dx&&dpad.z===dz){dpad.x=0;dpad.z=0}};
+ b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);b.addEventListener('contextmenu',e=>e.preventDefault())});
 // ---------- game controllers & steering wheels ----------
 const pad={x:0,y:0,rx:0,ry:0,prev:[]};
 function pollPad(){pad.x=pad.y=pad.rx=pad.ry=0;let gps=[];try{gps=navigator.getGamepads?[...navigator.getGamepads()]:[]}catch(e){}
@@ -624,9 +632,10 @@ function pollPad(){pad.x=pad.y=pad.rx=pad.ry=0;let gps=[];try{gps=navigator.getG
  pad.prev=now}
 addEventListener('gamepadconnected',()=>toast('🎮 Controller connected! Stick or wheel to steer, A to jump, B to talk, Y for the go-kart.',4000));
 function updatePlayer(dt){
- let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x+pad.x;
- let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y-pad.y;
+ let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x+pad.x+dpad.x;
+ let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y-pad.y+dpad.z;
  if(pad.rx)camYaw-=pad.rx*2.5*dt;if(pad.ry)camPitch=clamp(camPitch+pad.ry*1.5*dt,.1,1.25);
+ if(camHold>0)camHold-=dt;
  if(kart){driveKart(dt,clamp(ix,-1,1),clamp(iz,-1,1));return}
  const len=Math.hypot(ix,iz);if(len>1){ix/=len;iz/=len}
  const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=-fz,rz=fx;
@@ -650,7 +659,7 @@ function driveKart(dt,steer,gas){
  player.vy-=24*dt;player.y+=player.vy*dt;const g=groundAt(player.x,player.z,player.y);if(player.y<=g){player.y=g;player.vy=0;player.onGround=true}else player.onGround=false;
  kart.position.set(player.x,player.y-(inWater?.3:0),player.z);kart.rotation.y=player.yaw;kart.rotation.z=-steer*Math.min(1,Math.abs(kartSpeed)/18)*.06;
  kartWheel.rotation.z=steer*.9;for(const w of kartWheels){w.w.rotation.x+=kartSpeed*dt/.42;if(w.front)w.piv.rotation.y=-steer*.45}
- if(!drag){let d=player.yaw+Math.PI-camYaw;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;camYaw+=d*Math.min(1,dt*3)}
+ if(!drag&&camHold<=0){let d=player.yaw+Math.PI-camYaw;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;camYaw+=d*Math.min(1,dt*3)}
  const z=zoneAt(player.x,player.z);if(z!==curZone){curZone=z;if(z!=='wilds'){showZone(ZONES[z].name);if(!S.visited.includes(z)){S.visited.push(z);save()}}}}
 function updateCamera(dt){const t=new THREE.Vector3(player.x,player.y+1.8,player.z);const cp=Math.cos(camPitch);const want=new THREE.Vector3(t.x+Math.sin(camYaw)*cp*camDist,t.y+Math.sin(camPitch)*camDist,t.z+Math.cos(camYaw)*cp*camDist);camera.position.lerp(want,Math.min(1,dt*8));if(camera.position.y<.8)camera.position.y=.8;camera.lookAt(t);
  sun.position.set(player.x+30,60,player.z+20);sun.target.position.set(player.x,0,player.z)}
@@ -723,7 +732,7 @@ const QUESTS=[
 function checkQuests(){for(const q of QUESTS){if(!S.quests.includes(q.id)&&q.c()){S.quests.push(q.id);for(const k in q.r)S[k]+=q.r[k];toast(`🏆 Adventure complete: <b>${q.t}</b><br>Reward: ${q.rt}`,4200);sfx.win();updateHUD();save()}}}
 function currentQuest(){return QUESTS.find(q=>!S.quests.includes(q.id))}
 function openQuests(){if(mode!=='world'&&mode!=='menu')return;let h='';for(const q of QUESTS){const d=S.quests.includes(q.id);h+=`<div class="quest ${d?'done':''}"><span class="tick">${d?'✅':'⬜'}</span><div style="flex:1"><b>${q.t}</b><br><small>Reward: ${q.rt}</small></div></div>`}openPanel('🗺️ Adventures',h)}
-function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (joystick on phone) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p>🏎️ <b>Go-Kart:</b> press <kbd>K</kbd> (or the Go-Kart button) to jump in. Steer with <kbd>A</kbd>/<kbd>D</kbd> or ⬅ ➡, go with <kbd>W</kbd>, brake with <kbd>S</kbd>.</p><p>🕹️ <b>Joystick:</b> tap the Joystick button to put a steering stick on the screen.</p><p>🎮 <b>Controllers &amp; steering wheels:</b> plug one in and press a button. Steer with the stick or wheel, A = jump, B = talk, Y = go-kart.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
+function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (joystick on phone) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p>🏎️ <b>Go-Kart:</b> press <kbd>K</kbd> (or the Go-Kart button) to jump in. Steer with <kbd>A</kbd>/<kbd>D</kbd> or ⬅ ➡, go with <kbd>W</kbd>, brake with <kbd>S</kbd>.</p><p>⬆️ <b>Arrow buttons:</b> hold the arrows in the bottom-left corner to walk forward, backward, left and right. Tap <b>Jump</b> to jump.</p><p>🎮 <b>Controllers &amp; steering wheels:</b> plug one in and press a button. Steer with the stick or wheel, A = jump, B = talk, Y = go-kart.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat all 4 Stadium Masters and catch 6 monsters for your team, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
 $('bTeam').onclick=openTeam;$('bDex').onclick=openDex;$('bQuest').onclick=openQuests;$('bHelp').onclick=()=>{if(mode==='world'||mode==='menu')openHelp()};
 
 // insides
@@ -731,8 +740,8 @@ function openInside(kind,arg){const P_=(t,h)=>openPanel(t,h);
  if(kind==='heal'){P_('💗 Healing Center',`<div style="text-align:center"><img src="${snapCache('nurse')}" style="width:120px"><p style="font-size:18px"><b>Nurse Penny:</b> Welcome! Want me to make your monsters feel all better?</p></div><div class="btnrow"><button class="primary" onclick="healAll()">💗 Heal my team</button><button onclick="closePanel()">Leave</button></div>`)}
  else if(kind==='shop'){const item=(n,ic,k,cost)=>`<div class="row"><div style="font-size:34px">${ic}</div><div class="info"><b>${n}</b><br><small>${cost} coins · you have ${S[k]}</small></div><button class="blue" ${S.coins<cost?'disabled':''} onclick="buy('${k}',${cost})">Buy</button></div>`;
   P_('🛒 Jump Mart',`<p>You have <b>🪙 ${S.coins}</b> coins.</p>${item('Jump Ball','🔴','balls',20)}${item('Super Ball (catches better!)','🟣','superballs',50)}${item('Potion (+40 HP)','🧪','potions',30)}`)}
- else if(kind==='stadium'){const L=LEADERS[arg],won=S.badges.includes(arg),need=arg==='champ'&&!BADGE_ORDER.every(b=>S.badges.includes(b));
-  P_(`🏟️ ${arg==='champ'?'Grand Stadium':TYPES[L.type].name+' Stadium'}`,`<div style="text-align:center"><img src="${L.img}" style="width:140px"><p style="font-size:18px"><b>${L.name}:</b> ${need?`You need all 4 Stadium badges before you can challenge me! You have ${BADGE_ORDER.filter(b=>S.badges.includes(b)).length}.`:won?'Back for a rematch? I\'ve been training!':`Welcome, challenger! Beat me to win the <b>${L.badge}</b> ${L.icon}!`}</p><p>Team: ${L.team.map(([s,l])=>SPECIES[s].name+' Lv'+l).join(', ')}</p></div><div class="btnrow" style="justify-content:center">${need?'':`<button class="primary" onclick="stadiumBattle('${arg}')">⚔️ Battle!</button>`}<button onclick="closePanel()">Leave</button></div>`)}
+ else if(kind==='stadium'){const L=LEADERS[arg],won=S.badges.includes(arg),badgesOK=BADGE_ORDER.every(b=>S.badges.includes(b)),teamOK=S.party.length>=6,need=arg==='champ'&&!(badgesOK&&teamOK);
+  P_(`🏟️ ${arg==='champ'?'Grand Stadium':TYPES[L.type].name+' Stadium'}`,`<div style="text-align:center"><img src="${L.img}" style="width:140px"><p style="font-size:18px"><b>${L.name}:</b> ${need?`To battle me you must beat all 4 Stadium Masters <b>and</b> have 6 monsters on your team!<br>${badgesOK?'✅':'❌'} Badges: ${BADGE_ORDER.filter(b=>S.badges.includes(b)).length} / 4<br>${teamOK?'✅':'❌'} Monsters on your team: ${S.party.length} / 6${!teamOK&&S.party.length+S.box.length>=6?'<br><small>Tip: move monsters from your Monster Box into your team (🎒 Team button).</small>':''}`:won?'Back for a rematch? I\'ve been training!':`Welcome, challenger! Beat me to win the <b>${L.badge}</b> ${L.icon}!`}</p><p>Team: ${L.team.map(([s,l])=>SPECIES[s].name+' Lv'+l).join(', ')}</p></div><div class="btnrow" style="justify-content:center">${need?'':`<button class="primary" onclick="stadiumBattle('${arg}')">⚔️ Battle!</button>`}<button onclick="closePanel()">Leave</button></div>`)}
  else{const H=HEROES[kind];const gifts={seb:{t:'Seb\'s room is full of trampolines and maps of every land!',g:{superballs:2},gt:'2 Super Balls'},z:{t:'Z\'s Garage has a super-fast scooter and a wall of trophies from races.',g:{potions:3},gt:'3 Potions'},galley:{t:'Galley\'s Lab is packed with science machines, bubbling potions, and monster research notes.',g:{balls:10},gt:'10 Jump Balls'},josh:{t:'Josh\'s House has a huge TV showing stadium battles and a punching bag.',g:{coins:150},gt:'150 coins'}}[kind];
   const got=S.gifts.includes(kind);let msg=`<div style="text-align:center"><img src="${H.img}" style="width:120px"><p style="font-size:18px">${gifts.t}</p>`;
   if(!got){for(const k in gifts.g)S[k]+=gifts.g[k];S.gifts.push(kind);save();msg+=`<p>🎁 You found a gift: <b>${gifts.gt}</b>!</p>`;sfx.catch()}else msg+='<p style="color:#789">Nothing new here right now.</p>';
@@ -764,7 +773,7 @@ const TALK={
  josh:{greet:["Hey! Josh Clark here. Ready for a big battle? 💪","What's up, champ! Well, future champ.","Yo yo yo! Josh in the house!"],
   intro:"I'm Josh Clark! I love big stadium battles, and I've got the best jokes in Jumpstone Town.",
   fav:"Cragon! It's a rock dragon with diamond scales. Super tough, just like me!",mood:["I'm awesome! I just did 100 push-ups. Okay, 10.","Feeling strong and ready to battle!","Great! Today is a battling kind of day."],
-  filler:["The Grand Stadium is right here in town. You need all 4 badges to fight Champion Nova!","Train your monsters by battling wild ones. They'll level up and learn new moves!","At level 7 monsters learn Super Jump, and at level 12 they learn a super powerful move!","Never give up! Even a tiny Flarebit can win if it believes!","My cape makes me 20% cooler. Fact."],
+  filler:["The Grand Stadium is right here in town. You need all 4 badges AND 6 monsters on your team to fight Champion Nova!","Train your monsters by battling wild ones. They'll level up and learn new moves!","At level 7 monsters learn Super Jump, and at level 12 they learn a super powerful move!","Never give up! Even a tiny Flarebit can win if it believes!","My cape makes me 20% cooler. Fact."],
   adv:"Your adventure: Beat all 4 Stadium Leaders, then come challenge Champion Nova at the Grand Stadium! I'll be cheering!",team:[[0,0],[3,1],[14,2]]},
 };
 const JOKES=["Why did the Snowbun bring a blanket? Because it was a little chilly! 🥶","What do you call a Flarebit that tells jokes? A HOT comedian! 🔥","Why don't ghosts lie? Because you can see right through them! 👻","What's a Pebblet's favorite music? ROCK and roll! 🎸","Why was Zappip so good at school? It was super BRIGHT! ⚡","What do you call a sleeping dragon? A dino-SNORE! 🐉","Why did Bubblo cross the lake? To get to the other TIDE! 🌊","How does a Leafkit say goodbye? It LEAFS! 🍃"];
@@ -790,7 +799,7 @@ function npcReply(n,raw){const t=raw.toLowerCase(),T=TALK[n.key],me=HEROES[S.her
  if(has('favorite','favourite','fav','favorit'))return{text:T.fav};
  if(has('who are you','your name','about you','who r u'))return{text:T.intro};
  if(has('adventure','adventures','quest','mission','what should i do','what do i do','bored'))return{text:T.adv+(currentQuest()?` Oh, and your next adventure is: "${currentQuest().t}".`:'')};
- if(has('stadium','stadiums','badge','badges','gym','leader','leaders','champion'))return{text:(()=>{const nx=BADGE_ORDER.find(b=>!S.badges.includes(b));if(nx){const L=LEADERS[nx];return`Your next stadium is the ${TYPES[L.type].name} Stadium in ${ZONES[L.zone].name}. ${L.name} uses ${TYPES[L.type].name} monsters! Bring a monster that's strong against ${TYPES[L.type].name}.`}return S.badges.includes('champ')?"You're the CHAMPION! That's so awesome!":"You have all 4 badges! Go fight Champion Nova at the Grand Stadium in town!"})()};
+ if(has('stadium','stadiums','badge','badges','gym','leader','leaders','champion'))return{text:(()=>{const nx=BADGE_ORDER.find(b=>!S.badges.includes(b));if(nx){const L=LEADERS[nx];return`Your next stadium is the ${TYPES[L.type].name} Stadium in ${ZONES[L.zone].name}. ${L.name} uses ${TYPES[L.type].name} monsters! Bring a monster that's strong against ${TYPES[L.type].name}.`}return S.badges.includes('champ')?"You're the CHAMPION! That's so awesome!":S.party.length<6?`You have all 4 badges! Now catch more monsters. You need 6 on your team to fight Champion Nova. You have ${S.party.length}.`:"You have all 4 badges and 6 monsters! Go fight Champion Nova at the Grand Stadium in town!"})()};
  if(has('tip','tips','help','how do i','how to','catch'))return{text:pick(["Make a wild monster's HP low, then throw a Jump Ball! Super Balls work even better.","Press SPACE to jump, E to talk or open things, and drag the screen to look around!","Visit the Healing Center in town when your monsters are tired. It's free!","Treasure chests are hidden in every land. Check the yellow dots on your map!","Use moves your enemy is weak to — they do DOUBLE damage!"])};
  if(has('where','find'))return{text:"Look at the map in the corner! Each colored circle is a different land with different monsters. The emoji show where the stadiums are."};
  if(has('thank','thanks','thx','ty','thank you'))return{text:pick(["You're welcome!","No problem, buddy!","Anytime!"])};
@@ -850,7 +859,7 @@ function refreshCards(){const p=S.party[B.pi],e=B.enemyTeam[B.ei];const ps=stats
  $('pName').textContent=SPECIES[p.sp].name;$('pLv').textContent='Lv'+p.lvl;$('pType').innerHTML=typeTag(SPECIES[p.sp].type);const pf=p.hp/ps.maxHp;$('pHp').style.width=pf*100+'%';$('pHp').style.background=hpColor(pf);$('pHpTxt').textContent=`${p.hp}/${ps.maxHp}`;$('pXp').style.width=(p.xp/xpNeed(p)*100)+'%';
  $('eName').textContent=SPECIES[e.sp].name+(S.caught.includes(e.sp)&&B.wild?' 🔴':'');$('eLv').textContent='Lv'+e.lvl;$('eType').innerHTML=typeTag(SPECIES[e.sp].type);const ef=e.hp/es.maxHp;$('eHp').style.width=ef*100+'%';$('eHp').style.background=hpColor(ef)}
 function startWildBattle(w){const mon=makeMon(w.sp,w.lvl);startBattle({wild:mon,wobj:w,zone:w.zone})}
-async function startBattle(o){mode='battle';closeAll();mode='battle';$('prompt').classList.add('hidden');['hud','joy','touchBtns'].forEach(id=>$(id).classList.add('hidden'));$('battle').classList.remove('hidden');setMenu([]);
+async function startBattle(o){mode='battle';closeAll();mode='battle';$('prompt').classList.add('hidden');['hud','joy','touchBtns','dpad'].forEach(id=>$(id).classList.add('hidden'));$('battle').classList.remove('hidden');setMenu([]);
  setupBattleScene(o.zone,o.stadium);
  B={wild:o.wild,wobj:o.wobj,trainer:o.trainer,enemyTeam:o.trainer?o.trainer.team:[o.wild],ei:0,pi:S.party.findIndex(m=>m.hp>0),zone:o.zone,turn:0};
  const e=B.enemyTeam[0];markSeen(e.sp);
@@ -916,13 +925,13 @@ async function endBattle(res){for(const q of parts)bScene.remove(q.p);parts.leng
  B=null;updateHUD();save();checkQuests()}
 
 // ================= start / UI flow =================
-function showWorldUI(){$('hud').classList.remove('hidden');$('joy').classList.remove('hidden');$('touchBtns').classList.remove('hidden')}
+function showWorldUI(){$('hud').classList.remove('hidden');$('dpad').classList.remove('hidden');$('joy').classList.remove('hidden');$('touchBtns').classList.remove('hidden')}
 let selHero=null,selStarter=null;
 function buildTitle(){const hc=$('heroCards');for(const k in HEROES){const H=HEROES[k];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${H.img}"><b>${H.name}</b><small>${H.desc}</small><span class="perk">${H.perk}</span>`;c.onclick=()=>{selHero=k;[...hc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnHeroNext').disabled=false;sfx.click()};hc.appendChild(c)}
  const sc=$('starterCards');for(const i of STARTERS){const s=SPECIES[i];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${s.img}"><b>${s.name}</b>${typeTag(s.type)}<small>${s.desc}</small>`;c.onclick=()=>{selStarter=i;[...sc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnStart').disabled=false;sfx.click()};sc.appendChild(c)}
  const sv=loadSave();if(sv&&sv.party&&sv.party.length){$('btnContinue').classList.remove('hidden');$('btnContinue').textContent=`Continue as ${HEROES[sv.hero].name}`}}
-$('btnHeroNext').onclick=()=>{$('title').classList.add('hidden');$('starter').classList.remove('hidden')};
-$('btnStart').onclick=()=>{S=newState(selHero);const m=makeMon(selStarter,5);S.party.push(m);markCaught(selStarter);save();beginGame(true)};
+$('btnHeroNext').onclick=()=>{const old=loadSave();if(old&&old.party&&old.party.length)$('starter').querySelector('h2').innerHTML='You already have a saved game with '+old.party.length+' monster'+(old.party.length>1?'s':'')+'! Go back and tap <b>Continue</b> to keep them.';$('title').classList.add('hidden');$('starter').classList.remove('hidden')};
+let startArmed=false;$('btnStart').onclick=()=>{const old=loadSave();if(old&&old.party&&old.party.length&&!startArmed){startArmed=true;$('btnStart').textContent='⚠️ Tap again to start over (your saved monsters will be lost)';$('btnStart').style.background='#d32f2f';return}S=newState(selHero);const m=makeMon(selStarter,5);S.party.push(m);markCaught(selStarter);save();beginGame(true)};
 $('btnContinue').onclick=()=>{S=Object.assign(newState('seb'),loadSave());beginGame(false)};
 function beginGame(fresh){$('title').classList.add('hidden');$('starter').classList.add('hidden');
  const H=HEROES[S.hero];player.mesh=makePerson(H);scene.add(player.mesh);player.speedMul=S.hero==='z'?1.3:1;player.jumpMul=S.hero==='seb'?1.25:1;
