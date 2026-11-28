@@ -400,12 +400,17 @@ function systemPrompt() {
 }
 
 async function askAI(messages) {
-  const r = await fetch("https://text.pollinations.ai/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, seed: Math.floor(Math.random() * 1e6) })
-  });
-  if (!r.ok) throw new Error("AI said " + r.status);
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 100000);
+  let r;
+  try {
+    r = await fetch("https://text.pollinations.ai/", {
+      method: "POST", signal: ctrl.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, seed: Math.floor(Math.random() * 1e6) })
+    });
+  } catch (e) { clearTimeout(timer); throw new Error(e.name === "AbortError" ? "the AI took too long to answer" : "couldn't reach the AI (" + e.message + ")"); }
+  clearTimeout(timer);
+  if (!r.ok) { let t = ""; try { t = (await r.text()).slice(0, 160); } catch {} throw new Error("the AI said " + r.status + (t ? ": " + t : "")); }
   return (await r.text()).trim();
 }
 
@@ -817,6 +822,10 @@ let currentSite = null;
 const STORAGE_SHIM = "<script>(function(){function M(){var d={};return{getItem:function(k){return k in d?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}" +
   "['localStorage','sessionStorage'].forEach(function(n){try{window[n].length}catch(e){Object.defineProperty(window,n,{value:M(),configurable:true})}})})();<\/script>";
 
+const BACKUP_CSS = "body{margin:0;font-family:system-ui,sans-serif;background:linear-gradient(160deg,#7f5af0,#2cb67d);color:#16161a;min-height:100vh}" +
+  "header,section,footer{max-width:900px;margin:16px auto;padding:20px;background:#fffffe;border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.15)}" +
+  "h1{font-size:2.4em;margin:.2em 0}button{background:#ffd803;border:0;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer;margin:4px}" +
+  "button:hover{filter:brightness(1.1)}img{max-width:100%}";
 const stripFences = t => t.replace(/```[a-z]*\n?/gi, "").trim();
 function cleanBody(t) {
   t = stripFences(t);
@@ -828,9 +837,18 @@ const cleanCss = t => stripFences(t).replace(/<\/?style[^>]*>/gi, "").trim();
 const cleanJs = t => stripFences(t).replace(/<\/?script[^>]*>/gi, "").trim();
 function jsOk(js) { try { new Function(js); return true; } catch { return false; } } // only checks spelling of the code, never runs it
 
+let webWait = () => {};
 async function askAIRetry(messages) {
-  try { return await askAI(messages); }
-  catch { await new Promise(r => setTimeout(r, 15000)); return await askAI(messages); } // free AI sometimes needs a short rest
+  // The free AI sometimes needs a rest, so try up to 4 times, waiting a bit longer each time.
+  const waits = [10, 20, 30];
+  for (let i = 0; ; i++) {
+    try { return await askAI(messages); }
+    catch (e) {
+      if (i >= waits.length || /\b413\b/.test(e.message)) throw e;
+      for (let s = waits[i]; s > 0; s--) { webWait("⏳ The free AI needs a little rest… trying again in " + s + "s"); await new Promise(r => setTimeout(r, 1000)); }
+      webWait("");
+    }
+  }
 }
 const ask1 = text => askAIRetry([{ role: "system", content: WEB_SYS }, { role: "user", content: text }]);
 
@@ -839,26 +857,31 @@ async function buildSite(idea, old, change, step) {
   // 1) Page
   step(1, change ? "Changing the page" : "Building the page");
   const body = cleanBody(await ask1(ctx + (old
-    ? "Here is the current page HTML (inside <body>):\n" + old.body.slice(0, 6000) + "\n\nRewrite it with the change applied (if the change is only about colours or style, return it unchanged). "
+    ? "Here is the current page HTML (inside <body>):\n" + old.body.slice(0, 5000) + "\n\nRewrite it with the change applied (if the change is only about colours or style, return it unchanged). "
     : "") + "Write ONLY the HTML that goes inside <body> (no <html>, <head>, <style> or <script> tags, no onclick attributes). " +
     "Make it rich and fun: a big header, several sections, cards, and interactive parts (games, quizzes, buttons, counters) where they fit the idea. " +
     "Give every interactive element a clear id. Use short class names. Maximum 4000 characters."));
   if (body.length < 40) throw new Error("empty page");
   // 2) Style
   step(2, "Making it look amazing");
-  const css = cleanCss(await ask1(ctx + "Here is the page HTML:\n" + body.slice(0, 6000) + "\n\n" + (old ? "Here is the old CSS:\n" + old.css.slice(0, 4000) + "\n\nUpdate it for the change. " : "") +
+  let css;
+  try { css = cleanCss(await ask1(ctx + "Here is the page HTML:\n" + body.slice(0, 5000) + "\n\n" + (old ? "Here is the old CSS:\n" + old.css.slice(0, 4000) + "\n\nUpdate it for the change. " : "") +
     "Write ONLY the CSS (no <style> tags) to make this page look amazing: a bold theme that suits the idea, gradients, rounded cards, hover effects, " +
     "gentle hover effects, and a phone-friendly layout. Style every class and id used. " +
-    "Do NOT make anything move, wobble, float or bounce forever (no infinite animations on buttons or main content); short animations on hover or click are fine. Maximum 4000 characters."));
+    "Do NOT make anything move, wobble, float or bounce forever (no infinite animations on buttons or main content); short animations on hover or click are fine. Maximum 4000 characters.")); }
+  catch { css = old ? old.css : BACKUP_CSS; } // if the style step fails, still show the website with a nice simple style
   // 3) Game code (checked; if the AI makes a mistake, ask again once)
   step(3, "Making the buttons and games work");
-  const jsAsk = ctx + "Here is the page HTML:\n" + body.slice(0, 6000) + "\n\n" + (old && old.js ? "Here is the old JavaScript:\n" + old.js.slice(0, 4000) + "\n\nUpdate it so it matches the new page. " : "") +
+  const jsAsk = ctx + "Here is the page HTML:\n" + body.slice(0, 5000) + "\n\n" + (old && old.js ? "Here is the old JavaScript:\n" + old.js.slice(0, 4000) + "\n\nUpdate it so it matches the new page. " : "") +
     "Write ONLY the JavaScript (no <script> tags) that makes every button, game, quiz and interactive element in this HTML work, using their ids. " +
     "Check each element exists before using it. You may add a small celebration (a few emoji) ONLY right after the user clicks or wins something: " +
     "it must last under 1.5 seconds, be removed from the page afterwards, use pointer-events:none so it never blocks clicks, and never repeat on a timer. " +
     "No splashes, popups or effects that happen by themselves. Make sure there are no errors. Maximum 4000 characters.";
-  let js = cleanJs(await ask1(jsAsk));
-  if (!jsOk(js)) { step(3, "Fixing a little mistake"); js = cleanJs(await ask1(jsAsk + " Keep it under 3000 characters so it is complete.")); }
+  let js = "";
+  try {
+    js = cleanJs(await ask1(jsAsk));
+    if (!jsOk(js)) { step(3, "Fixing a little mistake"); js = cleanJs(await ask1(jsAsk + " Keep it under 3000 characters so it is complete.")); }
+  } catch { js = old ? old.js : ""; } // if the game-code step fails, still show the website
   if (!jsOk(js)) js = "";
   return { body, css, js };
 }
@@ -884,9 +907,11 @@ async function makeSite(change) {
   $("webBtn").disabled = $("webChangeBtn").disabled = true;
   const started = Date.now(); let label = "";
   const tick = setInterval(() => { $("webStatus").textContent = label + " … " + Math.floor((Date.now() - started) / 1000) + "s"; }, 300);
-  const step = (n, what) => { label = "🛠️ Step " + n + " of 3: " + what; };
+  let stepLabel = "";
+  const step = (n, what) => { label = stepLabel = "🛠️ Step " + n + " of 3: " + what; };
   try {
     const old = change && currentSite && currentSite.body ? currentSite : null;
+    webWait = msg => { label = msg || stepLabel; };
     const parts = await buildSite(idea, old, change, step);
     const site = Object.assign(parts, { idea, t: Date.now() });
     site.name = siteTitle(site, idea);
@@ -899,7 +924,7 @@ async function makeSite(change) {
   } catch (e) {
     $("webStatus").textContent = /^(localhost|127\.)/.test(location.hostname) || location.protocol === "file:"
       ? "Oops! The website maker only works when Buddy is on a real website."
-      : "Oops, the website maker got stuck 😵 Try again in a moment.";
+      : "Oops, the website maker got stuck 😵 Wait a minute and try again. (Reason: " + e.message + ")";
   }
   clearInterval(tick);
   $("webBtn").disabled = $("webChangeBtn").disabled = false;
