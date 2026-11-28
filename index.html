@@ -149,6 +149,7 @@ button.gold{background:var(--gold)}
   <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
     <button class="primary" id="btnHeroNext" disabled style="font-size:22px;padding:14px 30px">Next ➜</button>
     <button class="gold hidden" id="btnContinue" style="font-size:22px;padding:14px 30px">Continue my adventure</button>
+    <button class="blue hidden" id="btnBackup" style="font-size:18px;padding:12px 22px">↩️ Get my old monsters back</button>
   </div>
 </div>
 <div class="screen hidden" id="starter">
@@ -289,6 +290,9 @@ const SAVE_KEY='monsterQuest3D_v1';
 function newState(hero){return{hero,party:[],box:[],seen:[],caught:[],badges:[],balls:10,superballs:1,potions:3,coins:100,chests:[],visited:['town'],talked:[],quests:[],gifts:[],pos:[0,0,10],uid:1}}
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
 function loadSave(){try{const s=localStorage.getItem(SAVE_KEY);return s?JSON.parse(s):null}catch(e){return null}}
+const BACKUP_KEY=SAVE_KEY+'_backup';
+function loadBackup(){try{const s=localStorage.getItem(BACKUP_KEY);return s?JSON.parse(s):null}catch(e){return null}}
+function monCount(sv){return sv?(sv.party||[]).length+(sv.box||[]).length:0}
 
 // ================= creature instances =================
 function makeMon(sp,lvl){const m={sp,lvl,xp:0,uid:(S?S.uid++:Math.random())};m.hp=stats(m).maxHp;return m}
@@ -886,10 +890,12 @@ function showWorldUI(){$('hud').classList.remove('hidden');$('dpad').classList.r
 let selHero=null,selStarter=null;
 function buildTitle(){const hc=$('heroCards');for(const k in HEROES){const H=HEROES[k];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${H.img}"><b>${H.name}</b><small>${H.desc}</small><span class="perk">${H.perk}</span>`;c.onclick=()=>{selHero=k;[...hc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnHeroNext').disabled=false;sfx.click()};hc.appendChild(c)}
  const sc=$('starterCards');for(const i of STARTERS){const s=SPECIES[i];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${s.img}"><b>${s.name}</b>${typeTag(s.type)}<small>${s.desc}</small>`;c.onclick=()=>{selStarter=i;[...sc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnStart').disabled=false;sfx.click()};sc.appendChild(c)}
- const sv=loadSave();if(sv&&sv.party&&sv.party.length){$('btnContinue').classList.remove('hidden');$('btnContinue').textContent=`Continue as ${HEROES[sv.hero].name}`}}
-$('btnHeroNext').onclick=()=>{$('title').classList.add('hidden');$('starter').classList.remove('hidden')};
-$('btnStart').onclick=()=>{S=newState(selHero);const m=makeMon(selStarter,5);S.party.push(m);markCaught(selStarter);save();beginGame(true)};
+ const sv=loadSave();if(sv&&sv.party&&sv.party.length){$('btnContinue').classList.remove('hidden');$('btnContinue').textContent=`Continue as ${HEROES[sv.hero].name} (${monCount(sv)} monster${monCount(sv)>1?'s':''})`;$('title').querySelector('h2').innerHTML='Tap <b>Continue</b> to keep your monsters, or pick a hero to start a new game'}
+ const bk=loadBackup();if(bk&&bk.party&&bk.party.length){$('btnBackup').classList.remove('hidden');$('btnBackup').textContent=`↩️ Get my old monsters back (${HEROES[bk.hero].name}, ${monCount(bk)} monster${monCount(bk)>1?'s':''})`}}
+$('btnHeroNext').onclick=()=>{const old=loadSave();if(old&&old.party&&old.party.length)$('starter').querySelector('h2').innerHTML=`⚠️ You already have a saved game with ${monCount(old)} monsters! Starting a new game puts it in a backup.`;$('title').classList.add('hidden');$('starter').classList.remove('hidden')};
+let startArmed=false;$('btnStart').onclick=()=>{const old=loadSave();if(old&&old.party&&old.party.length){if(!startArmed){startArmed=true;$('btnStart').textContent='Tap again to start a new game (your old monsters go to the backup)';$('btnStart').style.background='#d32f2f';return}const bk=loadBackup();if(monCount(old)>=monCount(bk)||!bk){try{localStorage.setItem(BACKUP_KEY,JSON.stringify(old))}catch(e){}}}S=newState(selHero);const m=makeMon(selStarter,5);S.party.push(m);markCaught(selStarter);save();beginGame(true)};
 $('btnContinue').onclick=()=>{S=Object.assign(newState('seb'),loadSave());beginGame(false)};
+$('btnBackup').onclick=()=>{const bk=loadBackup(),cur=loadSave();if(!bk)return;try{if(cur&&cur.party&&cur.party.length)localStorage.setItem(BACKUP_KEY,JSON.stringify(cur));else localStorage.removeItem(BACKUP_KEY)}catch(e){}S=Object.assign(newState('seb'),bk);save();beginGame(false);toast('↩️ Your old monsters are back!',3500)};
 function beginGame(fresh){$('title').classList.add('hidden');$('starter').classList.add('hidden');
  const H=HEROES[S.hero];player.mesh=makePerson(H);scene.add(player.mesh);player.speedMul=S.hero==='z'?1.3:1;player.jumpMul=S.hero==='seb'?1.25:1;
  player.x=S.pos[0];player.y=S.pos[1]||0;player.z=S.pos[2];player.y=Math.max(0,player.y);
