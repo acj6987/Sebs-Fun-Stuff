@@ -230,6 +230,18 @@
         <button class="btn ghost" id="lockBtn">Log out / lock</button>
       </div>
       <p class="muted small">Your memory is saved on this device and browser.</p>
+      <h4>⚙️ Owner settings: better pictures</h4>
+      <p class="muted small">Free pictures are basic. For much better ones (Google Gemini or ChatGPT pictures), a grown-up can get a key at
+        <a href="https://enter.pollinations.ai" target="_blank" rel="noopener" style="color:var(--accent)">enter.pollinations.ai</a>
+        (it can cost money). The key is only saved on this device, never in the website's code.</p>
+      <label class="small">Picture AI</label>
+      <select id="picModelSel" style="margin:4px 0 10px"></select>
+      <label class="small">Pollinations key</label>
+      <div class="row" style="margin-top:4px">
+        <input type="password" id="keyInput" placeholder="sk_… or pk_…" autocomplete="off">
+        <button class="btn alt" id="keyBtn">Save</button>
+      </div>
+      <div class="muted small" id="keyMsg" style="margin-top:6px"></div>
     </div>
   </section>
 </div>
@@ -289,7 +301,7 @@ $("nameInput").onkeydown = e => { if (e.key === "Enter") setName(); };
 document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav.tabs button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("hidden", t.id !== "tab-" + b.dataset.tab));
-  if (b.dataset.tab === "memory") renderMemory();
+  if (b.dataset.tab === "memory") { renderMemory(); renderSettings(); }
 });
 document.querySelectorAll(".chips").forEach(box => box.onclick = e => {
   if (e.target.classList.contains("chip")) $(box.dataset.for).value = e.target.textContent;
@@ -397,34 +409,73 @@ $("askBtn").onclick = sendChat;
 $("ask").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } };
 
 /* ================== PICTURES ================== */
-function imgUrl(prompt, w, h, seed) {
-  return "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) +
-    "?width=" + w + "&height=" + h + "&seed=" + seed + "&nologo=true&safe=true";
+// Free pictures use Pollinations' basic model (1 picture every 45 seconds).
+// With a Pollinations key (saved in Owner settings, only on this device) you can use
+// Google Gemini "Nano Banana", ChatGPT "GPT Image" and other much better models.
+const PIC_MODELS = {
+  free:        { label: "Free (basic quality)", key: false },
+  nanobanana:  { label: "Google Gemini – Nano Banana", key: true },
+  gptimage:    { label: "ChatGPT – GPT Image", key: true },
+  zimage:      { label: "Z-Image Turbo (cheap & sharp)", key: true },
+};
+const hasKey = () => !!(S.apiKey || "").trim();
+const picModel = () => (hasKey() && S.picModel && S.picModel !== "free") ? S.picModel : "free";
+
+class PicError extends Error {}
+async function makeImage(prompt, w, h, seed) {
+  const model = picModel();
+  let url, opts = {};
+  if (model === "free") {
+    url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt + ", highly detailed, vibrant colours, beautiful lighting, high quality") +
+      "?width=" + w + "&height=" + h + "&seed=" + seed + "&nologo=true&safe=true&enhance=true";
+  } else {
+    url = "https://gen.pollinations.ai/image/" + encodeURIComponent(prompt) +
+      "?model=" + model + "&width=" + w + "&height=" + h + "&seed=" + seed + "&safe=true";
+    opts.headers = { Authorization: "Bearer " + S.apiKey.trim() };
+  }
+  let r;
+  try { r = await fetch(url, opts); } catch { throw new PicError("Couldn't reach the picture AI. Check the internet and try again."); }
+  if (!r.ok) {
+    let msg = ""; try { msg = (await r.json()).error.message || ""; } catch {}
+    if (r.status === 402 && model === "free") throw new PicError("⏳ The free picture AI needs a rest: 1 picture every 45 seconds. Wait a bit and try again!");
+    if (r.status === 401 || r.status === 403) throw new PicError("🔑 The picture key didn't work. Check it in Memory → Owner settings. " + msg);
+    if (r.status === 402) throw new PicError("💷 The picture account has run out of credit. " + msg);
+    throw new PicError("The picture AI had a problem (" + r.status + "). Try again! " + msg);
+  }
+  const blob = await r.blob();
+  if (!blob.type.startsWith("image/")) throw new PicError("The picture AI sent something that wasn't a picture. Try again!");
+  return blob;
 }
-function loadImg(src) {
+function blobToImg(blob) {
   return new Promise((res, rej) => {
-    const i = new Image(); i.crossOrigin = "anonymous";
-    i.onload = () => res(i); i.onerror = () => rej(new Error("image failed")); i.src = src;
+    const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new PicError("Couldn't open the picture."));
+    i.src = URL.createObjectURL(blob);
   });
+}
+function thumb(img) { // small copy for the gallery, so it survives a reload without asking the AI again
+  const c = document.createElement("canvas"), s = 320 / Math.max(img.naturalWidth, img.naturalHeight);
+  c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.8);
+}
+function showPic(src, name) {
+  $("picOut").innerHTML = '<img src="' + src + '" alt="' + esc(name) + '"><br><a class="dl" href="' + src + '" download="buddy-picture.jpg">⬇ Save picture</a>';
 }
 async function makePic() {
   const p = $("picPrompt").value.trim(); if (!p) return;
   $("picBtn").disabled = true;
-  $("picOut").innerHTML = '<p class="muted typing">Painting your picture (this can take 10–20 seconds)</p>';
-  const url = imgUrl(p, 768, 768, Math.floor(Math.random() * 1e6));
+  $("picOut").innerHTML = '<p class="muted typing">Painting your picture with ' + esc(PIC_MODELS[picModel()].label) + ' (this can take 10–30 seconds)</p>';
   try {
-    await loadImg(url);
-    $("picOut").innerHTML = '<img src="' + url + '" alt="' + esc(p) + '"><br><a class="dl" href="' + url + '" target="_blank" rel="noopener">⬇ Open / save picture</a>';
-    S.pics.unshift({ p, url, t: Date.now() }); S.pics = S.pics.slice(0, 24); save(); renderGallery();
-  } catch { $("picOut").innerHTML = '<p class="err">Couldn\'t make that picture. Try again!</p>'; }
+    const img = await blobToImg(await makeImage(p, 1024, 1024, Math.floor(Math.random() * 1e6)));
+    showPic(img.src, p);
+    S.pics.unshift({ p, url: thumb(img), t: Date.now() }); S.pics = S.pics.slice(0, 16); save(); renderGallery();
+  } catch (e) { $("picOut").innerHTML = '<p class="err">' + esc(e instanceof PicError ? e.message : "Couldn't make that picture. Try again!") + '</p>'; }
   $("picBtn").disabled = false;
 }
 function renderGallery() {
+  S.pics = S.pics.filter(x => x.url && x.url.startsWith("data:")); // old-style links would ask the AI again
   $("gallery").innerHTML = S.pics.map(x => '<img src="' + x.url + '" title="' + esc(x.p) + '" alt="' + esc(x.p) + '">').join("");
-  $("gallery").querySelectorAll("img").forEach(i => i.onclick = () => {
-    $("picOut").innerHTML = '<img src="' + i.src + '"><br><a class="dl" href="' + i.src + '" target="_blank" rel="noopener">⬇ Open / save picture</a>';
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+  $("gallery").querySelectorAll("img").forEach(i => i.onclick = () => { showPic(i.src, i.title); window.scrollTo({ top: 0, behavior: "smooth" }); });
 }
 $("picBtn").onclick = makePic;
 $("picPrompt").onkeydown = e => { if (e.key === "Enter") makePic(); };
@@ -434,37 +485,46 @@ async function makeVideo() {
   const p = $("vidPrompt").value.trim(); if (!p) return;
   $("vidBtn").disabled = true; $("vidOut").innerHTML = "";
   const bar = $("vidBar"), status = $("vidStatus");
-  bar.style.width = "3%"; status.textContent = "Drawing the scenes (about 20 seconds)…";
+  bar.style.width = "3%";
   const seed = Math.floor(Math.random() * 1e6);
-  const shots = [p + ", cinematic wide shot", p + ", cinematic, action scene", p + ", cinematic close up, dramatic lighting"];
-  let done = 0;
-  let imgs;
+  // Free mode can only make 1 picture every 45s, so it films 3 "camera shots" from one big picture.
+  // With a key it draws 3 different scenes.
+  const multi = picModel() !== "free";
+  const shots = multi ? [p + ", cinematic wide shot", p + ", cinematic action scene", p + ", cinematic close up, dramatic lighting"]
+                      : [p + ", cinematic, epic wide scene"];
+  status.textContent = multi ? "Drawing 3 scenes (about 30 seconds)…" : "Drawing the scene (about 20 seconds)…";
+  let done = 0, imgs;
   try {
-    imgs = await Promise.all(shots.map((s, k) => loadImg(imgUrl(s, 640, 360, seed + k)).then(i => { done++; bar.style.width = (5 + done * 15) + "%"; return i; })));
-  } catch {
-    status.textContent = "Couldn't draw the scenes. Try again!"; $("vidBtn").disabled = false; return;
+    imgs = await Promise.all(shots.map((s, k) => makeImage(s, 1280, 720, seed + k).then(blobToImg).then(i => { done++; bar.style.width = (5 + done * 45 / shots.length) + "%"; return i; })));
+  } catch (e) {
+    status.textContent = e instanceof PicError ? e.message : "Couldn't draw the scenes. Try again!"; bar.style.width = "0"; $("vidBtn").disabled = false; return;
   }
+  // Three camera moves: [startZoom, endZoom, startX, endX, startY, endY] (x/y = where the camera points, 0..1)
+  const MOVES = [[1.0, 1.25, 0.5, 0.5, 0.5, 0.45], [1.5, 1.5, 0.2, 0.8, 0.5, 0.5], [1.4, 1.9, 0.6, 0.5, 0.55, 0.45]];
 
   const cv = $("vidCanvas"), ctx = cv.getContext("2d");
   cv.classList.remove("hidden");
-  const DUR = 10000, n = imgs.length, seg = DUR / n, fade = 700;
+  const DUR = 10000, n = 3, seg = DUR / n, fade = 700;
   const types = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"];
   const mime = window.MediaRecorder ? types.find(t => MediaRecorder.isTypeSupported(t)) : null;
   let rec, chunks = [];
   if (mime) {
-    rec = new MediaRecorder(cv.captureStream(30), { mimeType: mime, videoBitsPerSecond: 3e6 });
+    rec = new MediaRecorder(cv.captureStream(30), { mimeType: mime, videoBitsPerSecond: 4e6 });
     rec.ondataavailable = e => e.data.size && chunks.push(e.data);
     rec.start(250);
   }
   status.textContent = "Filming… 🎬";
 
-  function drawShot(img, local, alpha, k) {
-    // Ken Burns: slow zoom + pan, a different direction each shot
-    const z = 1.05 + 0.18 * (local / seg);
-    const dx = (k % 2 ? 1 : -1) * 30 * (local / seg), dy = (k === 1 ? -1 : 1) * 12 * (local / seg);
-    const w = cv.width * z, h = cv.height * z;
+  function drawShot(k, local, alpha) {
+    const img = imgs[k % imgs.length], [z0, z1, x0, x1, y0, y1] = MOVES[k];
+    const f = Math.min(1, Math.max(0, local / seg)), e = f * f * (3 - 2 * f);
+    const z = z0 + (z1 - z0) * e, cx = x0 + (x1 - x0) * e, cy = y0 + (y1 - y0) * e;
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const cover = Math.max(cv.width / iw, cv.height / ih) * z;
+    const sw = cv.width / cover, sh = cv.height / cover;
+    const sx = Math.min(iw - sw, Math.max(0, cx * iw - sw / 2)), sy = Math.min(ih - sh, Math.max(0, cy * ih - sh / 2));
     ctx.globalAlpha = alpha;
-    ctx.drawImage(img, (cv.width - w) / 2 + dx, (cv.height - h) / 2 + dy, w, h);
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
     ctx.globalAlpha = 1;
   }
   const start = performance.now();
@@ -473,16 +533,14 @@ async function makeVideo() {
       const t = Math.min(now - start, DUR);
       const k = Math.min(Math.floor(t / seg), n - 1), local = t - k * seg;
       ctx.fillStyle = "#000"; ctx.fillRect(0, 0, cv.width, cv.height);
-      drawShot(imgs[k], local, 1, k);
-      if (k + 1 < n && local > seg - fade) drawShot(imgs[k + 1], local - seg + fade, (local - (seg - fade)) / fade, k + 1);
-      // Title for the first 2.5s
+      drawShot(k, local, 1);
+      if (k + 1 < n && local > seg - fade) drawShot(k + 1, local - seg + fade, (local - (seg - fade)) / fade);
       if (t < 2500) {
         const a = t < 2000 ? 1 : 1 - (t - 2000) / 500;
         ctx.globalAlpha = a; ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(0, cv.height - 70, cv.width, 70);
         ctx.fillStyle = "#fff"; ctx.font = "bold 26px Trebuchet MS, sans-serif"; ctx.textAlign = "center";
         ctx.fillText(p.length > 40 ? p.slice(0, 38) + "…" : p, cv.width / 2, cv.height - 28); ctx.globalAlpha = 1;
       }
-      // Fade out the last 0.6s
       if (t > DUR - 600) { ctx.fillStyle = "rgba(0,0,0," + ((t - (DUR - 600)) / 600) + ")"; ctx.fillRect(0, 0, cv.width, cv.height); }
       bar.style.width = (50 + 50 * t / DUR) + "%";
       status.textContent = "Filming… " + Math.ceil((DUR - t) / 1000) + "s left 🎬";
@@ -648,6 +706,14 @@ $("forgetBtn").onclick = () => {
   if (!confirm("Really forget everything about you?")) return;
   S.history = []; S.facts = []; S.pics = []; S.name = ""; convo = []; $("chat").innerHTML = ""; save(); show();
 };
+function renderSettings() {
+  $("picModelSel").innerHTML = Object.entries(PIC_MODELS).map(([k, m]) =>
+    '<option value="' + k + '"' + ((S.picModel || "free") === k ? " selected" : "") + '>' + esc(m.label) + (m.key ? " (needs key)" : "") + '</option>').join("");
+  $("keyInput").value = S.apiKey || "";
+  $("keyMsg").textContent = hasKey() ? "✅ Key saved. Pictures use: " + PIC_MODELS[picModel()].label : "No key saved: using free pictures.";
+}
+$("keyBtn").onclick = () => { S.apiKey = $("keyInput").value.trim(); S.picModel = $("picModelSel").value; save(); renderSettings(); };
+$("picModelSel").onchange = () => { S.picModel = $("picModelSel").value; save(); renderSettings(); };
 $("lockBtn").onclick = () => { S.unlocked = false; save(); $("codeInput").value = ""; $("codeErr").textContent = ""; show(); };
 
 show();
