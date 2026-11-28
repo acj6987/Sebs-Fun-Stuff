@@ -96,6 +96,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
 
 <!-- RESULTS -->
 <header class="bar" id="bar">
+  <button class="pill" id="backBtn" title="Go back">← Back</button>
   <div class="logo" id="homeLogo">Sebble</div>
   <form class="box" id="f2"><input id="q2" autocomplete="off"><button>Search</button></form>
 </header>
@@ -274,12 +275,29 @@ function drawTabs(){
   $("#tabs").innerHTML = TABS.map(([k,label,free]) => `<button data-tab="${k}" class="${k===currentTab?"on":""}">${label}${!free&&!premium?" 🔒":""}</button>`).join("");
 }
 
-async function run(q, tab="all"){
+const hist = [];
+function goHome(remember=true){
+  if (remember && currentQ) hist.push({q:currentQ, tab:currentTab});
+  currentQ = ""; currentTab = "all"; store.set("sebble-last", "");
+  $("#home").style.display = "";
+  $("#bar").style.display = $("#tabs").style.display = $("#main").style.display = "none";
+  $("#q1").value = ""; document.title = "Sebble Search";
+}
+function goBack(){
+  const prev = hist.pop();
+  if (prev) run(prev.q, prev.tab, {nav:true}); else goHome(false);
+}
+async function run(q, tab="all", opt={}){
   q = q.trim(); if (!q) return;
   if (!premium){
     if (searchesLeft <= 0){ openModal(); return; }
-    if (q !== currentQ){ searchesLeft--; store.set("sebble-left", searchesLeft); }
+    if (q !== currentQ && !opt.nav && !opt.restore){ searchesLeft--; store.set("sebble-left", searchesLeft); }
   }
+  if (!opt.nav && !opt.restore && (q !== currentQ || tab !== currentTab)){
+    if (currentQ) hist.push({q:currentQ, tab:currentTab});
+    try { history.pushState({sebble:true}, ""); } catch {}
+  }
+  store.set("sebble-last", JSON.stringify({q, tab}));
   currentQ = q; currentTab = tab;
   $("#q2").value = q;
   $("#home").style.display = "none";
@@ -355,7 +373,12 @@ function closeModal(){ $("#modal").style.display = "none"; }
 // ---------- events ----------
 $("#f1").onsubmit = e => { e.preventDefault(); run($("#q1").value); };
 $("#f2").onsubmit = e => { e.preventDefault(); run($("#q2").value, currentTab); };
-$("#homeLogo").onclick = () => { location.href = location.pathname; };
+$("#homeLogo").onclick = () => { goHome(); try { history.pushState({sebble:true}, ""); } catch {} };
+$("#backBtn").onclick = () => { try { history.back(); } catch { goBack(); } };
+let popped = false;
+window.addEventListener("popstate", () => { popped = true; goBack(); });
+// if the browser has no history to go back through, still go back inside Sebble
+$("#backBtn").addEventListener("click", () => { popped = false; setTimeout(() => { if (!popped) goBack(); }, 300); });
 $("#upBtn").onclick = openModal;
 $("#closeModal").onclick = closeModal;
 $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
@@ -388,5 +411,8 @@ $("#lucky").onclick = () => run(IDEAS[Math.floor(Math.random()*IDEAS.length)]);
 const savedTheme = store.get("sebble-theme"); if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 updatePlan();
 const params = new URLSearchParams(location.search);
-if (params.get("q")) run(params.get("q"), params.get("tab") || "all");
+if (params.get("q")) run(params.get("q"), params.get("tab") || "all", {restore:true});
+else {
+  try { const last = JSON.parse(store.get("sebble-last") || "null"); if (last?.q) run(last.q, last.tab || "all", {restore:true}); } catch {}
+}
 </script>
