@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buddy AI</title>
+<style>
+  :root {
+    --bg1: #1b1240; --bg2: #3a1670; --card: rgba(255,255,255,0.08); --card-solid: #2a1b57;
+    --line: rgba(255,255,255,0.16); --text: #f6f2ff; --muted: #c9bdf0;
+    --accent: #ffcc33; --accent2: #39e0c8; --pink: #ff5fa2; --bad: #ff7a7a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    background: radial-gradient(1200px 600px at 10% -10%, #5b2bb5 0%, transparent 60%),
+                radial-gradient(900px 500px at 110% 10%, #0f6b8f 0%, transparent 55%),
+                linear-gradient(160deg, var(--bg1), var(--bg2));
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  button, input, textarea, select { font: inherit; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 0 16px; }
+  .logo { font-size: 34px; line-height: 1; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: .5px; }
+  h1 span { color: var(--accent); }
+  .who { margin-left: auto; color: var(--muted); font-size: 14px; text-align: right; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; backdrop-filter: blur(6px); }
+  .btn { border: 0; border-radius: 12px; padding: 11px 18px; font-weight: 700; cursor: pointer;
+         background: var(--accent); color: #2a1600; transition: transform .1s, filter .1s; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .btn.alt { background: var(--accent2); color: #002b26; }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .btn.danger { background: var(--bad); color: #3a0000; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+    background: rgba(0,0,0,.25); color: var(--text); outline: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent2); }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row > input, .row > textarea { flex: 1; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .hidden { display: none !important; }
+
+  /* Lock screen */
+  .lock { text-align: center; padding: 30px 18px; }
+  .lock .big { font-size: 60px; }
+  .price { font-size: 44px; font-weight: 800; color: var(--accent); margin: 6px 0; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 20px 0; }
+  .feat { background: rgba(0,0,0,.2); border-radius: 14px; padding: 14px 10px; }
+  .feat b { display: block; font-size: 28px; margin-bottom: 4px; }
+  .codebox { max-width: 360px; margin: 18px auto 0; }
+  .err { color: var(--bad); min-height: 20px; margin-top: 8px; font-size: 14px; }
+
+  /* Tabs */
+  nav.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  nav.tabs button { flex: 1 1 auto; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 12px; padding: 10px 12px; cursor: pointer; font-weight: 700; }
+  nav.tabs button.on { background: var(--accent); color: #2a1600; border-color: transparent; }
+
+  /* Chat */
+  .chat { height: 52vh; min-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px; }
+  .msg { max-width: 82%; padding: 10px 14px; border-radius: 16px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.me { align-self: flex-end; background: var(--accent2); color: #002b26; border-bottom-right-radius: 4px; }
+  .msg.ai { align-self: flex-start; background: var(--card-solid); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .msg.memo { align-self: center; background: rgba(255,204,51,.15); border: 1px dashed var(--accent); color: var(--accent);
+    font-size: 14px; text-align: center; max-width: 95%; }
+  .typing::after { content: "…"; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .composer { margin-top: 12px; }
+  .composer textarea { resize: none; height: 48px; }
+
+  /* Media */
+  .media-out { margin-top: 14px; text-align: center; }
+  .media-out img, .media-out video, .media-out canvas { max-width: 100%; border-radius: 14px; border: 1px solid var(--line); background: #000; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 14px; }
+  .gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; cursor: pointer; border: 1px solid var(--line); }
+  .bar { height: 10px; background: rgba(0,0,0,.3); border-radius: 99px; overflow: hidden; margin-top: 12px; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width .2s; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { background: rgba(0,0,0,.25); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; cursor: pointer; font-size: 14px; color: var(--text); }
+  .chip:hover { border-color: var(--accent); }
+  audio { width: 100%; margin-top: 10px; }
+  .dl { display: inline-block; margin-top: 10px; color: var(--accent); font-weight: 700; }
+
+  /* Memory */
+  .mem-item { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  .mem-item:last-child { border-bottom: 0; }
+  .mem-date { color: var(--accent); font-size: 13px; }
+
+  /* Modal */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .modal .card { max-width: 420px; background: var(--card-solid); text-align: center; }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 21px; }
+    .msg { max-width: 92%; }
+    .composer.row { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🤖</div>
+    <h1>Buddy <span>AI</span></h1>
+    <div class="who" id="who"></div>
+  </header>
+
+  <!-- ===== LOCK SCREEN ===== -->
+  <section id="lockScreen" class="card lock hidden">
+    <div class="big">🔒</div>
+    <h2 style="margin:6px 0">Unlock Buddy AI</h2>
+    <div class="price">£5</div>
+    <div class="muted">One payment. Use it forever.</div>
+    <div class="features">
+      <div class="feat"><b>💬</b>Answers your questions</div>
+      <div class="feat"><b>🧠</b>Remembers you</div>
+      <div class="feat"><b>🎨</b>Makes pictures</div>
+      <div class="feat"><b>🎬</b>10-second videos</div>
+      <div class="feat"><b>🎵</b>1-minute music</div>
+    </div>
+    <button class="btn" id="payBtn">Pay £5 to unlock</button>
+    <div class="codebox">
+      <p class="muted small">Got an access code?</p>
+      <div class="row">
+        <input type="password" id="codeInput" placeholder="Enter code" autocomplete="off">
+        <button class="btn alt" id="codeBtn">Go</button>
+      </div>
+      <div class="err" id="codeErr"></div>
+    </div>
+  </section>
+
+  <!-- ===== NAME SCREEN ===== -->
+  <section id="nameScreen" class="card lock hidden">
+    <div class="big">👋</div>
+    <h2>Hi! I'm Buddy.</h2>
+    <p class="muted">What's your name? I'll remember it.</p>
+    <div class="codebox">
+      <div class="row">
+        <input type="text" id="nameInput" placeholder="Your name" maxlength="30">
+        <button class="btn" id="nameBtn">Start</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== APP ===== -->
+  <section id="app" class="hidden">
+    <nav class="tabs">
+      <button data-tab="chat" class="on">💬 Ask</button>
+      <button data-tab="pics">🎨 Pictures</button>
+      <button data-tab="video">🎬 Video</button>
+      <button data-tab="music">🎵 Music</button>
+      <button data-tab="memory">🧠 Memory</button>
+    </nav>
+
+    <!-- Chat -->
+    <div class="card tab" id="tab-chat">
+      <div class="chat" id="chat"></div>
+      <div class="composer row">
+        <textarea id="ask" placeholder="Ask me anything… (homework, facts, jokes)"></textarea>
+        <button class="btn" id="askBtn">Ask</button>
+      </div>
+      <div class="muted small" style="margin-top:8px">Tip: say <b>"remember that…"</b> and I'll keep it in my memory.</div>
+    </div>
+
+    <!-- Pictures -->
+    <div class="card tab hidden" id="tab-pics">
+      <h3 style="margin-top:0">🎨 Make a picture</h3>
+      <div class="row composer">
+        <input type="text" id="picPrompt" placeholder="e.g. a dragon eating pizza on the moon">
+        <button class="btn" id="picBtn">Create</button>
+      </div>
+      <div class="chips" data-for="picPrompt">
+        <span class="chip">a cat astronaut</span><span class="chip">a castle made of sweets</span>
+        <span class="chip">a robot playing football</span><span class="chip">an underwater city</span>
+      </div>
+      <div class="media-out" id="picOut"></div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+
+    <!-- Video -->
+    <div class="card tab hidden" id="tab-video">
+      <h3 style="margin-top:0">🎬 Make a 10-second video</h3>
+      <div class="row composer">
+        <input type="text" id="vidPrompt" placeholder="e.g. a rocket flying through space">
+        <button class="btn" id="vidBtn">Create</button>
+      </div>
+      <div class="chips" data-for="vidPrompt">
+        <span class="chip">a rocket flying through space</span><span class="chip">dinosaurs in a jungle</span>
+        <span class="chip">a volcano erupting</span>
+      </div>
+      <div class="bar"><i id="vidBar"></i></div>
+      <div class="muted small" id="vidStatus" style="margin-top:6px"></div>
+      <div class="media-out">
+        <canvas id="vidCanvas" width="640" height="360" class="hidden"></canvas>
+        <div id="vidOut"></div>
+      </div>
+    </div>
+
+    <!-- Music -->
+    <div class="card tab hidden" id="tab-music">
+      <h3 style="margin-top:0">🎵 Make 1 minute of music</h3>
+      <div class="row composer">
+        <input type="text" id="musPrompt" placeholder="e.g. happy summer song, spooky, epic battle, chill">
+        <button class="btn" id="musBtn">Create</button>
+      </div>
+      <div class="chips" data-for="musPrompt">
+        <span class="chip">happy summer song</span><span class="chip">spooky haunted house</span>
+        <span class="chip">epic battle</span><span class="chip">chill and relaxing</span><span class="chip">sad rainy day</span>
+      </div>
+      <div class="muted small" id="musStatus" style="margin-top:10px"></div>
+      <div class="media-out" id="musOut"></div>
+    </div>
+
+    <!-- Memory -->
+    <div class="card tab hidden" id="tab-memory">
+      <h3 style="margin-top:0">🧠 What I remember about you</h3>
+      <div id="memFacts"></div>
+      <h4>Questions you've asked</h4>
+      <div id="memList"></div>
+      <div class="row" style="margin-top:16px; flex-wrap:wrap">
+        <button class="btn danger" id="forgetBtn">Forget everything</button>
+        <button class="btn ghost" id="lockBtn">Log out / lock</button>
+      </div>
+      <p class="muted small">Your memory is saved on this device and browser.</p>
+    </div>
+  </section>
+</div>
+
+<div class="modal hidden" id="payModal">
+  <div class="card">
+    <div style="font-size:44px">💷</div>
+    <h3>Payments coming soon!</h3>
+    <p class="muted">Card payments aren't switched on yet. If you have an access code from the owner, type it in to get in.</p>
+    <button class="btn" id="closeModal">OK</button>
+  </div>
+</div>
+
+<script>
+/* ================== SETTINGS ================== */
+// The owner's free access code. Change it to whatever you like!
+const OWNER_CODE = "SEBFREE";
+
+/* ================== STORAGE ================== */
+const KEY = "buddyai.v1";
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+}
+let S = Object.assign({ unlocked: false, name: "", history: [], facts: [], pics: [] }, load());
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+/* ================== SCREENS ================== */
+function show() {
+  $("lockScreen").classList.toggle("hidden", S.unlocked);
+  $("nameScreen").classList.toggle("hidden", !S.unlocked || !!S.name);
+  $("app").classList.toggle("hidden", !S.unlocked || !S.name);
+  $("who").innerHTML = S.unlocked && S.name ? "Hi, <b>" + esc(S.name) + "</b> ✨" : "";
+  if (S.unlocked && S.name) { renderChat(); renderMemory(); renderGallery(); }
+}
+
+$("payBtn").onclick = () => $("payModal").classList.remove("hidden");
+$("closeModal").onclick = () => $("payModal").classList.add("hidden");
+function tryCode() {
+  const c = $("codeInput").value.trim().toUpperCase();
+  if (c === OWNER_CODE) { S.unlocked = true; save(); show(); }
+  else $("codeErr").textContent = "That code didn't work. Try again!";
+}
+$("codeBtn").onclick = tryCode;
+$("codeInput").onkeydown = e => { if (e.key === "Enter") tryCode(); };
+
+function setName() {
+  const n = $("nameInput").value.trim();
+  if (!n) return;
+  S.name = n; save(); show();
+}
+$("nameBtn").onclick = setName;
+$("nameInput").onkeydown = e => { if (e.key === "Enter") setName(); };
+
+document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav.tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("hidden", t.id !== "tab-" + b.dataset.tab));
+  if (b.dataset.tab === "memory") renderMemory();
+});
+document.querySelectorAll(".chips").forEach(box => box.onclick = e => {
+  if (e.target.classList.contains("chip")) $(box.dataset.for).value = e.target.textContent;
+});
+
+/* ================== MEMORY HELPERS ================== */
+const STOP = new Set("a an the is are was were what whats what's who how why when where which do does did can could would you your me my i to of in on for and or it its please tell about be".split(" "));
+function words(s) {
+  return s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(w => w && !STOP.has(w));
+}
+function similar(a, b) {
+  const A = new Set(words(a)), B = new Set(words(b));
+  if (!A.size || !B.size) return a.trim().toLowerCase() === b.trim().toLowerCase();
+  let both = 0; A.forEach(w => { if (B.has(w)) both++; });
+  return both / (A.size + B.size - both) >= 0.7;
+}
+function ago(t) {
+  const days = Math.floor((Date.now() - t) / 86400000);
+  if (days < 1) { const h = Math.floor((Date.now() - t) / 3600000); return h < 1 ? "just a moment ago" : h + (h === 1 ? " hour" : " hours") + " ago"; }
+  if (days === 1) return "yesterday";
+  if (days < 30) return days + " days ago";
+  const m = Math.round(days / 30);
+  if (m < 12) return "about " + m + (m === 1 ? " month" : " months") + " ago";
+  const y = Math.round(days / 365); return "about " + y + (y === 1 ? " year" : " years") + " ago";
+}
+const niceDate = t => new Date(t).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+function extractFact(q) {
+  const m = q.match(/^\s*(?:please\s+)?remember(?:\s+that)?\s+(.+)/i);
+  if (m) return m[1].replace(/[.!]+$/, "");
+  const f = q.match(/\bmy (favou?rite [a-z ]+? is .+|name is .+|best friend is .+|pet .+? is .+)/i);
+  if (f) return "My " + f[1].replace(/[.!]+$/, "");
+  return null;
+}
+
+/* ================== CHAT ================== */
+let convo = []; // this session's back-and-forth for context
+
+function addMsg(cls, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls; d.textContent = text;
+  $("chat").appendChild(d); $("chat").scrollTop = $("chat").scrollHeight;
+  return d;
+}
+function renderChat() {
+  if ($("chat").children.length) return;
+  const last = S.history[S.history.length - 1];
+  let hello = "Hi " + S.name + "! 👋 Ask me anything.";
+  if (last) hello = "Welcome back, " + S.name + "! 😊 Last time (" + ago(last.t) + ") you asked me: \"" + last.q + "\"";
+  addMsg("ai", hello);
+}
+
+function systemPrompt() {
+  const facts = S.facts.map(f => "- " + f.text).join("\n") || "(none yet)";
+  const past = S.history.slice(-15).map(h => "- On " + new Date(h.t).toDateString() + " they asked: " + h.q.slice(0, 150)).join("\n") || "(none yet)";
+  return "You are Buddy, a friendly, fun and helpful AI for kids and families. The user's name is " + S.name + ". " +
+    "Answer clearly and kindly, using simple words. Help with homework by explaining step by step. Keep answers fairly short unless asked for more. " +
+    "Keep everything safe and suitable for children. Today is " + new Date().toDateString() + ".\n\n" +
+    "Things you remember about " + S.name + ":\n" + facts + "\n\nQuestions they asked before:\n" + past;
+}
+
+async function askAI(messages) {
+  const r = await fetch("https://text.pollinations.ai/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, seed: Math.floor(Math.random() * 1e6) })
+  });
+  if (!r.ok) throw new Error("AI said " + r.status);
+  return (await r.text()).trim();
+}
+
+async function sendChat() {
+  const q = $("ask").value.trim();
+  if (!q) return;
+  $("ask").value = ""; $("askBtn").disabled = true;
+  addMsg("me", q);
+
+  // Did they ask this before?
+  const before = [...S.history].reverse().find(h => similar(h.q, q));
+  if (before) addMsg("memo", "🧠 I remember! You asked me this " + ago(before.t) + " (" + niceDate(before.t) + ").");
+
+  const fact = extractFact(q);
+  if (fact) { S.facts.push({ text: fact, t: Date.now() }); save(); addMsg("memo", "🧠 Saved to memory: " + fact); }
+
+  const thinking = addMsg("ai typing", "Thinking");
+  convo.push({ role: "user", content: q });
+  try {
+    let a = await askAI([{ role: "system", content: systemPrompt() }, ...convo.slice(-10)]);
+    if (!a) a = "Hmm, I'm not sure. Can you ask in a different way?";
+    thinking.classList.remove("typing"); thinking.textContent = a;
+    convo.push({ role: "assistant", content: a });
+    S.history.push({ q, a: a.slice(0, 600), t: Date.now() }); save();
+  } catch (e) {
+    thinking.classList.remove("typing");
+    const local = location.protocol === "file:" || /^(localhost|127\.)/.test(location.hostname);
+    thinking.textContent = local
+      ? "Oops! My brain only works when I'm on a real website (like GitHub Pages), not opened from your computer. 🌐"
+      : "Oops, I couldn't reach my brain 😵 Check the internet and try again.";
+    convo.pop();
+  }
+  $("askBtn").disabled = false; $("ask").focus();
+  $("chat").scrollTop = $("chat").scrollHeight;
+}
+$("askBtn").onclick = sendChat;
+$("ask").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } };
+
+/* ================== PICTURES ================== */
+function imgUrl(prompt, w, h, seed) {
+  return "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) +
+    "?width=" + w + "&height=" + h + "&seed=" + seed + "&nologo=true&safe=true";
+}
+function loadImg(src) {
+  return new Promise((res, rej) => {
+    const i = new Image(); i.crossOrigin = "anonymous";
+    i.onload = () => res(i); i.onerror = () => rej(new Error("image failed")); i.src = src;
+  });
+}
+async function makePic() {
+  const p = $("picPrompt").value.trim(); if (!p) return;
+  $("picBtn").disabled = true;
+  $("picOut").innerHTML = '<p class="muted typing">Painting your picture (this can take 10–20 seconds)</p>';
+  const url = imgUrl(p, 768, 768, Math.floor(Math.random() * 1e6));
+  try {
+    await loadImg(url);
+    $("picOut").innerHTML = '<img src="' + url + '" alt="' + esc(p) + '"><br><a class="dl" href="' + url + '" target="_blank" rel="noopener">⬇ Open / save picture</a>';
+    S.pics.unshift({ p, url, t: Date.now() }); S.pics = S.pics.slice(0, 24); save(); renderGallery();
+  } catch { $("picOut").innerHTML = '<p class="err">Couldn\'t make that picture. Try again!</p>'; }
+  $("picBtn").disabled = false;
+}
+function renderGallery() {
+  $("gallery").innerHTML = S.pics.map(x => '<img src="' + x.url + '" title="' + esc(x.p) + '" alt="' + esc(x.p) + '">').join("");
+  $("gallery").querySelectorAll("img").forEach(i => i.onclick = () => {
+    $("picOut").innerHTML = '<img src="' + i.src + '"><br><a class="dl" href="' + i.src + '" target="_blank" rel="noopener">⬇ Open / save picture</a>';
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+$("picBtn").onclick = makePic;
+$("picPrompt").onkeydown = e => { if (e.key === "Enter") makePic(); };
+
+/* ================== VIDEO (10 seconds) ================== */
+async function makeVideo() {
+  const p = $("vidPrompt").value.trim(); if (!p) return;
+  $("vidBtn").disabled = true; $("vidOut").innerHTML = "";
+  const bar = $("vidBar"), status = $("vidStatus");
+  bar.style.width = "3%"; status.textContent = "Drawing the scenes (about 20 seconds)…";
+  const seed = Math.floor(Math.random() * 1e6);
+  const shots = [p + ", cinematic wide shot", p + ", cinematic, action scene", p + ", cinematic close up, dramatic lighting"];
+  let done = 0;
+  let imgs;
+  try {
+    imgs = await Promise.all(shots.map((s, k) => loadImg(imgUrl(s, 640, 360, seed + k)).then(i => { done++; bar.style.width = (5 + done * 15) + "%"; return i; })));
+  } catch {
+    status.textContent = "Couldn't draw the scenes. Try again!"; $("vidBtn").disabled = false; return;
+  }
+
+  const cv = $("vidCanvas"), ctx = cv.getContext("2d");
+  cv.classList.remove("hidden");
+  const DUR = 10000, n = imgs.length, seg = DUR / n, fade = 700;
+  const types = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"];
+  const mime = window.MediaRecorder ? types.find(t => MediaRecorder.isTypeSupported(t)) : null;
+  let rec, chunks = [];
+  if (mime) {
+    rec = new MediaRecorder(cv.captureStream(30), { mimeType: mime, videoBitsPerSecond: 3e6 });
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.start(250);
+  }
+  status.textContent = "Filming… 🎬";
+
+  function drawShot(img, local, alpha, k) {
+    // Ken Burns: slow zoom + pan, a different direction each shot
+    const z = 1.05 + 0.18 * (local / seg);
+    const dx = (k % 2 ? 1 : -1) * 30 * (local / seg), dy = (k === 1 ? -1 : 1) * 12 * (local / seg);
+    const w = cv.width * z, h = cv.height * z;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, (cv.width - w) / 2 + dx, (cv.height - h) / 2 + dy, w, h);
+    ctx.globalAlpha = 1;
+  }
+  const start = performance.now();
+  await new Promise(resolve => {
+    function frame(now) {
+      const t = Math.min(now - start, DUR);
+      const k = Math.min(Math.floor(t / seg), n - 1), local = t - k * seg;
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, cv.width, cv.height);
+      drawShot(imgs[k], local, 1, k);
+      if (k + 1 < n && local > seg - fade) drawShot(imgs[k + 1], local - seg + fade, (local - (seg - fade)) / fade, k + 1);
+      // Title for the first 2.5s
+      if (t < 2500) {
+        const a = t < 2000 ? 1 : 1 - (t - 2000) / 500;
+        ctx.globalAlpha = a; ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(0, cv.height - 70, cv.width, 70);
+        ctx.fillStyle = "#fff"; ctx.font = "bold 26px Trebuchet MS, sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(p.length > 40 ? p.slice(0, 38) + "…" : p, cv.width / 2, cv.height - 28); ctx.globalAlpha = 1;
+      }
+      // Fade out the last 0.6s
+      if (t > DUR - 600) { ctx.fillStyle = "rgba(0,0,0," + ((t - (DUR - 600)) / 600) + ")"; ctx.fillRect(0, 0, cv.width, cv.height); }
+      bar.style.width = (50 + 50 * t / DUR) + "%";
+      status.textContent = "Filming… " + Math.ceil((DUR - t) / 1000) + "s left 🎬";
+      if (t < DUR) requestAnimationFrame(frame); else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
+
+  if (rec) {
+    await new Promise(r => { rec.onstop = r; rec.stop(); });
+    const blob = new Blob(chunks, { type: mime.split(";")[0] });
+    const url = URL.createObjectURL(blob), ext = mime.includes("mp4") ? "mp4" : "webm";
+    cv.classList.add("hidden");
+    $("vidOut").innerHTML = '<video src="' + url + '" controls autoplay loop playsinline></video><br><a class="dl" href="' + url + '" download="buddy-video.' + ext + '">⬇ Download video</a>';
+    status.textContent = "Done! Your 10-second video is ready 🎉";
+  } else {
+    status.textContent = "Done! (This browser can't save videos, but you watched it above.)";
+  }
+  $("vidBtn").disabled = false;
+}
+$("vidBtn").onclick = makeVideo;
+$("vidPrompt").onkeydown = e => { if (e.key === "Enter") makeVideo(); };
+
+/* ================== MUSIC (1 minute) ================== */
+function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+const MOODS = {
+  happy:  { bpm: 124, scale: [0,2,4,5,7,9,11], prog: [0,4,5,3], lead: "square",   pad: "triangle", root: 60 },
+  sad:    { bpm: 76,  scale: [0,2,3,5,7,8,10], prog: [0,5,2,6], lead: "sine",     pad: "sine",     root: 57 },
+  spooky: { bpm: 92,  scale: [0,1,3,5,6,8,10], prog: [0,1,0,5], lead: "triangle", pad: "sawtooth", root: 52 },
+  epic:   { bpm: 132, scale: [0,2,3,5,7,8,10], prog: [0,5,2,6], lead: "sawtooth", pad: "sawtooth", root: 50 },
+  chill:  { bpm: 84,  scale: [0,2,4,5,7,9,11], prog: [0,5,1,4], lead: "sine",     pad: "triangle", root: 55 },
+};
+function pickMood(p) {
+  const s = p.toLowerCase();
+  if (/sad|rain|lonely|cry|slow/.test(s)) return "sad";
+  if (/spook|scary|halloween|ghost|haunt|creep|dark/.test(s)) return "spooky";
+  if (/epic|battle|fight|hero|war|boss|action|fast/.test(s)) return "epic";
+  if (/chill|relax|calm|sleep|lofi|lo-fi|study|peace/.test(s)) return "chill";
+  if (/happy|summer|fun|party|dance|sun|joy/.test(s)) return "happy";
+  return Object.keys(MOODS)[hash(s) % 5];
+}
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+async function renderMusic(prompt) {
+  const moodName = pickMood(prompt), M = MOODS[moodName], R = rng(hash(prompt));
+  const SR = 44100, LEN = 60;
+  const ac = new OfflineAudioContext(2, SR * LEN, SR);
+  const master = ac.createGain(); master.gain.value = 0.8;
+  const comp = ac.createDynamicsCompressor(); master.connect(comp); comp.connect(ac.destination);
+  master.gain.setValueAtTime(0.8, LEN - 3); master.gain.linearRampToValueAtTime(0, LEN);
+
+  const noise = ac.createBuffer(1, SR, SR); const nd = noise.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+  const beat = 60 / M.bpm, bar = beat * 4, bars = Math.floor((LEN - 1) / bar);
+  const deg = (d, oct = 0) => M.root + M.scale[((d % 7) + 7) % 7] + 12 * (Math.floor(d / 7) + oct);
+
+  function tone(freq, t, dur, type, vol, pan = 0, attack = 0.01) {
+    if (t >= LEN) return;
+    const o = ac.createOscillator(), g = ac.createGain(), p = ac.createStereoPanner();
+    o.type = type; o.frequency.value = freq; p.pan.value = pan;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(p); p.connect(master); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function kick(t) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+    g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.35);
+  }
+  function hit(t, freq, dur, vol) {
+    const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    s.buffer = noise; f.type = "highpass"; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t, R() * 0.5); s.stop(t + dur + 0.02);
+  }
+
+  // A melody "motif" that repeats with small changes
+  const motif = Array.from({ length: 8 }, () => (R() < 0.2 ? null : Math.floor(R() * 7)));
+  const melOct = M.bpm > 110 ? 1 : 0;
+
+  for (let b = 0; b < bars; b++) {
+    const t0 = 0.5 + b * bar, chord = M.prog[b % 4];
+    const section = b < 4 ? "intro" : b < bars - 4 ? (Math.floor((b - 4) / 8) % 2 ? "B" : "A") : "outro";
+    const drums = section !== "intro", melody = section === "A" || section === "B";
+
+    // Pads (chord)
+    [0, 2, 4].forEach((s, i) => tone(mtof(deg(chord + s, -1)), t0, bar * 1.02, M.pad, 0.05, (i - 1) * 0.4, 0.3));
+    // Bass
+    for (let q = 0; q < 4; q++) {
+      if (section === "intro" && q % 2) continue;
+      const n = q === 3 && R() < 0.4 ? deg(chord + 4, -2) : deg(chord, -2);
+      tone(mtof(n), t0 + q * beat, beat * 0.9, "triangle", 0.28, 0, 0.005);
+    }
+    // Drums
+    if (drums) {
+      for (let q = 0; q < 4; q++) {
+        if (q === 0 || q === 2 || (moodName === "epic" || moodName === "happy")) kick(t0 + q * beat);
+        if (q === 1 || q === 3) hit(t0 + q * beat, 1500, 0.18, 0.35);
+        hit(t0 + q * beat, 7000, 0.04, 0.12); hit(t0 + q * beat + beat / 2, 7000, 0.03, 0.08);
+      }
+    }
+    // Melody: 8 eighth notes per bar
+    if (melody) {
+      for (let e = 0; e < 8; e++) {
+        let d = motif[e]; if (d === null) continue;
+        if (section === "B") d += 2;
+        if (R() < 0.15) d += R() < 0.5 ? 1 : -1;
+        tone(mtof(deg(chord + d, melOct)), t0 + e * beat / 2, beat * 0.45, M.lead, M.lead === "sawtooth" || M.lead === "square" ? 0.06 : 0.13, 0.15);
+      }
+    }
+    // Sparkle arpeggio in the outro / intro
+    if (section === "intro" || section === "outro") {
+      for (let e = 0; e < 4; e++) tone(mtof(deg(chord + e * 2, 1)), t0 + e * beat, beat * 1.5, "sine", 0.07, e % 2 ? 0.5 : -0.5);
+    }
+  }
+  return { buf: await ac.startRendering(), mood: moodName, bpm: M.bpm };
+}
+
+function toWav(buf) {
+  const ch = buf.numberOfChannels, len = buf.length, out = new DataView(new ArrayBuffer(44 + len * ch * 2));
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); out.setUint32(4, 36 + len * ch * 2, true); w(8, "WAVE"); w(12, "fmt ");
+  out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, ch, true);
+  out.setUint32(24, buf.sampleRate, true); out.setUint32(28, buf.sampleRate * ch * 2, true);
+  out.setUint16(32, ch * 2, true); out.setUint16(34, 16, true); w(36, "data"); out.setUint32(40, len * ch * 2, true);
+  const data = [...Array(ch).keys()].map(c => buf.getChannelData(c));
+  let o = 44;
+  for (let i = 0; i < len; i++) for (let c = 0; c < ch; c++) {
+    const v = Math.max(-1, Math.min(1, data[c][i])); out.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7FFF, true); o += 2;
+  }
+  return new Blob([out], { type: "audio/wav" });
+}
+
+async function makeMusic() {
+  const p = $("musPrompt").value.trim(); if (!p) return;
+  $("musBtn").disabled = true; $("musOut").innerHTML = "";
+  $("musStatus").innerHTML = '<span class="typing">Composing your song</span>';
+  try {
+    const { buf, mood, bpm } = await renderMusic(p);
+    const url = URL.createObjectURL(toWav(buf));
+    const emoji = { happy: "😄", sad: "🌧️", spooky: "👻", epic: "⚔️", chill: "😎" }[mood];
+    $("musStatus").textContent = "Done! A " + mood + " " + emoji + " song at " + bpm + " beats per minute.";
+    $("musOut").innerHTML = '<audio src="' + url + '" controls autoplay></audio><a class="dl" href="' + url + '" download="buddy-song.wav">⬇ Download song</a>';
+  } catch (e) { $("musStatus").textContent = "Couldn't make the music: " + e.message; }
+  $("musBtn").disabled = false;
+}
+$("musBtn").onclick = makeMusic;
+$("musPrompt").onkeydown = e => { if (e.key === "Enter") makeMusic(); };
+
+/* ================== MEMORY PAGE ================== */
+function renderMemory() {
+  $("memFacts").innerHTML = '<div class="mem-item"><span class="mem-date">Your name</span><br>' + esc(S.name) + '</div>' +
+    S.facts.map(f => '<div class="mem-item"><span class="mem-date">' + niceDate(f.t) + '</span><br>' + esc(f.text) + '</div>').join("");
+  $("memList").innerHTML = S.history.length ? [...S.history].reverse().map(h =>
+    '<div class="mem-item"><span class="mem-date">' + niceDate(h.t) + ' · ' + ago(h.t) + '</span><br><b>' + esc(h.q) + '</b><br><span class="muted small">' + esc(h.a.slice(0, 200)) + (h.a.length > 200 ? "…" : "") + '</span></div>'
+  ).join("") : '<p class="muted">Nothing yet — go ask me something!</p>';
+}
+$("forgetBtn").onclick = () => {
+  if (!confirm("Really forget everything about you?")) return;
+  S.history = []; S.facts = []; S.pics = []; S.name = ""; convo = []; $("chat").innerHTML = ""; save(); show();
+};
+$("lockBtn").onclick = () => { S.unlocked = false; save(); $("codeInput").value = ""; $("codeErr").textContent = ""; show(); };
+
+show();
+</script>
+</body>
+</html>
