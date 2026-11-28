@@ -78,7 +78,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
 <div class="top">
   <span id="planLabel" class="pill">Free plan</span>
   <button id="themeBtn" class="pill" title="Light / dark">🌓</button>
-  <button id="upBtn" class="pill premium">⭐ Go Premium</button>
+  <button id="upBtn" class="pill premium">🧱 Get Block AI</button>
 </div>
 
 <!-- HOME -->
@@ -111,17 +111,16 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
 <!-- PREMIUM MODAL -->
 <div class="modal" id="modal">
   <div class="card">
-    <div class="logo" style="font-size:40px">Sebble Premium</div>
-    <div class="price">£5 <small>every 5 months</small></div>
-    <div style="color:var(--muted)">That's just £1 a month!</div>
+    <div class="logo" style="font-size:40px">🧱 Block AI</div>
+    <div class="price">£2 <small>a month</small></div>
+    <div style="color:var(--muted)">Searching on Sebble is free. Block is the AI that answers for you.</div>
     <ul class="perks">
-      <li>🛒 Shopping results — Amazon, eBay, Argos, Etsy</li>
-      <li>🎬 Videos — YouTube, Netflix, Twitch, TikTok</li>
-      <li>🎵 Music, 📚 Books and 🖼️ Images tabs</li>
-      <li>🌍 20+ websites searched at once</li>
-      <li>🚫 Unlimited searches</li>
+      <li>🧱 Block answers your question at the top of every search</li>
+      <li>🤓 Explains things in a way that's easy to understand</li>
+      <li>📚 Finds the best pages to read about it</li>
+      <li>⚡ Works on every search, as much as you like</li>
     </ul>
-    <button class="go" id="payBtn">Subscribe — £5 / 5 months</button>
+    <button class="go" id="payBtn">Subscribe — £2 a month</button>
     <div class="fine">This is a pretend subscription for fun — no real money is taken and no card details are asked for.</div>
     <form id="codeForm" style="display:flex;gap:8px;margin-top:14px"><input id="code" placeholder="Got a secret code?" autocomplete="off" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--bg);color:var(--fg);font:inherit"><button class="pill">Use code</button></form>
     <button class="pill" style="margin-top:12px" id="closeModal">Maybe later</button>
@@ -138,8 +137,7 @@ const store = {
   get(k){ try { return localStorage.getItem(k) } catch { return null } },
   set(k,v){ try { localStorage.setItem(k,v) } catch {} }
 };
-let premium = store.get("sebble-premium") === "1";
-let searchesLeft = Number(store.get("sebble-left") ?? 10);
+let premium = store.get("sebble-block") === "1";   // premium = has Block AI
 let currentQ = "", currentTab = "all";
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,3500); }
 
@@ -181,12 +179,12 @@ const SITES = [
   {n:"BBC Weather", c:"#0a7cc1", u:"https://www.bbc.co.uk/weather/search?s=", free:true},
   {n:"Images",    c:"#0b8", u:"https://commons.wikimedia.org/w/index.php?search=", free:true},
 ];
-const canUse = s => premium || s.free;
+const canUse = s => true;   // every website is free
 const siteLink = (s,q) => s.u + encodeURIComponent(q);
 
 const TABS = [
-  ["all","🔎 All",true], ["images","🖼️ Images",false], ["videos","🎬 Videos",false],
-  ["shopping","🛒 Shopping",false], ["books","📚 Books",false], ["music","🎵 Music",false], ["sites","🌍 All websites",true]
+  ["all","🔎 All",true], ["images","🖼️ Images",true], ["videos","🎬 Videos",true],
+  ["shopping","🛒 Shopping",true], ["books","📚 Books",true], ["music","🎵 Music",true], ["sites","🌍 All websites",true]
 ];
 
 // ---------- instant answers ----------
@@ -261,9 +259,9 @@ function sitesHTML(q, title="Search this on other websites"){
     ? `<a class="site" href="${siteLink(s,q)}" target="_blank" rel="noopener"><b style="background:${s.c}">${s.n[0]}</b>${s.n}</a>`
     : `<a class="site locked" href="#" data-lock><b style="background:${s.c}">${s.n[0]}</b>${s.n}</a>`).join("")}</div></div>`;
 }
-const lockHTML = what => `<div class="lock"><div style="font-size:30px">🔒</div><b>${what} is a Premium feature</b>
-  <p class="meta">Unlock Amazon, YouTube, Music, Books, Images and 20+ websites for just £5 every 5 months.</p>
-  <button class="pill premium" data-lock>⭐ Unlock for £5 / 5 months</button></div>`;
+const lockHTML = what => `<div class="lock"><div style="font-size:30px">🧱</div><b>${what}</b>
+  <p class="meta">Get Block AI to answer your searches for you, for £2 a month.</p>
+  <button class="pill premium" data-lock>🧱 Get Block AI — £2 a month</button></div>`;
 const tiles = (arr, extra="") => arr.length ? `<div class="grid">${arr.map(x => `<a class="tile" href="${esc(x.url)}" target="_blank" rel="noopener">
   ${x.img?`<img loading="lazy" src="${esc(x.img)}" alt="">`:`<img alt="">`}<div><b>${esc(x.t)}</b>${x.by?`<br><span class="meta">${esc(x.by)}${x.y?" · "+x.y:""}</span>`:""}</div></a>`).join("")}</div>${extra}` : `<p class="meta">Nothing found.</p>`;
 
@@ -290,10 +288,6 @@ function goBack(){
 }
 async function run(q, tab="all", opt={}){
   q = q.trim(); if (!q) return;
-  if (!premium){
-    if (searchesLeft <= 0){ openModal(); return; }
-    if (q !== currentQ && !opt.nav && !opt.restore){ searchesLeft--; store.set("sebble-left", searchesLeft); }
-  }
   if (!opt.nav && !opt.restore && (q !== currentQ || tab !== currentTab)){
     if (currentQ) hist.push({q:currentQ, tab:currentTab});
     try { history.pushState({sebble:true}, ""); } catch {}
@@ -326,23 +320,19 @@ async function run(q, tab="all", opt={}){
       let [w, extra=""] = await Promise.all(jobs);
       if (wm && !extra) extra = bigLinks(wm[1], ["BBC Weather"]);
       top += extra || "";
-      let aiSum = "";
-      if (!w.length){
-        R.innerHTML = `<div class="loading">✨ Asking Sebble AI…</div>`;
-        const a = await aiResults(q).catch(()=>null);
-        if (a){ w = a.items; aiSum = a.summary; }
-      }
-      if (aiSum) top += `<div class="answer"><div class="meta">✨ Sebble AI answer</div><p>${esc(aiSum)}</p></div>`;
-      let body = "";
       if (premium){
-        body += bigLinks(q, ["Amazon","YouTube"]);
-      } else {
-        body += lockHTML("Amazon shopping");
-      }
+        R.innerHTML = `<div class="loading">🧱 Block is thinking…</div>`;
+        const a = await aiResults(q).catch(()=>null);
+        if (a){
+          if (!w.length) w = a.items;
+          top += `<div class="answer"><div class="meta">🧱 Block AI says</div><p>${esc(a.summary)}</p></div>`;
+        } else top += `<div class="answer"><div class="meta">🧱 Block AI</div><p>Block couldn't answer just now. Try searching again.</p></div>`;
+      } else top += lockHTML("Want Block AI to answer this for you?");
+      let body = bigLinks(q, ["YouTube","Amazon"]);
       body += w.map(resultHTML).join("");
-      if (premium) body += bigLinks(q, ["Reddit","eBay","BBC"]);
+      body += bigLinks(q, ["Netflix","Reddit","eBay","BBC"]);
       const ms = Math.round(performance.now()-t0);
-      R.innerHTML = `<div class="meta">About ${w.length + (premium?20:6)} sources searched (${(ms/1000).toFixed(2)} seconds)</div>` + top + (body || `<p>No results. Try another search!</p>`);
+      R.innerHTML = `<div class="meta">About ${w.length + SITES.length} sources searched (${(ms/1000).toFixed(2)} seconds)</div>` + top + (body || `<p>No results. Try another search!</p>`);
       if (w[0]) wikiSummary(w[0].t).then(s => {
         S.innerHTML = `<div class="panel">${s.thumbnail?`<img src="${esc(s.thumbnail.source)}" alt="">`:""}
           <h4 style="margin-top:10px">${esc(s.title)}</h4><div class="meta">${esc(s.description||"")}</div>
@@ -365,7 +355,7 @@ async function run(q, tab="all", opt={}){
 }
 
 function updatePlan(){
-  $("#planLabel").textContent = premium ? "⭐ Premium" : `Free plan · ${searchesLeft} searches left`;
+  $("#planLabel").textContent = premium ? "🧱 Block AI is on" : "Sebble is free!";
   $("#upBtn").style.display = premium ? "none" : "";
 }
 function openModal(){ $("#modal").style.display = "flex"; }
@@ -384,15 +374,15 @@ $("#upBtn").onclick = openModal;
 $("#closeModal").onclick = closeModal;
 $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
 $("#payBtn").onclick = () => {
-  premium = true; store.set("sebble-premium","1"); closeModal(); updatePlan();
-  toast("🎉 Welcome to Sebble Premium! (Pretend — no money was taken.)");
+  premium = true; store.set("sebble-block","1"); closeModal(); updatePlan();
+  toast("🧱 Block AI is on! (Pretend — no money was taken.)");
   if (currentQ) run(currentQ, currentTab);
 };
 $("#codeForm").onsubmit = e => {
   e.preventDefault();
   if ($("#code").value.trim().toUpperCase() === "SEBFREE"){
-    premium = true; store.set("sebble-premium","1"); closeModal(); updatePlan();
-    toast("🔓 Code accepted! Premium for free, forever.");
+    premium = true; store.set("sebble-block","1"); closeModal(); updatePlan();
+    toast("🔓 Code accepted! Block AI for free, forever.");
     if (currentQ) run(currentQ, currentTab);
   } else toast("❌ That code doesn't work. Try again!");
 };
