@@ -1,8 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sebble Search</title>
 <style>
 :root{
@@ -12,12 +7,12 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#14121c; --fg:#f0eef7; --muted:#a29fb5; --line:#2e2a3d; --card:#1e1b29;
-    --accent:#9a74ff; --accent2:#ff9a4d; --good:#34d399; --link:#b6a0ff;
+    --accent:#9a74ff; --accent2:#ff9a4d; --good:#34d399; --link:#b6a0ff; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#14121c; --fg:#f0eef7; --muted:#a29fb5; --line:#2e2a3d; --card:#1e1b29;
-  --accent:#9a74ff; --accent2:#ff9a4d; --good:#34d399; --link:#b6a0ff;
+  --accent:#9a74ff; --accent2:#ff9a4d; --good:#34d399; --link:#b6a0ff; color-scheme:dark;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
@@ -76,10 +71,9 @@ main{max-width:1100px;padding:16px;display:none;gap:28px}
 .perks{text-align:left;margin:16px 0;padding-left:20px}
 .go{width:100%;border:0;border-radius:12px;padding:13px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-weight:700;font-size:17px}
 .fine{font-size:12px;color:var(--muted);margin-top:10px}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--accent);color:#fff;padding:12px 20px;border-radius:999px;font-weight:600;z-index:10;max-width:calc(100% - 32px);text-align:center}
 footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
 </style>
-</head>
-<body>
 
 <div class="top">
   <span id="planLabel" class="pill">Free plan</span>
@@ -132,6 +126,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
   </div>
 </div>
 
+<div id="toast" hidden></div>
 <script>
 // ---------- helpers ----------
 const $ = s => document.querySelector(s);
@@ -144,6 +139,18 @@ const store = {
 let premium = store.get("sebble-premium") === "1";
 let searchesLeft = Number(store.get("sebble-left") ?? 10);
 let currentQ = "", currentTab = "all";
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,3500); }
+
+// When a page can't reach other websites directly, ask Claude for the results instead
+let samplerP = null;
+const ai = () => (samplerP ??= (window.claude?.use ? window.claude.use("sample").catch(()=>null) : Promise.resolve(null)));
+async function aiResults(q){
+  const s = await ai(); if (!s) return null;
+  const v = await s.json(`You power a child-friendly search engine called Sebble. For the search "${q}", reply with JSON only, shaped {"summary": "a friendly, accurate 2-3 sentence answer", "items": [{"title": "an exact English Wikipedia article title", "snippet": "one sentence about it"}]} with 6 items relevant to the search. Keep everything safe for children.`, {modelTier:"quick"});
+  if (!v || !Array.isArray(v.items)) return null;
+  return {summary: String(v.summary||""), items: v.items.slice(0,8).map(i => ({src:"Wikipedia", c:"#555", t:String(i.title),
+    url:"https://en.wikipedia.org/wiki/"+encodeURIComponent(String(i.title).replace(/ /g,"_")), d:String(i.snippet||"")}))};
+}
 
 // ---------- the websites Sebble searches ----------
 const SITES = [
@@ -168,6 +175,7 @@ const SITES = [
   {n:"Stack Overflow", c:"#f48024", u:"https://stackoverflow.com/search?q="},
   {n:"Open Library", c:"#3a6ea5", u:"https://openlibrary.org/search?q=", free:true},
   {n:"Steam",     c:"#1b2838", u:"https://store.steampowered.com/search/?term="},
+  {n:"BBC Weather", c:"#0a7cc1", u:"https://www.bbc.co.uk/weather/search?s=", free:true},
   {n:"Images",    c:"#0b8", u:"https://commons.wikimedia.org/w/index.php?search=", free:true},
 ];
 const canUse = s => premium || s.free;
@@ -276,7 +284,7 @@ async function run(q, tab="all"){
   $("#home").style.display = "none";
   $("#bar").style.display = $("#tabs").style.display = "flex";
   $("#main").style.display = "flex";
-  history.replaceState(null, "", "?q=" + encodeURIComponent(q) + (tab!=="all" ? "&tab="+tab : ""));
+  try { history.replaceState(null, "", "?q=" + encodeURIComponent(q) + (tab!=="all" ? "&tab="+tab : "")); } catch {}
   document.title = q + " – Sebble Search";
   updatePlan(); drawTabs();
   const R = $("#results"), S = $("#side");
@@ -295,8 +303,16 @@ async function run(q, tab="all"){
       const jobs = [wiki(q).catch(()=>[])];
       if (wm) jobs.push(weather(wm[1]).catch(()=>""));
       if (dm) jobs.push(define(dm[1]).catch(()=>""));
-      const [w, extra=""] = await Promise.all(jobs);
+      let [w, extra=""] = await Promise.all(jobs);
+      if (wm && !extra) extra = bigLinks(wm[1], ["BBC Weather"]);
       top += extra || "";
+      let aiSum = "";
+      if (!w.length){
+        R.innerHTML = `<div class="loading">✨ Asking Sebble AI…</div>`;
+        const a = await aiResults(q).catch(()=>null);
+        if (a){ w = a.items; aiSum = a.summary; }
+      }
+      if (aiSum) top += `<div class="answer"><div class="meta">✨ Sebble AI answer</div><p>${esc(aiSum)}</p></div>`;
       let body = "";
       if (premium){
         body += bigLinks(q, ["Amazon","YouTube"]);
@@ -313,12 +329,12 @@ async function run(q, tab="all"){
           <p style="font-size:14px">${esc((s.extract||"").slice(0,400))}${(s.extract||"").length>400?"…":""}</p>
           <a href="${esc(s.content_urls?.desktop?.page)}" target="_blank" rel="noopener">Read more on Wikipedia</a></div>` + sitesHTML(q);
       }).catch(()=>{});
+      if (!w.length && !top) R.innerHTML += `<p>Try the websites on the right to see more!</p>`;
     }
-    else if (tab === "images") R.innerHTML = tiles(await images(q));
-    else if (tab === "books")  R.innerHTML = tiles(await books(q));
+    else if (tab === "images") R.innerHTML = await images(q).then(tiles).catch(()=>bigLinks(q,["Images"]));
+    else if (tab === "books")  R.innerHTML = await books(q).then(tiles).catch(()=>bigLinks(q,["Open Library","Amazon"]));
     else if (tab === "music"){
-      const m = await music(q);
-      R.innerHTML = tiles(m) + `<div style="margin-top:20px">${bigLinks(q,["Spotify"])}</div>`;
+      R.innerHTML = await music(q).then(m => tiles(m) + `<div style="margin-top:20px">${bigLinks(q,["Spotify"])}</div>`).catch(()=>bigLinks(q,["Spotify","YouTube"]));
     }
     else if (tab === "videos")   R.innerHTML = bigLinks(q, ["YouTube","Twitch","TikTok","IMDb"]);
     else if (tab === "shopping") R.innerHTML = bigLinks(q, ["Amazon","eBay","Argos","Etsy","Steam"]);
@@ -344,7 +360,7 @@ $("#closeModal").onclick = closeModal;
 $("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
 $("#payBtn").onclick = () => {
   premium = true; store.set("sebble-premium","1"); closeModal(); updatePlan();
-  alert("🎉 Welcome to Sebble Premium! (Pretend — no money was taken.)");
+  toast("🎉 Welcome to Sebble Premium! (Pretend — no money was taken.)");
   if (currentQ) run(currentQ, currentTab);
 };
 $("#themeBtn").onclick = () => {
@@ -365,5 +381,3 @@ updatePlan();
 const params = new URLSearchParams(location.search);
 if (params.get("q")) run(params.get("q"), params.get("tab") || "all");
 </script>
-</body>
-</html>
