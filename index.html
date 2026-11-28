@@ -144,12 +144,42 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; cle
 // When a page can't reach other websites directly, ask Claude for the results instead
 let samplerP = null;
 const ai = () => (samplerP ??= (window.claude?.use ? window.claude.use("sample").catch(()=>null) : Promise.resolve(null)));
+const aiCache = {};
 async function aiResults(q){
+  if (aiCache["all|"+q]) return aiCache["all|"+q];
   const s = await ai(); if (!s) return null;
   const v = await s.json(`You power a child-friendly search engine called Sebble. For the search "${q}", reply with JSON only, shaped {"summary": "a friendly, accurate 2-3 sentence answer", "items": [{"title": "an exact English Wikipedia article title", "snippet": "one sentence about it"}]} with 6 items relevant to the search. Keep everything safe for children.`, {modelTier:"quick"});
   if (!v || !Array.isArray(v.items)) return null;
-  return {summary: String(v.summary||""), items: v.items.slice(0,8).map(i => ({src:"Wikipedia", c:"#555", t:String(i.title),
+  return aiCache["all|"+q] = {summary: String(v.summary||""), items: v.items.slice(0,8).map(i => ({src:"Wikipedia", c:"#555", t:String(i.title),
     url:"https://en.wikipedia.org/wiki/"+encodeURIComponent(String(i.title).replace(/ /g,"_")), d:String(i.snippet||"")}))};
+}
+const yt = t => "https://www.youtube.com/results?search_query="+encodeURIComponent(t);
+const KINDS = {
+  books:    {ask:'6 real books about or matching "Q". "title" is the book title, "by" is the author.', src:"Open Library", c:"#3a6ea5",
+             url:i => "https://openlibrary.org/search?q="+encodeURIComponent(i.title+" "+i.by)},
+  music:    {ask:'6 real songs matching "Q". "title" is the song name, "by" is the artist.', src:"YouTube", c:"#e62117",
+             url:i => yt(i.title+" "+i.by)},
+  videos:   {ask:'6 real films, TV shows or YouTube videos for "Q" that suit children. "title" is its name, "by" is where to watch it: YouTube or Netflix.', src:"", c:"#e62117",
+             url:i => /netflix/i.test(i.by) ? "https://www.netflix.com/search?q="+encodeURIComponent(i.title) : yt(i.title)},
+  shopping: {ask:'6 real products someone searching "Q" might want to buy. "title" is the product name, "by" is a rough price in pounds like "about £20".', src:"Amazon", c:"#ff9900",
+             url:i => "https://www.amazon.co.uk/s?k="+encodeURIComponent(i.title)},
+};
+async function aiList(q, kind){
+  const key = kind+"|"+q; if (aiCache[key]) return aiCache[key];
+  const s = await ai(); if (!s) return null;
+  const k = KINDS[kind];
+  const v = await s.json(`You power a child-friendly search engine called Sebble. List ${k.ask.replace("Q", q)} Reply with JSON only, shaped {"items":[{"title":"","by":"","snippet":"one sentence about it"}]}. Keep everything safe for children.`, {modelTier:"quick"});
+  if (!v || !Array.isArray(v.items) || !v.items.length) return null;
+  return aiCache[key] = v.items.slice(0,8).map(r => {
+    const i = {title:String(r.title||""), by:String(r.by||""), snippet:String(r.snippet||"")};
+    const src = k.src || (/netflix/i.test(i.by) ? "Netflix" : "YouTube");
+    return {src, c: src==="Netflix" ? "#e50914" : k.c, t: i.title + (i.by ? " — " + i.by : ""), url:k.url(i), d:i.snippet};
+  });
+}
+async function aiTab(q, kind, fallbackSites){
+  $("#results").innerHTML = `<div class="loading">Finding the best results…</div>`;
+  const items = await aiList(q, kind).catch(()=>null);
+  return (items ? items.map(resultHTML).join("") + `<h4>Search more websites</h4>` : "") + bigLinks(q, fallbackSites);
 }
 
 // ---------- the websites Sebble searches ----------
@@ -320,17 +350,19 @@ async function run(q, tab="all", opt={}){
       let [w, extra=""] = await Promise.all(jobs);
       if (wm && !extra) extra = bigLinks(wm[1], ["BBC Weather"]);
       top += extra || "";
-      if (premium){
-        R.innerHTML = `<div class="loading">🧱 Block is thinking…</div>`;
-        const a = await aiResults(q).catch(()=>null);
-        if (a){
-          if (!w.length) w = a.items;
-          top += `<div class="answer"><div class="meta">🧱 Block AI says</div><p>${esc(a.summary)}</p></div>`;
-        } else top += `<div class="answer"><div class="meta">🧱 Block AI</div><p>Block couldn't answer just now. Try searching again.</p></div>`;
-      } else top += lockHTML("Want Block AI to answer this for you?");
-      let body = bigLinks(q, ["YouTube","Amazon"]);
+      // everyone gets real results; only Block subscribers get Block's written answer
+      let a = null;
+      if (premium || !w.length){
+        R.innerHTML = `<div class="loading">${premium ? "🧱 Block is thinking…" : "Finding the best results…"}</div>`;
+        a = await aiResults(q).catch(()=>null);
+        if (a && !w.length) w = a.items;
+      }
+      if (premium) top += a ? `<div class="answer"><div class="meta">🧱 Block AI says</div><p>${esc(a.summary)}</p></div>`
+                            : `<div class="answer"><div class="meta">🧱 Block AI</div><p>Block couldn't answer just now. Try searching again.</p></div>`;
+      let body = w.length ? "" : `<p class="meta">Sebble couldn't load results just now. Try again, or use these buttons to search other websites:</p>`;
       body += w.map(resultHTML).join("");
-      body += bigLinks(q, ["Netflix","Reddit","eBay","BBC"]);
+      body += bigLinks(q, ["YouTube","Amazon","Netflix","Reddit"]);
+      if (!premium) body += lockHTML("Want Block AI to answer this for you?");
       const ms = Math.round(performance.now()-t0);
       R.innerHTML = `<div class="meta">About ${w.length + SITES.length} sources searched (${(ms/1000).toFixed(2)} seconds)</div>` + top + (body || `<p>No results. Try another search!</p>`);
       if (w[0]) wikiSummary(w[0].t).then(s => {
@@ -339,15 +371,14 @@ async function run(q, tab="all", opt={}){
           <p style="font-size:14px">${esc((s.extract||"").slice(0,400))}${(s.extract||"").length>400?"…":""}</p>
           <a href="${esc(s.content_urls?.desktop?.page)}" target="_blank" rel="noopener">Read more on Wikipedia</a></div>` + sitesHTML(q);
       }).catch(()=>{});
-      if (!w.length && !top) R.innerHTML += `<p>Try the websites on the right to see more!</p>`;
     }
     else if (tab === "images") R.innerHTML = await images(q).then(tiles).catch(()=>bigLinks(q,["Images"]));
-    else if (tab === "books")  R.innerHTML = await books(q).then(tiles).catch(()=>bigLinks(q,["Open Library","Amazon"]));
+    else if (tab === "books")  R.innerHTML = await books(q).then(tiles).catch(()=>aiTab(q,"books",["Open Library","Amazon"]));
     else if (tab === "music"){
-      R.innerHTML = await music(q).then(m => tiles(m) + `<div style="margin-top:20px">${bigLinks(q,["Spotify"])}</div>`).catch(()=>bigLinks(q,["Spotify","YouTube"]));
+      R.innerHTML = await music(q).then(m => tiles(m) + `<div style="margin-top:20px">${bigLinks(q,["Spotify"])}</div>`).catch(()=>aiTab(q,"music",["Spotify","YouTube"]));
     }
-    else if (tab === "videos")   R.innerHTML = bigLinks(q, ["YouTube","Netflix","Twitch","TikTok","IMDb"]);
-    else if (tab === "shopping") R.innerHTML = bigLinks(q, ["Amazon","eBay","Argos","Etsy","Steam"]);
+    else if (tab === "videos")   R.innerHTML = await aiTab(q, "videos", ["YouTube","Netflix","Twitch","TikTok","IMDb"]);
+    else if (tab === "shopping") R.innerHTML = await aiTab(q, "shopping", ["Amazon","eBay","Argos","Etsy","Steam"]);
     else if (tab === "sites")    R.innerHTML = sitesHTML(q, "Search “"+esc(q)+"” everywhere");
   } catch (e){
     R.innerHTML = `<p>Oops, something went wrong getting results. Try again!</p>`;
