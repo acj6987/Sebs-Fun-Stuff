@@ -1,0 +1,907 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Monster Quest 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d2340;--card:#ffffff;--accent:#ff5a3c;--blue:#2f7df6;--gold:#ffc83a;--bg:#8fd3ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);font-family:Fredoka,system-ui,Arial,sans-serif;color:var(--ink);user-select:none;-webkit-user-select:none}
+#game{position:fixed;inset:0}
+#game canvas{display:block;touch-action:none}
+.hidden{display:none!important}
+button{font-family:inherit;font-weight:600;font-size:16px;border:0;border-radius:14px;padding:10px 16px;cursor:pointer;background:#fff;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.18);transition:transform .08s}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);color:#fff}
+button.blue{background:var(--blue);color:#fff}
+button.gold{background:var(--gold)}
+/* screens */
+.screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;padding:24px 16px;background:linear-gradient(180deg,#5cc3ff 0%,#a8e6ff 55%,#9be37a 55%,#62c24e 100%)}
+.screen h1{font-size:clamp(34px,7vw,64px);margin:8px 0 0;color:#fff;text-shadow:0 4px 0 #1d5fbf,0 8px 18px rgba(0,0,0,.25);text-align:center;letter-spacing:1px}
+.screen h2{color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.25);margin:10px 0 16px;text-align:center}
+.cards{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:980px}
+.card{background:#fff;border-radius:22px;padding:12px;width:200px;text-align:center;box-shadow:0 6px 0 rgba(0,0,0,.15);cursor:pointer;border:4px solid transparent;transition:transform .12s}
+.card:hover{transform:translateY(-4px)}
+.card.sel{border-color:var(--accent)}
+.card img{width:150px;height:150px;object-fit:contain}
+.card b{display:block;font-size:20px}
+.card small{display:block;color:#566;min-height:38px}
+.perk{display:inline-block;margin-top:6px;background:#eef4ff;border-radius:10px;padding:2px 8px;font-size:13px;color:#2a4ea8}
+.type{display:inline-block;border-radius:8px;padding:1px 8px;font-size:12px;color:#fff;font-weight:700}
+/* HUD */
+#hud{position:fixed;left:0;top:0;right:0;z-index:10;pointer-events:none;padding:10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+#hudLeft{display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+.pill{background:rgba(255,255,255,.92);border-radius:14px;padding:6px 12px;font-weight:600;box-shadow:0 3px 0 rgba(0,0,0,.12);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#hudBtns{display:flex;gap:6px;flex-wrap:wrap}
+#hudBtns button{padding:7px 11px;font-size:14px}
+#minimap{width:150px;height:150px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.25);background:#7cc55a;pointer-events:none}
+#zoneToast{position:fixed;top:22%;left:50%;transform:translateX(-50%);z-index:11;color:#fff;font-size:clamp(26px,5vw,44px);font-weight:700;text-shadow:0 3px 0 rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .5s;text-align:center;white-space:nowrap}
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:60;background:#fff;border-radius:16px;padding:10px 18px;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.25);pointer-events:none;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center}
+#prompt{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:12;background:rgba(29,35,64,.85);color:#fff;border-radius:14px;padding:8px 16px;font-weight:600;cursor:pointer;white-space:nowrap}
+#prompt kbd{background:#fff;color:var(--ink);border-radius:6px;padding:0 6px;margin-right:6px}
+/* touch controls */
+#joy{position:fixed;left:22px;bottom:22px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.25);border:3px solid rgba(255,255,255,.6);z-index:12;touch-action:none}
+#knob{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.85)}
+#touchBtns{position:fixed;right:20px;bottom:24px;z-index:12;display:flex;gap:12px;align-items:flex-end}
+#touchBtns button{width:74px;height:74px;border-radius:50%;font-size:15px;padding:0}
+#btnJump{background:var(--blue);color:#fff}
+#btnAct{background:var(--accent);color:#fff;width:64px!important;height:64px!important}
+/* panels */
+.panel{position:fixed;z-index:40;left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 40px);background:#fff;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}
+.panel header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--blue);color:#fff}
+.panel header h3{margin:0;flex:1;font-size:22px}
+.panel header button{padding:6px 12px}
+.panel .body{padding:14px 16px;overflow-y:auto}
+.avatar{width:48px;height:48px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
+.avatar img{width:60px;height:60px;object-fit:cover;margin-top:12px}
+#chatLog{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:220px;max-height:46vh;background:#f2f7ff}
+.msg{max-width:80%;padding:8px 12px;border-radius:16px;line-height:1.35}
+.msg.them{background:#fff;align-self:flex-start;border-bottom-left-radius:4px;box-shadow:0 2px 0 rgba(0,0,0,.08)}
+.msg.me{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+#chatQuick{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0}
+#chatQuick button{padding:6px 10px;font-size:14px}
+#chatForm{display:flex;gap:8px;padding:10px 12px 14px}
+#chatInput{flex:1;font:inherit;font-size:16px;padding:10px 14px;border-radius:14px;border:2px solid #cfdcf5;outline:none;min-width:0}
+#chatInput:focus{border-color:var(--blue)}
+.row{display:flex;gap:10px;align-items:center;padding:8px;border-radius:14px;background:#f4f7fd;margin-bottom:8px}
+.row img{width:56px;height:56px;object-fit:contain;flex:none}
+.row .info{flex:1;min-width:0}
+.row .info b{font-size:17px}
+.bar{height:10px;background:#dde3ef;border-radius:6px;overflow:hidden;margin-top:4px}
+.bar>i{display:block;height:100%;background:#3ccf5a;border-radius:6px;transition:width .4s}
+.bar.xp>i{background:#4aa3ff}
+.row button{padding:6px 10px;font-size:13px}
+.dexgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:8px}
+.dex{background:#f4f7fd;border-radius:14px;padding:6px;text-align:center;font-size:13px}
+.dex img{width:84px;height:84px;object-fit:contain}
+.dex.unseen img{filter:brightness(0) opacity(.35)}
+.quest{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:#f4f7fd;margin-bottom:6px}
+.quest.done{background:#e3f8e6;color:#2a7a3a}
+.quest .tick{font-size:20px}
+.inside-art{font-size:64px;text-align:center;margin:4px 0}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+/* battle */
+#battle{position:fixed;inset:0;z-index:30;pointer-events:none}
+.hpcard{position:absolute;background:rgba(255,255,255,.95);border-radius:16px;padding:8px 14px;min-width:230px;box-shadow:0 4px 0 rgba(0,0,0,.15);pointer-events:auto}
+.hpcard b{font-size:18px}
+.hpcard .lv{float:right;font-weight:700}
+#enemyCard{left:16px;top:16px}
+#playerCard{right:16px;bottom:200px}
+#battleBox{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:10px;pointer-events:auto;flex-wrap:wrap}
+#battleMsg{flex:1 1 300px;background:#fff;border-radius:18px;padding:16px 18px;font-size:19px;font-weight:600;min-height:86px;border:4px solid var(--ink);cursor:pointer;line-height:1.35}
+#battleMenu{flex:1 1 300px;display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:520px}
+#battleMenu button{font-size:17px;padding:12px 8px}
+#battleMenu button.wide{grid-column:span 2}
+.flash{animation:fl .4s}
+@keyframes fl{0%,100%{filter:none}50%{filter:brightness(2)}}
+#help kbd{background:#eef;border-radius:6px;padding:0 6px;border:1px solid #ccd}
+@media (max-width:640px){
+  #minimap{width:104px;height:104px}
+  #playerCard{bottom:auto;top:96px;right:12px;min-width:190px}
+  #enemyCard{min-width:190px}
+  #battleMsg{font-size:16px;min-height:70px}
+}
+@media (hover:hover) and (pointer:fine){#joy,#touchBtns{display:none}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="hudLeft">
+    <div class="pill" id="hudStats"></div>
+    <div class="pill" id="hudBadges"></div>
+    <div id="hudBtns">
+      <button id="bTeam">🎒 Team</button>
+      <button id="bDex">📖 Monster Book</button>
+      <button id="bQuest">🗺️ Adventures</button>
+      <button id="bHelp">❓</button>
+    </div>
+  </div>
+  <canvas id="minimap" width="300" height="300"></canvas>
+</div>
+<div id="zoneToast"></div>
+<div id="toast"></div>
+<div id="prompt" class="hidden"></div>
+<div id="joy" class="hidden"><div id="knob"></div></div>
+<div id="touchBtns" class="hidden"><button id="btnAct">Talk</button><button id="btnJump">Jump</button></div>
+
+<!-- Title -->
+<div class="screen" id="title">
+  <h1>Monster Quest 3D</h1>
+  <h2>Pick your hero!</h2>
+  <div class="cards" id="heroCards"></div>
+  <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+    <button class="primary" id="btnHeroNext" disabled style="font-size:22px;padding:14px 30px">Next ➜</button>
+    <button class="gold hidden" id="btnContinue" style="font-size:22px;padding:14px 30px">Continue my adventure</button>
+  </div>
+</div>
+<div class="screen hidden" id="starter">
+  <h1>Choose a partner!</h1>
+  <h2>Your very first monster friend</h2>
+  <div class="cards" id="starterCards"></div>
+  <div style="margin-top:18px"><button class="primary" id="btnStart" disabled style="font-size:22px;padding:14px 30px">Start adventure!</button></div>
+</div>
+
+<!-- Chat -->
+<div class="panel hidden" id="chat">
+  <header><div class="avatar" id="chatAvatar"></div><h3 id="chatName"></h3><button id="chatClose">Bye 👋</button></header>
+  <div id="chatLog"></div>
+  <div id="chatQuick"></div>
+  <form id="chatForm" autocomplete="off"><input id="chatInput" placeholder="Type anything to chat..." maxlength="200"><button class="blue" type="submit">Send</button></form>
+</div>
+
+<!-- generic panel -->
+<div class="panel hidden" id="panel">
+  <header><h3 id="panelTitle"></h3><button id="panelClose">Close ✕</button></header>
+  <div class="body" id="panelBody"></div>
+</div>
+
+<!-- Battle -->
+<div id="battle" class="hidden">
+  <div class="hpcard" id="enemyCard"><span class="lv" id="eLv"></span><b id="eName"></b> <span id="eType"></span><div class="bar"><i id="eHp"></i></div></div>
+  <div class="hpcard" id="playerCard"><span class="lv" id="pLv"></span><b id="pName"></b> <span id="pType"></span><div class="bar"><i id="pHp"></i></div><div style="font-size:13px;text-align:right" id="pHpTxt"></div><div class="bar xp" style="height:5px"><i id="pXp"></i></div></div>
+  <div id="battleBox"><div id="battleMsg"></div><div id="battleMenu"></div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+// ================= helpers =================
+const $=id=>document.getElementById(id);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const randi=(a,b)=>Math.floor(rand(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+// ================= sound =================
+let AC=null;
+function beep(f=440,d=.1,type='square',vol=.05,slide=0){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;if(slide)o.frequency.linearRampToValueAtTime(f+slide,AC.currentTime+d);g.gain.value=vol;g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+const sfx={
+  hit:()=>beep(160,.15,'sawtooth',.06,-80),
+  super:()=>{beep(220,.12,'sawtooth',.07,200);setTimeout(()=>beep(120,.2,'sawtooth',.07,-60),90)},
+  jump:()=>beep(300,.15,'sine',.05,300),
+  catch:()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.15,'triangle',.07),i*110))},
+  wobble:()=>beep(200,.08,'triangle',.05),
+  level:()=>{[440,554,659,880].forEach((f,i)=>setTimeout(()=>beep(f,.12,'square',.04),i*90))},
+  click:()=>beep(700,.04,'square',.03),
+  win:()=>{[523,523,523,698,880].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.05),i*140))},
+  heal:()=>{[660,880,990].forEach((f,i)=>setTimeout(()=>beep(f,.15,'sine',.06),i*120))},
+};
+
+// ================= data =================
+const TYPES={
+  normal:{name:'Normal',color:'#a8a07e',hex:0xd8d0b0},
+  fire:{name:'Fire',color:'#ff6a2a',hex:0xff7a2a},
+  water:{name:'Water',color:'#2f7df6',hex:0x4aa8ff},
+  grass:{name:'Grass',color:'#33a845',hex:0x5fd25a},
+  electric:{name:'Electric',color:'#e0a800',hex:0xffe23a},
+  rock:{name:'Rock',color:'#94795a',hex:0xb09070},
+  ghost:{name:'Ghost',color:'#8a5cc8',hex:0xb07aff},
+  ice:{name:'Ice',color:'#3cb8d8',hex:0xbff4ff},
+  air:{name:'Air',color:'#6a8cf0',hex:0xe0ecff},
+};
+const STRONG={fire:['grass','ice'],water:['fire','rock'],grass:['water','rock'],electric:['water','air'],rock:['fire','air','ice'],ghost:['ghost'],ice:['grass','air'],air:['grass'],normal:[]};
+function eff(a,d){if(a==='normal')return 1;if(STRONG[a].includes(d))return 2;if((STRONG[d]||[]).includes(a))return .5;if(a===d)return .5;return 1}
+const TYPE_MOVE={fire:'Flame Burst',water:'Water Splash',grass:'Leaf Slash',electric:'Spark Zap',rock:'Stone Throw',ghost:'Spooky Shadow',ice:'Frost Bite',air:'Gust Wing'};
+const BIG_MOVE={fire:'Inferno Blast',water:'Tidal Crash',grass:'Vine Storm',electric:'Lightning Storm',rock:'Boulder Crush',ghost:'Phantom Scream',ice:'Blizzard Blast',air:'Tornado Spin'};
+function typeTag(t){return `<span class="type" style="background:${TYPES[t].color}">${TYPES[t].name}</span>`}
+
+function S_(name,type,shape,color,acc,zones,hp,atk,def,rare,size,desc){return{name,type,shape,color,acc,zones,hp,atk,def,rare,size,desc}}
+const SPECIES=[
+ S_('Embercub','fire','cat',0xff7a33,0xffd23a,['volcano'],40,12,9,0,1,'A playful cub whose tail is always on fire.'),
+ S_('Flarebit','fire','blob',0xff4d2e,0xffe066,['volcano'],36,11,8,0,.95,'A bouncy fireball that giggles when it pops.'),
+ S_('Magmaw','fire','dragon',0xc4281c,0xffa020,['volcano'],56,16,13,1,1.35,'A mighty dragon that naps inside the volcano.'),
+ S_('Splashel','water','turtle',0x4aa8ff,0x2e6fd1,['lake'],44,10,12,0,1,'A little turtle that squirts water to say hi.'),
+ S_('Bubblo','water','blob',0x7fd4ff,0xffffff,['lake'],38,10,9,0,.95,'Blows bubbles that float for days.'),
+ S_('Tidalon','water','dragon',0x2a5fd8,0x9fe8ff,['lake'],58,15,14,1,1.35,'Rules Splash Lake. It can make huge waves.'),
+ S_('Leafkit','grass','cat',0x5fcf5a,0x2f8a2f,['forest'],42,11,10,0,1,'Hides in bushes and pounces on falling leaves.'),
+ S_('Sprouty','grass','blob',0x9be35a,0xff7ab8,['meadow','forest'],38,9,10,0,.95,'A happy sprout with a flower on its head.'),
+ S_('Thornox','grass','turtle',0x3a7a2a,0xa0e060,['forest'],56,14,16,1,1.3,'An ancient forest guardian covered in moss.'),
+ S_('Zappip','electric','bird',0xffe03a,0x333333,['meadow'],34,12,7,0,.95,'A tiny bird that sparks when it sings.'),
+ S_('Voltmouse','electric','cat',0xffd000,0xff5a5a,['meadow'],36,13,8,0,.9,'Super fast! Its cheeks crackle with power.'),
+ S_('Thundrake','electric','dragon',0xf0c000,0x4a4aff,['cliffs','meadow'],54,17,12,1,1.35,'Rides thunderclouds across the sky.'),
+ S_('Pebblet','rock','rocky',0x9a8a7a,0x6a5a4a,['mountain'],44,10,14,0,.95,'A pebble that bounces like a ball. Boing!'),
+ S_('Bouldash','rock','turtle',0x7a6a5a,0xc0a080,['mountain'],50,12,15,0,1.05,'Rolls down mountains at amazing speed.'),
+ S_('Cragon','rock','dragon',0x6a6060,0xe0a040,['mountain'],60,16,16,1,1.35,'Its scales are as hard as diamonds.'),
+ S_('Boolin','ghost','ghost',0xd8d0ff,0x6a4aa0,['graveyard','forest'],36,12,8,0,1,'Says BOO! then gets scared of itself.'),
+ S_('Shadewisp','ghost','ghost',0x5a3a8a,0xff4ad8,['graveyard'],40,14,9,0,1,'A shadowy wisp that glows pink at night.'),
+ S_('Phantorn','ghost','dragon',0x3a2a5a,0xb070ff,['graveyard'],54,17,12,1,1.35,'A spooky dragon that can walk through walls.'),
+ S_('Frostpup','ice','cat',0xbfefff,0x4ab0e0,['snow'],42,12,10,0,1,'A frosty puppy that loves snowball fights.'),
+ S_('Snowbun','ice','blob',0xffffff,0x9fd8ff,['snow'],40,10,11,0,.95,'Looks just like a snowball with ears.'),
+ S_('Glacirex','ice','dragon',0x8fd8f8,0xffffff,['snow'],58,16,15,1,1.35,'Breathes blizzards. Very cool. Literally.'),
+ S_('Featherz','air','bird',0xb8c8ff,0xff9a3a,['cliffs','meadow'],36,11,8,0,.95,'Flies loop-de-loops just for fun.'),
+ S_('Gustling','air','bird',0xe8f0ff,0x6a9aff,['cliffs'],38,12,9,0,1,'Makes little whirlwinds with its wings.'),
+ S_('Skyleon','air','dragon',0x7aa8ff,0xffe080,['cliffs'],60,18,13,1,1.35,'The king of the clouds.'),
+ S_('Jumpstar','air','star',0xffd23a,0xffffff,[],70,20,16,2,1.2,'LEGENDARY! Lives at the top of Cloud Heights. It can jump to the moon!'),
+];
+const JUMPSTAR=24;
+const STARTERS=[0,3,6];
+
+const ZONES={
+ town:{name:'Jumpstone Town',x:0,z:0,r:34,color:0x93cf62,lv:[2,4]},
+ meadow:{name:'Sparkle Meadow',x:98,z:0,r:44,color:0xb8e66a,lv:[2,6]},
+ forest:{name:'Whisper Forest',x:-98,z:0,r:44,color:0x3d8a38,lv:[3,7]},
+ lake:{name:'Splash Lake',x:0,z:98,r:44,color:0xe2c27e,lv:[5,9]},
+ volcano:{name:'Ember Volcano',x:0,z:-98,r:44,color:0x6e3a2a,lv:[6,10]},
+ mountain:{name:'Rocky Peaks',x:88,z:88,r:38,color:0x9a928a,lv:[8,12]},
+ snow:{name:'Frosty Fields',x:88,z:-88,r:38,color:0xf2f8ff,lv:[10,14]},
+ graveyard:{name:'Spooky Hollow',x:-88,z:88,r:38,color:0x55496a,lv:[12,16]},
+ cliffs:{name:'Cloud Heights',x:-88,z:-88,r:38,color:0xc8e8a8,lv:[11,15]},
+};
+
+const HEROES={
+ seb:{name:'Seb Jumpstone',skin:0xf2c9a0,shirt:0xe53935,pants:0x1e3a8a,hair:0x6b3e1f,hat:0x1e88e5,style:'cap',desc:'Super jumper and brave explorer!',perk:'⭐ Jumps way higher'},
+ z:{name:'Z Jumpstream',skin:0xe0b088,shirt:0x222222,pants:0x3a3a3a,hair:0xf5f5f5,stripe:0xffd600,style:'spiky',desc:'The fastest trainer around. Zoom!',perk:'⚡ Runs super fast'},
+ galley:{name:'Galley',skin:0xf5d0b0,shirt:0x43a047,pants:0x795548,hair:0xff8a3d,style:'glasses',desc:'Smart scientist who knows every monster.',perk:'🔬 Catches more easily'},
+ josh:{name:'Josh Clark',skin:0xc68e5e,shirt:0x1565c0,pants:0x212121,hair:0x1a1a1a,cape:0xd32f2f,style:'cape',desc:'Strong, funny and loves big battles.',perk:'💪 Stronger attacks'},
+};
+const LEADERS={
+ fire:{name:'Leader Blaze',look:{skin:0xf0c090,shirt:0xd84315,pants:0x3e2723,hair:0xff3d00,style:'spiky'},zone:'volcano',pos:[22,-68],team:[[1,7],[0,9]],badge:'Flame Badge',icon:'🔥',type:'fire'},
+ water:{name:'Leader Marina',look:{skin:0xf5d0b0,shirt:0x0277bd,pants:0x01579b,hair:0x4fc3f7,style:'plain'},zone:'lake',pos:[30,72],team:[[4,10],[3,12]],badge:'Wave Badge',icon:'🌊',type:'water'},
+ electric:{name:'Leader Volt',look:{skin:0xe0b088,shirt:0xfbc02d,pants:0x212121,hair:0x212121,style:'spiky'},zone:'meadow',pos:[72,24],team:[[9,13],[10,15]],badge:'Spark Badge',icon:'⚡',type:'electric'},
+ ice:{name:'Leader Yuki',look:{skin:0xf8e0d0,shirt:0x80deea,pants:0xffffff,hair:0xe0f7fa,style:'plain'},zone:'snow',pos:[62,-84],team:[[19,16],[18,18]],badge:'Frost Badge',icon:'❄️',type:'ice'},
+ champ:{name:'Champion Nova',look:{skin:0xd8a878,shirt:0x6a1b9a,pants:0x311b92,hair:0xffffff,cape:0xffd600,style:'cape'},zone:'town',pos:[-12.2,-29.6],team:[[14,21],[17,22],[5,23],[23,24]],badge:'Champion Crown',icon:'👑',type:'normal'},
+};
+const BADGE_ORDER=['fire','water','electric','ice'];
+
+// ================= save state =================
+let S=null;
+const SAVE_KEY='monsterQuest3D_v1';
+function newState(hero){return{hero,party:[],box:[],seen:[],caught:[],badges:[],balls:10,superballs:1,potions:3,coins:100,chests:[],visited:['town'],talked:[],quests:[],gifts:[],pos:[0,0,10],uid:1}}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
+function loadSave(){try{const s=localStorage.getItem(SAVE_KEY);return s?JSON.parse(s):null}catch(e){return null}}
+
+// ================= creature instances =================
+function makeMon(sp,lvl){const m={sp,lvl,xp:0,uid:(S?S.uid++:Math.random())};m.hp=stats(m).maxHp;return m}
+function stats(m){const s=SPECIES[m.sp];return{maxHp:Math.floor(s.hp+m.lvl*4),atk:s.atk+m.lvl*2,def:s.def+m.lvl*1.5}}
+function movesFor(m){const t=SPECIES[m.sp].type;const mv=[{name:'Tackle',type:'normal',power:35,acc:1},{name:TYPE_MOVE[t],type:t,power:50,acc:.97}];
+ if(m.lvl>=7)mv.push({name:'Super Jump',type:'normal',power:55,acc:.95});
+ if(m.lvl>=12)mv.push({name:BIG_MOVE[t],type:t,power:80,acc:.88});return mv}
+function xpNeed(m){return m.lvl*12}
+function markSeen(sp){if(!S.seen.includes(sp))S.seen.push(sp)}
+function markCaught(sp){markSeen(sp);if(!S.caught.includes(sp))S.caught.push(sp)}
+
+// ================= three setup =================
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+$('game').appendChild(renderer.domElement);
+
+const matCache={};
+function M(color,opts){const k=color+'|'+JSON.stringify(opts||{});if(!matCache[k])matCache[k]=new THREE.MeshStandardMaterial(Object.assign({color,roughness:.6,metalness:.04},opts||{}));return matCache[k]}
+const G={sph:new THREE.SphereGeometry(1,20,14),box:new THREE.BoxGeometry(1,1,1),cone:new THREE.ConeGeometry(1,1,14),cyl:new THREE.CylinderGeometry(1,1,1,14),dodec:new THREE.DodecahedronGeometry(1,0),oct:new THREE.OctahedronGeometry(1,0),ring:new THREE.TorusGeometry(1,.15,8,28),hemi:new THREE.SphereGeometry(1,20,10,0,Math.PI*2,0,Math.PI/2)};
+function P(geo,color,pos,scale,rot,opts){const m=new THREE.Mesh(geo,M(color,opts));m.position.set(pos[0],pos[1],pos[2]);if(scale!=null){if(typeof scale==='number')m.scale.setScalar(scale);else m.scale.set(scale[0],scale[1],scale[2])}if(rot)m.rotation.set(rot[0],rot[1],rot[2]);m.castShadow=true;return m}
+
+function addEyes(g,y,z,sp,size){size=size||.13;for(const s of[-1,1]){g.add(P(G.sph,0xffffff,[s*sp,y,z],size));g.add(P(G.sph,0x161616,[s*sp,y,z+size*.62],size*.58));g.add(P(G.sph,0xffffff,[s*sp+size*.18,y+size*.22,z+size*1.02],size*.2,null,{emissive:0xffffff}))}}
+
+function makeCreature(spi){
+ const sp=SPECIES[spi],c=sp.color,a=sp.acc,g=new THREE.Group();let top=[0,1,0],tail=null;
+ const ghostOpt={transparent:true,opacity:.85};
+ switch(sp.shape){
+  case 'blob':
+   g.add(P(G.sph,c,[0,.52,0],[.62,.52,.6]));
+   g.add(P(G.sph,a,[0,.4,.38],[.35,.28,.2]));
+   for(const s of[-1,1])g.add(P(G.sph,c,[s*.3,.08,.15],[.18,.1,.22]));
+   addEyes(g,.66,.48,.2,.13);top=[0,1.04,0];break;
+  case 'cat':
+   g.add(P(G.sph,c,[0,.55,-.05],[.42,.36,.6]));
+   g.add(P(G.sph,c,[0,.98,.42],.38));
+   g.add(P(G.sph,a,[0,.88,.7],[.16,.11,.1]));
+   for(const s of[-1,1]){g.add(P(G.cone,c,[s*.22,1.36,.38],[.13,.3,.13],[0,0,-s*.25]));g.add(P(G.cone,a,[s*.22,1.34,.42],[.07,.18,.07],[0,0,-s*.25]))}
+   for(const x of[-1,1])for(const z of[-1,1])g.add(P(G.cyl,c,[x*.22,.2,z*.3],[.09,.4,.09]));
+   g.add(P(G.cyl,c,[0,.82,-.72],[.07,.6,.07],[-.7,0,0]));
+   addEyes(g,1.02,.72,.15,.12);top=[0,1.38,.3];tail=[0,1.12,-.95];break;
+  case 'bird':
+   g.add(P(G.sph,c,[0,.68,0],[.42,.42,.45]));
+   g.add(P(G.sph,a,[0,.6,.25],[.28,.28,.22]));
+   g.add(P(G.sph,c,[0,1.15,.15],.3));
+   g.add(P(G.cone,0xffa020,[0,1.1,.5],[.08,.22,.08],[Math.PI/2,0,0]));
+   for(const s of[-1,1]){const w=P(G.sph,a,[s*.45,.78,-.02],[.08,.3,.42],[0,0,s*.45]);w.userData.wing=s;g.add(w);g.add(P(G.cyl,0xffa020,[s*.15,.18,0],[.04,.36,.04]))}
+   g.add(P(G.cone,a,[0,.75,-.5],[.15,.35,.08],[-1.2,0,0]));
+   addEyes(g,1.2,.38,.13,.1);top=[0,1.45,.1];break;
+  case 'dragon':
+   g.add(P(G.sph,c,[0,.9,0],[.6,.55,.85]));
+   g.add(P(G.sph,a,[0,.78,.3],[.42,.38,.55]));
+   g.add(P(G.cyl,c,[0,1.35,.55],[.2,.6,.2],[.6,0,0]));
+   g.add(P(G.sph,c,[0,1.72,.75],.4));
+   g.add(P(G.sph,c,[0,1.62,1.08],[.26,.2,.3]));
+   for(const s of[-1,1]){g.add(P(G.cone,a,[s*.22,2.12,.6],[.08,.38,.08],[-.5,0,-s*.3]));
+    const w=P(G.cone,a,[s*.75,1.45,-.15],[.5,.9,.06],[0,0,-s*1.1],{side:THREE.DoubleSide});w.userData.wing=s;g.add(w)}
+   for(const x of[-1,1])for(const z of[-1,1])g.add(P(G.cyl,c,[x*.33,.25,z*.42],[.14,.5,.14]));
+   g.add(P(G.cone,c,[0,.75,-1.25],[.18,.9,.18],[-1.7,0,0]));
+   addEyes(g,1.84,1.02,.18,.12);top=[0,2.1,.7];tail=[0,.8,-1.75];break;
+  case 'turtle':
+   g.add(P(G.hemi,a,[0,.3,0],[.65,.55,.75]));
+   g.add(P(G.sph,c,[0,.3,0],[.62,.16,.72]));
+   g.add(P(G.sph,c,[0,.55,.78],.3));
+   for(const x of[-1,1])for(const z of[-1,1])g.add(P(G.sph,c,[x*.45,.15,z*.45],[.17,.14,.2]));
+   g.add(P(G.cone,c,[0,.3,-.8],[.1,.25,.1],[-1.5,0,0]));
+   addEyes(g,.64,1.0,.13,.1);top=[0,.9,0];break;
+  case 'ghost':
+   g.add(P(G.sph,c,[0,1.05,0],[.5,.5,.48],null,ghostOpt));
+   g.add(P(G.cone,c,[0,.5,0],[.5,.75,.48],[Math.PI,0,0],ghostOpt));
+   for(const s of[-1,1])g.add(P(G.sph,c,[s*.52,.95,.1],[.14,.22,.14],[0,0,s*.6],ghostOpt));
+   for(const s of[-1,1]){g.add(P(G.sph,0x111111,[s*.17,1.12,.42],[.1,.16,.06]));g.add(P(G.sph,0xffffff,[s*.17+.03,1.16,.46],.03,null,{emissive:0xffffff}))}
+   g.add(P(G.sph,a,[0,.9,.46],[.12,.08,.04]));
+   top=[0,1.6,0];break;
+  case 'rocky':
+   g.add(P(G.dodec,c,[0,.58,0],.55));
+   for(let i=0;i<6;i++){const an=i/6*Math.PI*2;g.add(P(G.dodec,a,[Math.sin(an)*.42,.75+Math.cos(i)*.2,Math.cos(an)*.38-.05],.17))}
+   for(const s of[-1,1])g.add(P(G.dodec,c,[s*.62,.45,.1],.2));
+   addEyes(g,.68,.46,.19,.12);top=[0,1.15,0];break;
+  case 'star':
+   g.add(P(G.sph,c,[0,.95,0],.55,null,{emissive:0x664400}));
+   for(let i=0;i<5;i++){const an=i/5*Math.PI*2;g.add(P(G.cone,c,[Math.sin(an)*.7,.95+Math.cos(an)*.7,0],[.22,.5,.22],[0,0,-an],{emissive:0x664400}))}
+   const halo=P(G.ring,a,[0,1.95,0],[.35,.35,.35],[Math.PI/2,0,0],{emissive:0xffffaa});g.add(halo);
+   addEyes(g,1.02,.5,.18,.13);top=null;break;
+ }
+ // type accessories
+ const t=sp.type,pos=(tail&&t==='fire')?tail:top;
+ if(pos){
+  if(t==='fire'){g.add(P(G.cone,0xff5a1a,[pos[0],pos[1]+.12,pos[2]],[.16,.38,.16],null,{emissive:0xff3a00}));g.add(P(G.cone,0xffd23a,[pos[0],pos[1]+.08,pos[2]],[.09,.24,.09],null,{emissive:0xffaa00}))}
+  if(t==='water')g.add(P(G.cone,a,[pos[0],pos[1]+.05,pos[2]-.1],[.06,.35,.25]));
+  if(t==='grass'){g.add(P(G.sph,0x2fa83a,[pos[0]+.1,pos[1]+.1,pos[2]],[.22,.05,.12],[0,0,.5]));g.add(P(G.sph,0x2fa83a,[pos[0]-.1,pos[1]+.1,pos[2]],[.22,.05,.12],[0,0,-.5]))}
+  if(t==='electric'){g.add(P(G.oct,0xfff59d,[pos[0],pos[1]+.15,pos[2]],[.1,.22,.06],[0,0,.4],{emissive:0xffcc00}))}
+  if(t==='ice')g.add(P(G.oct,0xdff8ff,[pos[0],pos[1]+.18,pos[2]],[.14,.28,.14],null,{transparent:true,opacity:.85,emissive:0x2288aa}));
+  if(t==='air')for(let i=-1;i<=1;i++)g.add(P(G.cone,a,[pos[0]+i*.08,pos[1]+.12,pos[2]-.05],[.05,.3,.05],[-.3,0,i*.4]));
+  if(t==='rock')g.add(P(G.cone,a,[pos[0],pos[1]+.05,pos[2]],[.12,.3,.12]));
+  if(t==='ghost')g.add(P(G.sph,a,[pos[0],pos[1],pos[2]],.08,null,{emissive:a}));
+ }
+ if(t==='electric'&&sp.shape!=='bird'){const fy=sp.shape==='cat'?.9:.55,fz=sp.shape==='cat'?.68:.45;for(const s of[-1,1])g.add(P(G.sph,0xff4a4a,[s*.26,fy,fz],.07))}
+ g.scale.setScalar(sp.size);
+ g.userData.sp=spi;
+ return g;
+}
+
+function makePerson(h){
+ const g=new THREE.Group();
+ g.add(P(G.box,h.shirt,[0,1.35,0],[.8,.9,.45]));
+ if(h.stripe)g.add(P(G.box,h.stripe,[0,1.42,.232],[.82,.16,.02]));
+ g.add(P(G.sph,h.skin,[0,2.12,0],.38));
+ if(h.style==='spiky'){g.add(P(G.sph,h.hair,[0,2.28,-.05],[.4,.26,.4]));for(let i=0;i<7;i++){const an=i/7*Math.PI*2;g.add(P(G.cone,h.hair,[Math.sin(an)*.24,2.48,Math.cos(an)*.24-.06],[.12,.38,.12],[Math.cos(an)*.7,0,-Math.sin(an)*.7]))}}
+ else g.add(P(G.sph,h.hair,[0,2.25,-.06],[.41,.29,.41]));
+ if(h.style==='cap'){g.add(P(G.sph,h.hat,[0,2.33,0],[.415,.22,.415]));g.add(P(G.box,h.hat,[0,2.3,.38],[.5,.05,.36]))}
+ if(h.style==='glasses'){for(const s of[-1,1])g.add(P(G.ring,0x222222,[s*.14,2.14,.36],.09));g.add(P(G.box,0x8d6e63,[0,1.38,-.32],[.6,.7,.25]))}
+ if(h.cape)g.add(P(G.box,h.cape,[0,1.25,-.27],[.86,1.25,.05]));
+ for(const s of[-1,1])g.add(P(G.sph,0x161616,[s*.13,2.14,.35],.05));
+ g.add(P(G.box,0x8a3a2a,[0,2.0,.36],[.12,.03,.02]));
+ const limb=(x,y,w,hh,col,hand)=>{const pv=new THREE.Group();pv.position.set(x,y,0);pv.add(P(G.box,col,[0,-hh/2,0],[w,hh,w*1.1]));if(hand)pv.add(P(G.sph,hand,[0,-hh-.05,0],.13));g.add(pv);return pv};
+ g.userData.legs=[limb(-.2,.9,.3,.9,h.pants),limb(.2,.9,.3,.9,h.pants)];
+ g.userData.arms=[limb(-.52,1.75,.22,.78,h.shirt,h.skin),limb(.52,1.75,.22,.78,h.shirt,h.skin)];
+ return g;
+}
+function animPerson(p,speed,t){const u=p.userData,s=Math.sin(t*11)*.7*speed;u.legs[0].rotation.x=s;u.legs[1].rotation.x=-s;u.arms[0].rotation.x=-s;u.arms[1].rotation.x=s}
+
+function makeLabel(text,bg){const c=document.createElement('canvas');c.width=512;c.height=96;const x=c.getContext('2d');x.font='bold 50px Fredoka, Arial';const w=Math.min(500,x.measureText(text).width+44);x.fillStyle=bg||'rgba(29,35,64,.78)';const L=(512-w)/2;x.beginPath();x.moveTo(L+30,12);x.arcTo(L+w,12,L+w,84,30);x.arcTo(L+w,84,L,84,30);x.arcTo(L,84,L,12,30);x.arcTo(L,12,L+w,12,30);x.fill();x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';x.fillText(text,256,50);const tx=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true}));s.scale.set(4.2,.8,1);return s}
+
+// ================= thumbnails =================
+const thumbR=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});thumbR.setSize(200,200);thumbR.setPixelRatio(1);
+const thumbScene=new THREE.Scene();thumbScene.add(new THREE.HemisphereLight(0xffffff,0x8899aa,.9));const tl=new THREE.DirectionalLight(0xffffff,.7);tl.position.set(3,5,6);thumbScene.add(tl);
+const thumbCam=new THREE.PerspectiveCamera(35,1,.1,100);
+function snap(obj,yaw){obj.rotation.y=yaw==null?.5:yaw;thumbScene.add(obj);const box=new THREE.Box3().setFromObject(obj),c=box.getCenter(new THREE.Vector3()),sz=box.getSize(new THREE.Vector3());const d=Math.max(sz.x,sz.y,sz.z)*1.75+.5;thumbCam.position.set(c.x+d*.25,c.y+d*.28,c.z+d);thumbCam.lookAt(c);thumbR.render(thumbScene,thumbCam);const url=thumbR.domElement.toDataURL();thumbScene.remove(obj);return url}
+SPECIES.forEach((s,i)=>s.img=snap(makeCreature(i)));
+for(const k in HEROES)HEROES[k].img=snap(makePerson(HEROES[k]),.3);
+for(const k in LEADERS)LEADERS[k].img=snap(makePerson(LEADERS[k].look),.3);
+const NURSE={skin:0xf8d8c0,shirt:0xff8fb8,pants:0xffffff,hair:0xff6fa0,style:'plain'};
+
+// ================= world =================
+const scene=new THREE.Scene();
+const SKY=0x8fd3ff;scene.background=new THREE.Color(SKY);scene.fog=new THREE.Fog(SKY,80,230);
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,700);
+scene.add(new THREE.HemisphereLight(0xffffff,0x557a3a,.75));
+const sun=new THREE.DirectionalLight(0xffffff,.85);sun.position.set(30,60,20);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-45,right:45,top:45,bottom:-45,near:1,far:160});scene.add(sun);scene.add(sun.target);
+
+const obstacles=[];   // {x,z,r}
+const platforms=[];   // {x,z,w,d,y(top),h}
+const interactables=[]; // {x,z,r,label,act,obj?}
+const rng=mulberry32(12345);
+const rr=(a,b)=>a+rng()*(b-a);
+
+const ground=new THREE.Mesh(new THREE.CircleGeometry(200,64),M(0x7cc55a));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+for(const k in ZONES){const z=ZONES[k];const d=new THREE.Mesh(new THREE.CircleGeometry(z.r,48),M(z.color));d.rotation.x=-Math.PI/2;d.position.set(z.x,.02,z.z);d.receiveShadow=true;scene.add(d);
+ if(k!=='town'){const len=Math.hypot(z.x,z.z);const p=new THREE.Mesh(new THREE.PlaneGeometry(6,len),M(0xd4b26e));p.rotation.x=-Math.PI/2;p.position.z=len/2;p.receiveShadow=true;const pg=new THREE.Group();pg.add(p);pg.rotation.y=Math.atan2(z.x,z.z);pg.position.y=.035;scene.add(pg)}}
+// town plaza
+{const pl=new THREE.Mesh(new THREE.CircleGeometry(12,40),M(0xd4b26e));pl.rotation.x=-Math.PI/2;pl.position.y=.04;pl.receiveShadow=true;scene.add(pl);
+ const f=new THREE.Group();f.add(P(G.cyl,0xcfd8dc,[0,.4,0],[3,.8,3]));f.add(P(G.cyl,0x4fc3f7,[0,.82,0],[2.6,.05,2.6]));f.add(P(G.cyl,0xcfd8dc,[0,1.5,0],[.4,2,.4]));f.add(P(G.sph,0x4fc3f7,[0,2.7,0],.6,null,{emissive:0x1a6a9a}));scene.add(f);obstacles.push({x:0,z:0,r:3.2})}
+// border mountains
+for(let i=0;i<70;i++){const a=i/70*Math.PI*2,r=172+rr(0,15),h=rr(25,55);const m=P(G.cone,pick([0x6f8f5f,0x7a9a6a,0x8a8f80]),[Math.sin(a)*r,h/2-1,Math.cos(a)*r],[rr(14,22),h,rr(14,22)]);m.castShadow=false;scene.add(m)}
+function inZone(k,margin){const z=ZONES[k],a=rr(0,Math.PI*2),d=Math.sqrt(rng())*(z.r-(margin||4));return[z.x+Math.sin(a)*d,z.z+Math.cos(a)*d]}
+function nearPath(x,z){for(const k in ZONES){if(k==='town')continue;const Z=ZONES[k],L=Math.hypot(Z.x,Z.z),ux=Z.x/L,uz=Z.z/L,t=x*ux+z*uz;if(t>0&&t<L){const px=x-ux*t,pz=z-uz*t;if(Math.hypot(px,pz)<5)return true}}return false}
+function free(x,z,r){if(nearPath(x,z))return false;for(const o of obstacles)if(Math.hypot(o.x-x,o.z-z)<o.r+r)return false;return true}
+function tree(x,z,kind){const g=new THREE.Group();g.position.set(x,0,z);
+ if(kind==='pine'||kind==='snowpine'){g.add(P(G.cyl,0x6d4c2f,[0,.8,0],[.28,1.6,.28]));for(let i=0;i<3;i++){g.add(P(G.cone,kind==='snowpine'?0x2f6a4a:0x2e7d32,[0,2+i*1.1,0],[1.7-i*.4,1.8,1.7-i*.4]));if(kind==='snowpine')g.add(P(G.cone,0xffffff,[0,2.5+i*1.1,0],[1.0-i*.25,.8,1.0-i*.25]))}}
+ else if(kind==='dead'){g.add(P(G.cyl,0x4a3a3a,[0,1.6,0],[.25,3.2,.25]));for(const s of[-1,1])g.add(P(G.cyl,0x4a3a3a,[s*.5,2.6,0],[.1,1.3,.1],[0,0,s*.8]))}
+ else{g.add(P(G.cyl,0x7a5232,[0,1,0],[.3,2,.3]));const col=kind==='dark'?pick([0x2e6b2e,0x23592a,0x3a7a33]):pick([0x4caf50,0x66bb6a,0x43a047]);g.add(P(G.sph,col,[0,2.8,0],1.5));g.add(P(G.sph,col,[.6,2.3,.4],1.0));g.add(P(G.sph,col,[-.5,2.5,-.4],1.0));
+  if(kind==='fruit')for(let i=0;i<4;i++)g.add(P(G.sph,0xe53935,[rr(-1,1),rr(2.2,3.4),rr(.8,1.3)],.15))}
+ scene.add(g);obstacles.push({x,z,r:.8});return g}
+function scatter(k,n,fn,r,margin){let c=0,tries=0;while(c<n&&tries<n*30){tries++;const[x,z]=inZone(k,margin);if(free(x,z,r||1)){fn(x,z);c++}}}
+
+// town buildings
+function house(x,z,col,roof,label,act){const rot=Math.atan2(-x,-z);const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot||0;g.add(P(G.box,col,[0,1.8,0],[6,3.6,5]));const rf=P(G.cone,roof,[0,4.6,0],[4.8,2.2,4.8],[0,Math.PI/4,0]);rf.geometry=new THREE.ConeGeometry(1,1,4);g.add(rf);g.add(P(G.box,0x6d4c2f,[0,1.1,2.52],[1.3,2.2,.1]));for(const s of[-1,1])g.add(P(G.box,0xbfe8ff,[s*1.9,2.1,2.52],[1.1,1,.08],null,{emissive:0x335566}));const lb=makeLabel(label);lb.position.set(0,6.6,0);g.add(lb);scene.add(g);obstacles.push({x,z,r:3.6});
+ const dx=Math.sin(rot||0)*3.6,dz=Math.cos(rot||0)*3.6;interactables.push({x:x+dx,z:z+dz,r:2.4,label:'Go inside '+label,act});return g}
+house(-18,10,0xffffff,0xff6f9a,'Healing Center',()=>openInside('heal'));
+house(18,10,0xbbdefb,0x1e88e5,'Jump Mart',()=>openInside('shop'));
+house(-22,-8,0xfff3c4,0xd84315,"Seb's House",()=>openInside('seb'));
+house(22,-8,0xe0e0e0,0x424242,"Z's Garage",()=>openInside('z'));
+house(-9,24,0xdcedc8,0x388e3c,"Galley's Lab",()=>openInside('galley'));
+house(9,24,0xd1e3ff,0x1565c0,"Josh's House",()=>openInside('josh'));
+
+// stadiums
+const stadiumMeshes={};
+for(const k in LEADERS){const L=LEADERS[k],[x,z]=L.pos,big=k==='champ',R=big?8:7,g=new THREE.Group();g.position.set(x,0,z);const col=big?0x7e57c2:TYPES[L.type].hex;
+ g.add(P(G.cyl,0xf5f5f5,[0,2.5,0],[R,5,R]));g.add(P(G.cyl,col,[0,5.2,0],[R+.4,.6,R+.4]));g.add(P(G.cyl,col,[0,1,0],[R+.05,.6,R+.05]));
+ const dome=P(G.hemi,col,[0,5.4,0],[R*.85,R*.35,R*.85],null,{transparent:true,opacity:.75});g.add(dome);
+ for(let i=0;i<4;i++){const a=i/4*Math.PI*2+Math.PI/4;g.add(P(G.cyl,0x9e9e9e,[Math.sin(a)*R,6.5,Math.cos(a)*R],[.12,3,.12]));g.add(P(G.box,col,[Math.sin(a)*R+.5,7.5,Math.cos(a)*R],[1,.6,.05]))}
+ const ang=Math.atan2(-x,-z);const door=P(G.box,0x263238,[Math.sin(ang)*R,1.4,Math.cos(ang)*R],[2.4,2.8,.4],[0,ang,0]);g.add(door);
+ const lb=makeLabel((big?'Grand Stadium':TYPES[L.type].name+' Stadium')+' '+L.icon,'rgba(0,0,0,.6)');lb.position.set(0,big?11:9.5,0);lb.scale.set(6,1.15,1);g.add(lb);
+ scene.add(g);obstacles.push({x,z,r:R+.3});stadiumMeshes[k]=g;
+ interactables.push({x:x+Math.sin(ang)*(R+1.4),z:z+Math.cos(ang)*(R+1.4),r:2.6,label:'Enter '+(big?'Grand Stadium':TYPES[L.type].name+' Stadium'),act:()=>openInside('stadium',k)})}
+
+for(let i=0;i<18;i++){const a=i/18*Math.PI*2+.1,r=31,x=Math.sin(a)*r,z=Math.cos(a)*r;if(free(x,z,1))tree(x,z,'fruit')}
+// zone decor
+scatter('forest',85,(x,z)=>tree(x,z,rng()<.3?'pine':'dark'),1.4);
+scatter('forest',25,(x,z)=>{scene.add(P(G.sph,pick([0x3a8a33,0x2e7d32]),[x,.5,z],[1,.8,1]))},1);
+scatter('meadow',14,(x,z)=>tree(x,z,'normal'),2);
+scatter('meadow',160,(x,z)=>{const c=pick([0xff6f9a,0xffeb3b,0xffffff,0xba68c8,0xff8a65]);const f=P(G.sph,c,[x,.25,z],.18);scene.add(f);const s=P(G.cyl,0x388e3c,[x,.12,z],[.03,.24,.03]);scene.add(s)},.2,2);
+scatter('meadow',80,(x,z)=>scene.add(P(G.cone,0x7cb342,[x,.35,z],[.25,.7,.25])),.2,2);
+// lake
+{const Z=ZONES.lake;const w=new THREE.Mesh(new THREE.CircleGeometry(27,48),M(0x2f8fe0,{transparent:true,opacity:.82,roughness:.15,metalness:.2}));w.rotation.x=-Math.PI/2;w.position.set(Z.x,.1,Z.z);scene.add(w);
+ for(let i=0;i<20;i++){const a=rr(0,7),d=rr(6,24);scene.add(P(G.cyl,0x4caf50,[Z.x+Math.sin(a)*d,.13,Z.z+Math.cos(a)*d],[.6,.02,.6]))}
+ scatter('lake',16,(x,z)=>{if(Math.hypot(x-Z.x,z-Z.z)>29)tree(x,z,'normal')},1.5)}
+// volcano
+{const Z=ZONES.volcano;const v=P(G.cone,0x5a2a1a,[Z.x,11,Z.z-6],[18,22,18]);scene.add(v);v.geometry=new THREE.CylinderGeometry(.18,1,1,24);
+ scene.add(P(G.cyl,0xff5a1a,[Z.x,22.05,Z.z-6],[3.2,.2,3.2],null,{emissive:0xff3300}));obstacles.push({x:Z.x,z:Z.z-6,r:17.5});
+ const smoke=[];for(let i=0;i<6;i++){const s=P(G.sph,0x888888,[Z.x,24+i*2,Z.z-6],2+i*.4,null,{transparent:true,opacity:.35});scene.add(s);smoke.push(s)}window._smoke=smoke;
+ scatter('volcano',30,(x,z)=>{const r=P(G.dodec,pick([0x3e2723,0x4e342e,0x5d4037]),[x,.5,z],rr(.6,1.4));scene.add(r);obstacles.push({x,z,r:1})},1.6);
+ for(let i=0;i<5;i++){const a=rr(0,7),d=rr(19,32);const l=P(G.cyl,0xff6a1a,[Z.x+Math.sin(a)*d,.06,Z.z-6+Math.cos(a)*d],[rr(1.5,3),.04,rr(1.5,3)],null,{emissive:0xff3300});scene.add(l)}}
+// mountain
+{scatter('mountain',7,(x,z)=>{const h=rr(10,20),r=rr(5,8);scene.add(P(G.cone,0x8a8078,[x,h/2,z],[r,h,r]));scene.add(P(G.cone,0xffffff,[x,h-h*.15,z],[r*.32,h*.3,r*.32]));obstacles.push({x,z,r:r*.85})},7,10);
+ scatter('mountain',30,(x,z)=>{const r=P(G.dodec,pick([0x9e9e9e,0x8d8d8d,0x757575]),[x,.4,z],rr(.5,1.2));scene.add(r);obstacles.push({x,z,r:.9})},1.4)}
+// snow
+const snowmen=[];
+{scatter('snow',40,(x,z)=>tree(x,z,'snowpine'),1.4);
+ scatter('snow',6,(x,z)=>{const g=new THREE.Group();g.position.set(x,0,z);g.add(P(G.sph,0xffffff,[0,.8,0],.8));g.add(P(G.sph,0xffffff,[0,1.9,0],.55));g.add(P(G.sph,0xffffff,[0,2.7,0],.38));g.add(P(G.cone,0xff7a1a,[0,2.7,.45],[.07,.35,.07],[Math.PI/2,0,0]));for(const s of[-1,1])g.add(P(G.sph,0x111111,[s*.13,2.8,.33],.05));g.add(P(G.cyl,0x222222,[0,3.15,0],[.3,.4,.3]));g.rotation.y=rr(0,6);scene.add(g);obstacles.push({x,z,r:1})},1.5)}
+// graveyard
+const lanterns=[];
+{scatter('graveyard',36,(x,z)=>{const g=P(G.box,0x9e9e9e,[x,.7,z],[1,1.4,.3],[0,rr(-.3,.3),rr(-.15,.15)]);scene.add(g);obstacles.push({x,z,r:.7})},1.2);
+ scatter('graveyard',16,(x,z)=>tree(x,z,'dead'),1.4);
+ scatter('graveyard',10,(x,z)=>{scene.add(P(G.cyl,0x333333,[x,1,z],[.08,2,.08]));const l=P(G.sph,0xb070ff,[x,2.1,z],.25,null,{emissive:0x8040ff});scene.add(l);lanterns.push(l)},.6)}
+// cliffs - floating platforms
+let jumpstarSpot=null;
+{const Z=ZONES.cliffs;const cx=Z.x,cz=Z.z;
+ for(let i=0;i<6;i++){const a=rr(0,7),d=rr(22,32),x=cx+Math.sin(a)*d,z=cz+Math.cos(a)*d;scene.add(P(G.cyl,0xb0a08a,[x,6,z],[1.6,12,1.6]));obstacles.push({x,z,r:1.7})}
+ const N=12;for(let i=0;i<N;i++){const a=i*.55,r=8.5+i*.3,x=cx+Math.sin(a)*r,z=cz+Math.cos(a)*r,top=1.1+i*1.45,w=i===N-1?6:4;
+  const g=new THREE.Group();g.position.set(x,top,z);g.add(P(G.box,0x8d6e63,[0,-.5,0],[w,1,w]));g.add(P(G.box,0x7cc55a,[0,.02,0],[w+.1,.12,w+.1]));g.add(P(G.cone,0x8d6e63,[0,-1.6,0],[w*.4,1.4,w*.4],[Math.PI,0,0]));
+  for(let c=0;c<2;c++){const cl=P(G.sph,0xffffff,[rr(-w,w)*.3,-1.3,rr(-w,w)*.3],[.9,.35,.7],null,{transparent:true,opacity:.85});cl.castShadow=false;g.add(cl)}
+  scene.add(g);platforms.push({x,z,w,d:w,y:top,h:1.2,mesh:g});
+  if(i===N-1)jumpstarSpot={x,z,y:top}}
+ const fk={x:cx,z:cz,r:15};obstacles.push(fk);scatter('cliffs',18,(x,z)=>tree(x,z,'normal'),1.4,4);obstacles.splice(obstacles.indexOf(fk),1);
+ const sign=makeLabel('⬆ Jump up to the top! ⬆','rgba(30,90,200,.8)');sign.position.set(cx+1,3.5,cz+5);sign.scale.set(5,1,1);scene.add(sign);
+ const clouds=[];for(let i=0;i<14;i++){const c=new THREE.Group();for(let j=0;j<4;j++)c.add(P(G.sph,0xffffff,[j*1.3-2,rr(-.3,.3),rr(-.5,.5)],rr(1.2,1.9),null,{transparent:true,opacity:.9}));c.position.set(cx+rr(-45,45),rr(28,40),cz+rr(-45,45));c.children.forEach(m=>m.castShadow=false);scene.add(c);clouds.push(c)}window._clouds=clouds}
+// stray decor in between
+for(let i=0;i<60;i++){const a=rr(0,7),d=rr(40,150),x=Math.sin(a)*d,z=Math.cos(a)*d;let inside=false;for(const k in ZONES){const Z=ZONES[k];if(Math.hypot(x-Z.x,z-Z.z)<Z.r+3)inside=true}if(!inside&&free(x,z,1.5))tree(x,z,'normal')}
+
+// snow particles
+const snowGeo=new THREE.BufferGeometry();{const n=500,p=new Float32Array(n*3);for(let i=0;i<n;i++){p[i*3]=rr(-38,38);p[i*3+1]=rr(0,25);p[i*3+2]=rr(-38,38)}snowGeo.setAttribute('position',new THREE.BufferAttribute(p,3))}
+const snowPts=new THREE.Points(snowGeo,new THREE.PointsMaterial({color:0xffffff,size:.35}));snowPts.position.set(ZONES.snow.x,0,ZONES.snow.z);scene.add(snowPts);
+
+// treasure chests
+const chests=[];
+{const spots=[['meadow',3],['forest',3],['lake',2],['volcano',2],['mountain',2],['snow',2],['graveyard',2],['cliffs',1]];let id=0;
+ for(const[k,n]of spots)scatter(k,n,(x,z)=>{chests.push(makeChest(id++,x,0,z))},1.5,6);
+ if(jumpstarSpot)chests.push(makeChest(id++,jumpstarSpot.x+1.8,jumpstarSpot.y,jumpstarSpot.z+1.8,true))}
+function makeChest(id,x,y,z,gold){const g=new THREE.Group();g.position.set(x,y,z);g.add(P(G.box,gold?0xffc107:0x8d5524,[0,.45,0],[1.2,.9,.8]));const lid=P(G.box,gold?0xffd54f:0xa0662d,[0,1,0],[1.25,.25,.85]);g.add(lid);g.add(P(G.box,0xffd23a,[0,.6,.41],[.25,.3,.05],null,{emissive:0x886600}));g.rotation.y=rr(0,6);scene.add(g);
+ const c={id,x,y,z,g,lid,gold};interactables.push({x,z,y,r:2.2,label:'Open treasure chest',act:()=>openChest(c),chest:c});if(!gold)obstacles.push({x,z,r:.8});return c}
+
+// signposts
+function signpost(x,z,text){const g=new THREE.Group();g.position.set(x,0,z);g.add(P(G.cyl,0x6d4c2f,[0,1,0],[.12,2,.12]));g.add(P(G.box,0xd7a86e,[0,2,0],[1.6,.8,.12]));scene.add(g);obstacles.push({x,z,r:.5});interactables.push({x,z,r:2,label:'Read sign',act:()=>openInfo('📜 Sign',`<p style="font-size:20px">${text}</p>`)})}
+for(const k in ZONES){if(k==='town')continue;const Z=ZONES[k],L=Math.hypot(Z.x,Z.z),ux=Z.x/L,uz=Z.z/L,d=L-Z.r+2;signpost(ux*d+uz*4.5,uz*d-ux*4.5,`Welcome to <b>${Z.name}</b>!<br>Monsters here are about level ${Z.lv[0]}-${Z.lv[1]}.`)}
+
+// ================= player =================
+const player={x:0,y:0,z:10,vy:0,yaw:Math.PI,onGround:true,mesh:null,speedMul:1,jumpMul:1};
+let camYaw=0,camPitch=.42,camDist=12;
+
+// ================= NPCs =================
+const npcs=[];
+function addNPC(key,def,x,z,wander){const m=makePerson(def);m.position.set(x,0,z);scene.add(m);const lb=makeLabel(def.name);lb.position.y=3.1;m.add(lb);const n={key,def,mesh:m,home:[x,z],x,z,tx:x,tz:z,wander:wander||5,timer:0,talking:false};npcs.push(n);return n}
+const FRIEND_HOMES={seb:[6,13],z:[66,-6],galley:[-62,6],josh:[-5,-18]};
+
+// ================= wild monsters =================
+const wild=[];
+const ZONE_COUNTS={meadow:8,forest:7,lake:6,volcano:6,mountain:5,snow:5,graveyard:5,cliffs:5,town:0};
+function zoneSpecies(k){return SPECIES.map((s,i)=>i).filter(i=>SPECIES[i].zones.includes(k))}
+function spawnWild(k){const list=zoneSpecies(k);if(!list.length)return;const w=[];for(const i of list)w.push(...Array(SPECIES[i].rare?1:6).fill(i));const sp=pick(w);const Z=ZONES[k];
+ let x,z,tries=0;do{const a=Math.random()*7,d=Math.sqrt(Math.random())*(Z.r-4);x=Z.x+Math.sin(a)*d;z=Z.z+Math.cos(a)*d;tries++}while(tries<40&&!freeDyn(x,z,1.2));
+ const lvl=randi(Z.lv[0],Z.lv[1])+(SPECIES[sp].rare?2:0);const mesh=makeCreature(sp);mesh.position.set(x,0,z);scene.add(mesh);
+ const lb=makeLabel(SPECIES[sp].name+' Lv'+lvl,'rgba(0,0,0,.45)');lb.position.y=(SPECIES[sp].shape==='dragon'?2.7:1.9);lb.scale.set(3,.58,1);mesh.add(lb);lb.material.opacity=.9;
+ wild.push({sp,lvl,mesh,x,z,zone:k,tx:x,tz:z,timer:0,phase:Math.random()*7})}
+function freeDyn(x,z,r){for(const o of obstacles)if(Math.hypot(o.x-x,o.z-z)<o.r+r)return false;return true}
+for(const k in ZONE_COUNTS)for(let i=0;i<ZONE_COUNTS[k];i++)spawnWild(k);
+let jumpstarWild=null;
+function spawnJumpstar(){if(!jumpstarSpot||jumpstarWild)return;const mesh=makeCreature(JUMPSTAR);mesh.position.set(jumpstarSpot.x,jumpstarSpot.y,jumpstarSpot.z);scene.add(mesh);const lb=makeLabel('Jumpstar Lv25 ✨','rgba(180,120,0,.75)');lb.position.y=2.6;lb.scale.set(3.2,.6,1);mesh.add(lb);
+ jumpstarWild={sp:JUMPSTAR,lvl:25,mesh,x:jumpstarSpot.x,z:jumpstarSpot.z,zone:'cliffs',tx:jumpstarSpot.x,tz:jumpstarSpot.z,timer:0,phase:0,fixedY:jumpstarSpot.y,still:true};wild.push(jumpstarWild)}
+function removeWild(w){scene.remove(w.mesh);const i=wild.indexOf(w);if(i>=0)wild.splice(i,1);if(w===jumpstarWild){jumpstarWild=null;if(!S.caught.includes(JUMPSTAR))setTimeout(spawnJumpstar,30000);return}setTimeout(()=>spawnWild(w.zone),15000)}
+
+// ================= input =================
+const keys={};let mode='title';
+addEventListener('keydown',e=>{if(document.activeElement&&document.activeElement.tagName==='INPUT')return;const k=e.key.toLowerCase();keys[k]=true;
+ if(mode==='world'){if(k==='e'||k==='enter')doInteract();if(k===' '){e.preventDefault();doJump()}if(k==='t')openTeam();if(k==='m')openDex();if(k==='q')openQuests()}
+ else if(mode==='battle'&&(k===' '||k==='enter'))skipMsg();
+ if(k==='escape')closeAll()});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+let drag=null;
+renderer.domElement.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,id:e.pointerId}});
+addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;camYaw-=(e.clientX-drag.x)*.006;camPitch=clamp(camPitch+(e.clientY-drag.y)*.004,.1,1.25);drag.x=e.clientX;drag.y=e.clientY});
+addEventListener('pointerup',e=>{if(drag&&drag.id===e.pointerId)drag=null});
+renderer.domElement.addEventListener('wheel',e=>{camDist=clamp(camDist+e.deltaY*.01,6,24)},{passive:true});
+// joystick
+const joy={x:0,y:0,id:null};
+{const J=$('joy'),K=$('knob');const upd=e=>{const r=J.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const d=Math.hypot(dx,dy),m=50;if(d>m){dx=dx/d*m;dy=dy/d*m}joy.x=dx/m;joy.y=dy/m;K.style.transform=`translate(${dx}px,${dy}px)`};
+ J.addEventListener('pointerdown',e=>{joy.id=e.pointerId;J.setPointerCapture(e.pointerId);upd(e)});J.addEventListener('pointermove',e=>{if(joy.id===e.pointerId)upd(e)});
+ const end=e=>{if(joy.id===e.pointerId){joy.id=null;joy.x=joy.y=0;K.style.transform=''}};J.addEventListener('pointerup',end);J.addEventListener('pointercancel',end)}
+$('btnJump').addEventListener('pointerdown',e=>{e.preventDefault();doJump()});
+$('btnAct').addEventListener('click',()=>doInteract());
+$('prompt').addEventListener('click',()=>doInteract());
+
+function doJump(){if(mode!=='world'||!player.onGround)return;player.vy=9.5*player.jumpMul;player.onGround=false;sfx.jump()}
+
+// ================= world update =================
+function groundAt(x,z,y){let g=0;for(const p of platforms){if(Math.abs(x-p.x)<p.w/2+.25&&Math.abs(z-p.z)<p.d/2+.25&&y>=p.y-.7)g=Math.max(g,p.y)}return g}
+function collide(px,pz,py){for(const o of obstacles){const dx=px-o.x,dz=pz-o.z,d=Math.hypot(dx,dz),r=o.r+.45;if(d<r&&d>0){px=o.x+dx/d*r;pz=o.z+dz/d*r}}
+ for(const p of platforms){if(py<p.y-.7&&py+2.4>p.y-p.h){const hw=p.w/2+.4,hd=p.d/2+.4,dx=px-p.x,dz=pz-p.z;if(Math.abs(dx)<hw&&Math.abs(dz)<hd){const ox=hw-Math.abs(dx),oz=hd-Math.abs(dz);if(ox<oz)px=p.x+Math.sign(dx||1)*hw;else pz=p.z+Math.sign(dz||1)*hd}}}
+ const d=Math.hypot(px,pz);if(d>158){px*=158/d;pz*=158/d}return[px,pz]}
+function zoneAt(x,z){let best='town',bd=1e9;for(const k in ZONES){const Z=ZONES[k],d=Math.hypot(x-Z.x,z-Z.z)/Z.r;if(d<bd){bd=d;best=k}}return bd<1?best:'wilds'}
+let curZone='town',encounterCD=2,wTime=0;
+function updatePlayer(dt){
+ let ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+joy.x;
+ let iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0)-joy.y;
+ const len=Math.hypot(ix,iz);if(len>1){ix/=len;iz/=len}
+ const fx=-Math.sin(camYaw),fz=-Math.cos(camYaw),rx=-fz,rz=fx;
+ let mx=fx*iz+rx*ix,mz=fz*iz+rz*ix;
+ const inWater=Math.hypot(player.x-ZONES.lake.x,player.z-ZONES.lake.z)<27&&player.y<.5;
+ const sp=(keys['shift']?11:8)*player.speedMul*(inWater?.65:1);
+ const mlen=Math.hypot(mx,mz);
+ if(mlen>.05){let nx=player.x+mx*sp*dt,nz=player.z+mz*sp*dt;[nx,nz]=collide(nx,nz,player.y);player.x=nx;player.z=nz;const ty=Math.atan2(mx,mz);let d=ty-player.yaw;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;player.yaw+=d*Math.min(1,dt*12)}
+ player.vy-=24*dt;player.y+=player.vy*dt;const g=groundAt(player.x,player.z,player.y);
+ if(player.y<=g){player.y=g;player.vy=0;player.onGround=true}else player.onGround=false;
+ const m=player.mesh;m.position.set(player.x,player.y-(inWater?.45:0),player.z);m.rotation.y=player.yaw;animPerson(m,player.onGround?Math.min(1,mlen):.3,wTime);
+ const z=zoneAt(player.x,player.z);if(z!==curZone){curZone=z;if(z!=='wilds'){showZone(ZONES[z].name);if(!S.visited.includes(z)){S.visited.push(z);save()}}}
+}
+function updateCamera(dt){const t=new THREE.Vector3(player.x,player.y+1.8,player.z);const cp=Math.cos(camPitch);const want=new THREE.Vector3(t.x+Math.sin(camYaw)*cp*camDist,t.y+Math.sin(camPitch)*camDist,t.z+Math.cos(camYaw)*cp*camDist);camera.position.lerp(want,Math.min(1,dt*8));if(camera.position.y<.8)camera.position.y=.8;camera.lookAt(t);
+ sun.position.set(player.x+30,60,player.z+20);sun.target.position.set(player.x,0,player.z)}
+function updateWild(dt){if(encounterCD>0)encounterCD-=dt;
+ for(const w of wild){w.timer-=dt;if(!w.still){if(w.timer<=0){w.timer=rand(2,5);const Z=ZONES[w.zone];if(Math.random()<.35){w.tx=w.x;w.tz=w.z}else{const a=Math.random()*7,d=Math.sqrt(Math.random())*(Z.r-5);w.tx=Z.x+Math.sin(a)*d;w.tz=Z.z+Math.cos(a)*d}}
+  const dx=w.tx-w.x,dz=w.tz-w.z,d=Math.hypot(dx,dz);let moving=0;if(d>.3){const s=Math.min(d,2.2*dt);let nx=w.x+dx/d*s,nz=w.z+dz/d*s;if(freeDyn(nx,nz,.6)){w.x=nx;w.z=nz;moving=1}else w.timer=0;w.mesh.rotation.y=Math.atan2(dx,dz)}
+  const isG=SPECIES[w.sp].shape==='ghost',fly=SPECIES[w.sp].shape==='bird';w.mesh.position.set(w.x,(isG?.6+Math.sin(wTime*2+w.phase)*.25:fly?Math.abs(Math.sin(wTime*4+w.phase))*.4:moving?Math.abs(Math.sin(wTime*8+w.phase))*.25:0),w.z)}
+ else{w.mesh.position.y=w.fixedY+.3+Math.sin(wTime*2)*.25;w.mesh.rotation.y+=dt*.8}
+ w.mesh.traverse(o=>{if(o.userData.wing)o.rotation.z=o.userData.wing*(.4+Math.sin(wTime*12+w.phase)*.4)});
+ if(encounterCD<=0&&mode==='world'){const dy=Math.abs((w.mesh.position.y)-(player.y));if(Math.hypot(w.x-player.x,w.z-player.z)<1.4*SPECIES[w.sp].size+.3&&dy<2.5){if(!S.party.some(m=>m.hp>0)){toast('Your monsters are too tired! Visit the Healing Center.');encounterCD=3;continue}startWildBattle(w);break}}}}
+function updateNPCs(dt){for(const n of npcs){if(n.talking){animPerson(n.mesh,0,wTime);continue}n.timer-=dt;if(n.timer<=0){n.timer=rand(2,6);const a=Math.random()*7,d=Math.random()*n.wander;n.tx=n.home[0]+Math.sin(a)*d;n.tz=n.home[1]+Math.cos(a)*d}
+ const dx=n.tx-n.x,dz=n.tz-n.z,d=Math.hypot(dx,dz);let mv=0;if(d>.3){const s=Math.min(d,(n.key==='z'?4.5:2.5)*dt);n.x+=dx/d*s;n.z+=dz/d*s;mv=1;n.mesh.rotation.y=Math.atan2(dx,dz)}n.mesh.position.set(n.x,0,n.z);animPerson(n.mesh,mv,wTime+n.home[0])}}
+
+let nearest=null;
+function checkInteract(){nearest=null;let bd=1e9;
+ for(const n of npcs){const d=Math.hypot(n.x-player.x,n.z-player.z);if(d<3&&d<bd){bd=d;nearest={label:'Talk to '+n.def.name,act:()=>openChat(n)}}}
+ for(const it of interactables){if(it.chest&&S.chests.includes(it.chest.id))continue;if(it.y!=null&&Math.abs(it.y-player.y)>2)continue;const d=Math.hypot(it.x-player.x,it.z-player.z);if(d<it.r&&d<bd){bd=d;nearest=it}}
+ const pr=$('prompt');if(nearest){pr.innerHTML=`<kbd>E</kbd>${esc(nearest.label)}`;pr.classList.remove('hidden');$('btnAct').textContent=nearest.label.startsWith('Talk')?'Talk':'Go'}else{pr.classList.add('hidden');$('btnAct').textContent='Talk'}}
+function doInteract(){if(mode!=='world'||!nearest)return;sfx.click();nearest.act()}
+
+// ================= minimap =================
+const mm=$('minimap').getContext('2d');let mmT=0;
+function drawMinimap(){const W=300,sc=W/340;mm.clearRect(0,0,W,W);mm.save();mm.translate(W/2,W/2);mm.fillStyle='#7cc55a';mm.beginPath();mm.arc(0,0,W/2,0,7);mm.fill();
+ for(const k in ZONES){const Z=ZONES[k];mm.fillStyle='#'+Z.color.toString(16).padStart(6,'0');mm.beginPath();mm.arc(Z.x*sc,Z.z*sc,Z.r*sc,0,7);mm.fill()}
+ mm.fillStyle='#2f8fe0';mm.beginPath();mm.arc(ZONES.lake.x*sc,ZONES.lake.z*sc,27*sc,0,7);mm.fill();
+ mm.font='bold 22px Arial';mm.textAlign='center';mm.textBaseline='middle';
+ for(const k in LEADERS){const[x,z]=LEADERS[k].pos;mm.fillText(LEADERS[k].icon,x*sc,z*sc)}
+ mm.fillStyle='#ffeb3b';for(const c of chests)if(!S.chests.includes(c.id)){mm.fillRect(c.x*sc-3,c.z*sc-3,6,6)}
+ for(const n of npcs){mm.fillStyle='#fff';mm.beginPath();mm.arc(n.x*sc,n.z*sc,5,0,7);mm.fill()}
+ mm.translate(player.x*sc,player.z*sc);mm.rotate(-player.yaw+Math.PI);mm.fillStyle='#ff3b30';mm.strokeStyle='#fff';mm.lineWidth=3;mm.beginPath();mm.moveTo(0,-11);mm.lineTo(8,8);mm.lineTo(-8,8);mm.closePath();mm.fill();mm.stroke();mm.restore()}
+
+// ================= HUD =================
+function updateHUD(){$('hudStats').innerHTML=`<span>🔴 ${S.balls}</span><span>🟣 ${S.superballs}</span><span>🧪 ${S.potions}</span><span>🪙 ${S.coins}</span><span>📖 ${S.caught.length}/${SPECIES.length}</span>`;
+ $('hudBadges').innerHTML='Badges: '+BADGE_ORDER.map(k=>S.badges.includes(k)?LEADERS[k].icon:'⚪').join(' ')+(S.badges.includes('champ')?' 👑':'')}
+let toastT=null;function toast(t,ms){const e=$('toast');e.innerHTML=t;e.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>e.style.opacity=0,ms||2600)}
+let zoneT=null;function showZone(n){const e=$('zoneToast');e.textContent=n;e.style.opacity=1;clearTimeout(zoneT);zoneT=setTimeout(()=>e.style.opacity=0,2200)}
+
+// ================= panels =================
+function openPanel(title,html){$('panelTitle').innerHTML=title;$('panelBody').innerHTML=html;$('panel').classList.remove('hidden');if(mode==='world')mode='menu'}
+function closePanel(){$('panel').classList.add('hidden');if(mode==='menu')mode='world';updateHUD()}
+$('panelClose').onclick=closePanel;
+function closeAll(){if(!$('chat').classList.contains('hidden'))closeChat();if(!$('panel').classList.contains('hidden'))closePanel()}
+function openInfo(t,h){openPanel(t,h+'<div class="btnrow"><button class="primary" onclick="closePanel()">OK</button></div>')}
+
+function monRow(m,btns){const s=SPECIES[m.sp],st=stats(m);return`<div class="row"><img src="${s.img}"><div class="info"><b>${s.name}</b> ${typeTag(s.type)} <span style="float:right">Lv ${m.lvl}</span><div class="bar"><i style="width:${m.hp/st.maxHp*100}%;background:${m.hp/st.maxHp<.25?'#ff5252':m.hp/st.maxHp<.5?'#ffc107':'#3ccf5a'}"></i></div><small>HP ${m.hp}/${st.maxHp}</small><div class="bar xp" style="height:5px"><i style="width:${m.xp/xpNeed(m)*100}%"></i></div></div>${btns||''}</div>`}
+function openTeam(){if(mode!=='world'&&mode!=='menu')return;let h='<h4 style="margin:0 0 8px">Your team ('+S.party.length+'/6)</h4>';
+ S.party.forEach((m,i)=>{h+=monRow(m,`<div style="display:flex;flex-direction:column;gap:4px">${i>0?`<button onclick="teamAct('lead',${i})">⭐ Lead</button>`:'<span style="font-size:12px;text-align:center">⭐ Leader</span>'}${S.party.length>1?`<button onclick="teamAct('box',${i})">📦 Box</button>`:''}${S.potions>0&&m.hp<stats(m).maxHp?`<button onclick="teamAct('potion',${i})">🧪</button>`:''}</div>`)});
+ h+='<h4 style="margin:14px 0 8px">Monster Box ('+S.box.length+')</h4>';if(!S.box.length)h+='<p style="color:#789">Extra monsters you catch go here.</p>';
+ S.box.forEach((m,i)=>{h+=monRow(m,S.party.length<6?`<button onclick="teamAct('take',${i})">➕ Team</button>`:'')});
+ openPanel('🎒 Team',h)}
+window.teamAct=(a,i)=>{if(a==='lead'){const m=S.party.splice(i,1)[0];S.party.unshift(m)}if(a==='box'){S.box.push(S.party.splice(i,1)[0])}if(a==='take'){S.party.push(S.box.splice(i,1)[0])}if(a==='potion'){const m=S.party[i];m.hp=Math.min(stats(m).maxHp,m.hp+40);S.potions--;sfx.heal()}save();openTeam()};
+function openDex(){if(mode!=='world'&&mode!=='menu')return;let h=`<p>Caught <b>${S.caught.length}</b> / ${SPECIES.length} &nbsp; Seen <b>${S.seen.length}</b></p><div class="dexgrid">`;
+ SPECIES.forEach((s,i)=>{const c=S.caught.includes(i),se=S.seen.includes(i);h+=`<div class="dex ${se?'':'unseen'}" ${se?`onclick="dexInfo(${i})"`:''} style="cursor:${se?'pointer':'default'}"><img src="${s.img}"><div><b>${se?s.name:'???'}</b></div>${se?typeTag(s.type):''} ${c?'✅':''}</div>`});
+ openPanel('📖 Monster Book',h+'</div>')}
+window.dexInfo=i=>{const s=SPECIES[i];const where=s.zones.length?s.zones.map(z=>ZONES[z].name).join(', '):'The very top of Cloud Heights';openPanel('📖 '+s.name,`<div style="text-align:center"><img src="${s.img}" style="width:200px;height:200px"><br>${typeTag(s.type)} ${s.rare===2?'<b>LEGENDARY</b>':s.rare?'<b>Rare!</b>':''}<p style="font-size:18px">${s.desc}</p><p>📍 Lives in: <b>${where}</b></p><p>Strong against: ${STRONG[s.type].map(typeTag).join(' ')||'—'}</p><button onclick="openDex()">⬅ Back</button></div>`)};
+
+// quests
+const QUESTS=[
+ {id:'q1',t:'Catch your first wild monster',c:()=>S.caught.length>=2,r:{balls:5},rt:'5 Jump Balls'},
+ {id:'q2',t:'Chat with all 3 of your friends',c:()=>S.talked.length>=3,r:{potions:3},rt:'3 Potions'},
+ {id:'q3',t:'Find 3 treasure chests',c:()=>S.chests.length>=3,r:{superballs:3},rt:'3 Super Balls'},
+ {id:'q4',t:'Win your first Stadium badge',c:()=>S.badges.length>=1,r:{coins:200},rt:'200 coins'},
+ {id:'q5',t:'Explore all 9 lands',c:()=>S.visited.length>=9,r:{superballs:5},rt:'5 Super Balls'},
+ {id:'q6',t:'Catch 10 different monsters',c:()=>S.caught.length>=10,r:{coins:400},rt:'400 coins'},
+ {id:'q7',t:'Win all 4 Stadium badges',c:()=>BADGE_ORDER.every(b=>S.badges.includes(b)),r:{potions:10},rt:'10 Potions'},
+ {id:'q8',t:'Climb Cloud Heights and find Jumpstar',c:()=>S.seen.includes(JUMPSTAR),r:{superballs:5},rt:'5 Super Balls'},
+ {id:'q9',t:'Become Champion at the Grand Stadium',c:()=>S.badges.includes('champ'),r:{coins:1000},rt:'1000 coins'},
+ {id:'q10',t:'Catch ALL 25 monsters!',c:()=>S.caught.length>=SPECIES.length,r:{coins:9999},rt:'Ultimate Trainer title'},
+];
+function checkQuests(){for(const q of QUESTS){if(!S.quests.includes(q.id)&&q.c()){S.quests.push(q.id);for(const k in q.r)S[k]+=q.r[k];toast(`🏆 Adventure complete: <b>${q.t}</b><br>Reward: ${q.rt}`,4200);sfx.win();updateHUD();save()}}}
+function currentQuest(){return QUESTS.find(q=>!S.quests.includes(q.id))}
+function openQuests(){if(mode!=='world'&&mode!=='menu')return;let h='';for(const q of QUESTS){const d=S.quests.includes(q.id);h+=`<div class="quest ${d?'done':''}"><span class="tick">${d?'✅':'⬜'}</span><div style="flex:1"><b>${q.t}</b><br><small>Reward: ${q.rt}</small></div></div>`}openPanel('🗺️ Adventures',h)}
+function openHelp(){openPanel('❓ How to play',`<p><b>Move:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows (joystick on phone) &nbsp; <b>Run:</b> <kbd>Shift</kbd></p><p><b>Jump:</b> <kbd>Space</kbd> &nbsp; <b>Talk / Enter / Open:</b> <kbd>E</kbd></p><p><b>Look around:</b> drag the screen. Scroll to zoom.</p><p><b>Team:</b> <kbd>T</kbd> &nbsp; <b>Monster Book:</b> <kbd>M</kbd> &nbsp; <b>Adventures:</b> <kbd>Q</kbd></p><p>🐾 Walk into a wild monster to battle it. Make it weak, then throw a Jump Ball to catch it!</p><p>🏟️ Beat the 4 Stadium Leaders, then take on the Champion in the Grand Stadium in town.</p><p>💬 Talk to your friends — you can type anything to chat!</p><p>☁️ Legend says a golden monster lives at the top of Cloud Heights…</p><p style="color:#789">Your game saves by itself.</p>`)}
+$('bTeam').onclick=openTeam;$('bDex').onclick=openDex;$('bQuest').onclick=openQuests;$('bHelp').onclick=()=>{if(mode==='world'||mode==='menu')openHelp()};
+
+// insides
+function openInside(kind,arg){const P_=(t,h)=>openPanel(t,h);
+ if(kind==='heal'){P_('💗 Healing Center',`<div style="text-align:center"><img src="${snapCache('nurse')}" style="width:120px"><p style="font-size:18px"><b>Nurse Penny:</b> Welcome! Want me to make your monsters feel all better?</p></div><div class="btnrow"><button class="primary" onclick="healAll()">💗 Heal my team</button><button onclick="closePanel()">Leave</button></div>`)}
+ else if(kind==='shop'){const item=(n,ic,k,cost)=>`<div class="row"><div style="font-size:34px">${ic}</div><div class="info"><b>${n}</b><br><small>${cost} coins · you have ${S[k]}</small></div><button class="blue" ${S.coins<cost?'disabled':''} onclick="buy('${k}',${cost})">Buy</button></div>`;
+  P_('🛒 Jump Mart',`<p>You have <b>🪙 ${S.coins}</b> coins.</p>${item('Jump Ball','🔴','balls',20)}${item('Super Ball (catches better!)','🟣','superballs',50)}${item('Potion (+40 HP)','🧪','potions',30)}`)}
+ else if(kind==='stadium'){const L=LEADERS[arg],won=S.badges.includes(arg),need=arg==='champ'&&!BADGE_ORDER.every(b=>S.badges.includes(b));
+  P_(`🏟️ ${arg==='champ'?'Grand Stadium':TYPES[L.type].name+' Stadium'}`,`<div style="text-align:center"><img src="${L.img}" style="width:140px"><p style="font-size:18px"><b>${L.name}:</b> ${need?`You need all 4 Stadium badges before you can challenge me! You have ${BADGE_ORDER.filter(b=>S.badges.includes(b)).length}.`:won?'Back for a rematch? I\'ve been training!':`Welcome, challenger! Beat me to win the <b>${L.badge}</b> ${L.icon}!`}</p><p>Team: ${L.team.map(([s,l])=>SPECIES[s].name+' Lv'+l).join(', ')}</p></div><div class="btnrow" style="justify-content:center">${need?'':`<button class="primary" onclick="stadiumBattle('${arg}')">⚔️ Battle!</button>`}<button onclick="closePanel()">Leave</button></div>`)}
+ else{const H=HEROES[kind];const gifts={seb:{t:'Seb\'s room is full of trampolines and maps of every land!',g:{superballs:2},gt:'2 Super Balls'},z:{t:'Z\'s Garage has a super-fast scooter and a wall of trophies from races.',g:{potions:3},gt:'3 Potions'},galley:{t:'Galley\'s Lab is packed with science machines, bubbling potions, and monster research notes.',g:{balls:10},gt:'10 Jump Balls'},josh:{t:'Josh\'s House has a huge TV showing stadium battles and a punching bag.',g:{coins:150},gt:'150 coins'}}[kind];
+  const got=S.gifts.includes(kind);let msg=`<div style="text-align:center"><img src="${H.img}" style="width:120px"><p style="font-size:18px">${gifts.t}</p>`;
+  if(!got){for(const k in gifts.g)S[k]+=gifts.g[k];S.gifts.push(kind);save();msg+=`<p>🎁 You found a gift: <b>${gifts.gt}</b>!</p>`;sfx.catch()}else msg+='<p style="color:#789">Nothing new here right now.</p>';
+  P_('🏠 '+(kind==='galley'?"Galley's Lab":kind==='z'?"Z's Garage":H.name.split(' ')[0]+"'s House"),msg+'</div><div class="btnrow" style="justify-content:center"><button onclick="closePanel()">Leave</button></div>')}}
+const _snaps={};function snapCache(k){if(!_snaps[k])_snaps[k]=snap(makePerson(NURSE),.3);return _snaps[k]}
+window.healAll=()=>{for(const m of S.party)m.hp=stats(m).maxHp;let extra='';if(S.balls<5){S.balls=5;extra='<p>Here, take some Jump Balls too! 🔴</p>'}sfx.heal();save();openPanel('💗 Healing Center',`<p style="font-size:20px;text-align:center">✨ Your monsters are all better! ✨</p>${extra}<div class="btnrow" style="justify-content:center"><button class="primary" onclick="closePanel()">Thanks!</button></div>`)};
+window.buy=(k,c)=>{if(S.coins<c)return;S.coins-=c;S[k]++;sfx.click();save();openInside('shop')};
+function openChest(c){if(S.chests.includes(c.id))return;S.chests.push(c.id);c.lid.rotation.x=-1.2;c.lid.position.z=-.3;c.lid.position.y=1.2;
+ let loot;if(c.gold){S.superballs+=5;S.coins+=500;loot='5 Super Balls and 500 coins! ✨'}else{const r=Math.random();if(r<.35){const n=randi(3,5);S.balls+=n;loot=n+' Jump Balls 🔴'}else if(r<.6){S.superballs+=2;loot='2 Super Balls 🟣'}else if(r<.8){S.potions+=2;loot='2 Potions 🧪'}else{const n=randi(80,200);S.coins+=n;loot=n+' coins 🪙'}}
+ sfx.catch();toast('🎁 Treasure! You found '+loot,3200);save();updateHUD()}
+
+// ================= chat =================
+const TALK={
+ seb:{greet:["Hey hey! Seb Jumpstone here, ready to jump into adventure! 🦘","Yo! Wanna go jump on some floating islands?","Boing! Oh hi! I didn't see you there!"],
+  intro:"I'm Seb Jumpstone! I can jump higher than anyone in Jumpstone Town. My dream is to catch every monster and become Champion!",
+  fav:"My favorite monster is Pebblet, because it bounces just like me! Boing boing!",mood:["I'm feeling super jumpy today!","Awesome! I just jumped over a tree. Well… almost.","Great! I had pancakes shaped like Jump Balls."],
+  filler:["Did you know you can climb Cloud Heights by jumping on the floating islands? Press SPACE!","The Volcano is my favorite place, it's so hot you can cook a marshmallow!","Boing! Sorry, I was jumping.","I bet there's treasure hidden in every land!","When I grow up I'm gonna build a trampoline as big as the stadium."],
+  adv:"Adventure time! Climb the floating islands in Cloud Heights. Legend says a golden monster called Jumpstar lives at the very top!",team:[[12,0],[21,1],[2,2]]},
+ z:{greet:["Zoom! Z Jumpstream in the house! ⚡","Hey! You're kinda slow, but I like you.","Whoosh! Did you see how fast I ran here?"],
+  intro:"Name's Z Jumpstream. Fastest trainer in the whole world. I raced a Voltmouse once and WON.",
+  fav:"Voltmouse, obviously. It's almost as fast as me. ALMOST.",mood:["I'm great! I ran around the lake 50 times today.","Fast. I mean good. I mean FAST and good!","I'm buzzing like an electric monster!"],
+  filler:["Electric types are super strong against water types. Zap!","Want to know a secret? Hold Shift to run faster. You'll never be as fast as me though.","Sparkle Meadow has tons of electric monsters. That's my turf!","Zoom zoom zoom!","Last week I was so fast I got to tomorrow early."],
+  adv:"Here's a mission for you: go to Sparkle Meadow and beat Leader Volt at the Electric Stadium! Then race me back. Ha!",team:[[9,0],[10,1],[11,2]]},
+ galley:{greet:["Oh, hello! I'm in the middle of some research. 🔬","Greetings, fellow explorer!","Hi! Did you know there are 25 kinds of monsters? I've studied them all!"],
+  intro:"I'm Galley! I'm a monster scientist. I study what types beat what, where monsters live, and why Boolin is scared of itself.",
+  fav:"I love Sprouty! It photosynthesizes. That means it eats sunshine! Science is amazing.",mood:["I'm doing excellent! My experiment only exploded a little bit.","Very well, thank you! I found a new kind of moss today.","Curious, as always!"],
+  filler:["Science fact: Fire beats Grass and Ice. Water beats Fire and Rock. Grass beats Water and Rock!","Tip: the lower a monster's HP, the easier it is to catch. Super Balls work even better!","Rare monsters like dragons are harder to catch. Bring lots of balls!","Ghost types live in Spooky Hollow. Brrr. Not scared. Okay, a little scared.","Rock types are strong against Fire, Air and Ice. Very sturdy!"],
+  adv:"I have a research mission for you! Fill up your Monster Book. Each land has different monsters. Try Frosty Fields for ice types!",team:[[7,0],[15,1],[19,2]]},
+ josh:{greet:["Hey! Josh Clark here. Ready for a big battle? 💪","What's up, champ! Well, future champ.","Yo yo yo! Josh in the house!"],
+  intro:"I'm Josh Clark! I love big stadium battles, and I've got the best jokes in Jumpstone Town.",
+  fav:"Cragon! It's a rock dragon with diamond scales. Super tough, just like me!",mood:["I'm awesome! I just did 100 push-ups. Okay, 10.","Feeling strong and ready to battle!","Great! Today is a battling kind of day."],
+  filler:["The Grand Stadium is right here in town. You need all 4 badges to fight Champion Nova!","Train your monsters by battling wild ones. They'll level up and learn new moves!","At level 7 monsters learn Super Jump, and at level 12 they learn a super powerful move!","Never give up! Even a tiny Flarebit can win if it believes!","My cape makes me 20% cooler. Fact."],
+  adv:"Your adventure: Beat all 4 Stadium Leaders, then come challenge Champion Nova at the Grand Stadium! I'll be cheering!",team:[[0,0],[3,1],[14,2]]},
+};
+const JOKES=["Why did the Snowbun bring a blanket? Because it was a little chilly! 🥶","What do you call a Flarebit that tells jokes? A HOT comedian! 🔥","Why don't ghosts lie? Because you can see right through them! 👻","What's a Pebblet's favorite music? ROCK and roll! 🎸","Why was Zappip so good at school? It was super BRIGHT! ⚡","What do you call a sleeping dragon? A dino-SNORE! 🐉","Why did Bubblo cross the lake? To get to the other TIDE! 🌊","How does a Leafkit say goodbye? It LEAFS! 🍃"];
+let chatNPC=null;
+function openChat(n){chatNPC=n;n.talking=true;mode='chat';n.mesh.rotation.y=Math.atan2(player.x-n.x,player.z-n.z);
+ $('chatAvatar').innerHTML=`<img src="${n.def.img}">`;$('chatName').textContent=n.def.name;$('chatLog').innerHTML='';
+ $('chatQuick').innerHTML='';[['👋 Hi!','hi'],['⚔️ Battle me!','battle'],['🗺️ Adventure?','adventure'],['😂 Tell a joke','joke'],['⭐ Favorite monster?','favorite monster'],['❓ Tips','tip']].forEach(([l,t])=>{const b=document.createElement('button');b.textContent=l;b.onclick=()=>sendChat(t,l);$('chatQuick').appendChild(b)});
+ $('chat').classList.remove('hidden');if(!S.talked.includes(n.key)){S.talked.push(n.key);save()}
+ addMsg('them',pick(TALK[n.key].greet));if(matchMedia('(hover:hover)').matches)setTimeout(()=>$('chatInput').focus(),50)}
+function closeChat(){$('chat').classList.add('hidden');if(chatNPC)chatNPC.talking=false;chatNPC=null;$('chatInput').blur();if(mode==='chat')mode='world'}
+$('chatClose').onclick=closeChat;
+function addMsg(who,text){const d=document.createElement('div');d.className='msg '+who;d.textContent=text;$('chatLog').appendChild(d);$('chatLog').scrollTop=1e6}
+$('chatForm').addEventListener('submit',e=>{e.preventDefault();const v=$('chatInput').value.trim();if(!v)return;$('chatInput').value='';sendChat(v)});
+function sendChat(text,shown){if(!chatNPC)return;addMsg('me',shown||text);const n=chatNPC;const r=npcReply(n,text);setTimeout(()=>{if(chatNPC!==n)return;addMsg('them',r.text);if(r.battle)setTimeout(()=>{if(chatNPC===n){closeChat();friendBattle(n)}},1300)},450+Math.random()*400)}
+function npcReply(n,raw){const t=raw.toLowerCase(),T=TALK[n.key],me=HEROES[S.hero].name.split(' ')[0];const has=(...w)=>w.some(x=>new RegExp('\\b'+x+'\\b').test(t));
+ for(const k in HEROES){if(k===n.key)continue;const nm=HEROES[k].name.toLowerCase().split(' ')[0];if(t.includes(nm)){const about={seb:"Seb? Seb Jumpstone is the best jumper ever! Boing!",z:"Z Jumpstream? So fast! I blinked and Z was gone.",galley:"Galley is super smart. Galley knows everything about monsters!",josh:"Josh Clark? Josh tells the funniest jokes and battles really hard!"};return{text:about[k]}}}
+ for(let i=0;i<SPECIES.length;i++){const s=SPECIES[i];if(t.includes(s.name.toLowerCase())){if(i===JUMPSTAR)return{text:"Jumpstar!? The legendary golden monster! It lives at the very top of the floating islands in Cloud Heights. You'll need to jump a LOT!"};return{text:`${s.name} is a ${TYPES[s.type].name} type! ${s.desc} You can find it in ${s.zones.map(z=>ZONES[z].name).join(' and ')}.${S.caught.includes(i)?' And hey, you already caught one!':''}`}}}
+ for(const ty in TYPES){if(ty!=='normal'&&t.includes(ty)){const list=SPECIES.filter(s=>s.type===ty&&s.zones.length);return{text:`${TYPES[ty].name} types! Like ${list.map(s=>s.name).join(', ')}. ${TYPES[ty].name} beats ${STRONG[ty].map(x=>TYPES[x].name).join(' and ')}. Look in ${ZONES[list[0].zones[0]].name}!`}}}
+ if(has('battle','fight','duel','versus','vs')&&!has('stadium','stadiums'))return{text:pick(["Oh yeah! Let's battle! Get ready!","A battle? You're on!","Battle time! Don't go easy on me!"]),battle:true};
+ if(has('joke','jokes','funny','laugh'))return{text:pick(JOKES)};
+ if(has('hi','hello','hey','yo','sup','howdy','hiya'))return{text:pick(T.greet)+` Nice to see you, ${me}!`};
+ if(/how (are|r) (you|u)|how's it going|whats up|what's up/.test(t))return{text:pick(T.mood)};
+ if(has('favorite','favourite','fav','favorit'))return{text:T.fav};
+ if(has('who are you','your name','about you','who r u'))return{text:T.intro};
+ if(has('adventure','adventures','quest','mission','what should i do','what do i do','bored'))return{text:T.adv+(currentQuest()?` Oh, and your next adventure is: "${currentQuest().t}".`:'')};
+ if(has('stadium','stadiums','badge','badges','gym','leader','leaders','champion'))return{text:(()=>{const nx=BADGE_ORDER.find(b=>!S.badges.includes(b));if(nx){const L=LEADERS[nx];return`Your next stadium is the ${TYPES[L.type].name} Stadium in ${ZONES[L.zone].name}. ${L.name} uses ${TYPES[L.type].name} monsters! Bring a monster that's strong against ${TYPES[L.type].name}.`}return S.badges.includes('champ')?"You're the CHAMPION! That's so awesome!":"You have all 4 badges! Go fight Champion Nova at the Grand Stadium in town!"})()};
+ if(has('tip','tips','help','how do i','how to','catch'))return{text:pick(["Make a wild monster's HP low, then throw a Jump Ball! Super Balls work even better.","Press SPACE to jump, E to talk or open things, and drag the screen to look around!","Visit the Healing Center in town when your monsters are tired. It's free!","Treasure chests are hidden in every land. Check the yellow dots on your map!","Use moves your enemy is weak to — they do DOUBLE damage!"])};
+ if(has('where','find'))return{text:"Look at the map in the corner! Each colored circle is a different land with different monsters. The emoji show where the stadiums are."};
+ if(has('thank','thanks','thx','ty','thank you'))return{text:pick(["You're welcome!","No problem, buddy!","Anytime!"])};
+ if(has('bye','goodbye','see ya','cya'))return{text:pick(["Bye! Good luck on your adventure!","See ya later!","Bye bye! Catch lots of monsters!"])};
+ if(has('friend','friends'))return{text:"Of course we're friends! Best friends! Let's go on adventures together!"};
+ if(has('cool','awesome','best','great','amazing','love'))return{text:pick(["Aww thanks! You're awesome too!","You're the best!","Hehe, I know right?"])};
+ if(has('sad','scared','angry','mad'))return{text:"Aww, don't worry! Want me to tell you a joke? Or we could go catch a cute monster!"};
+ if(has('yes','yeah','yep','ok','okay','sure'))return{text:pick(["Awesome!","Great! Let's go!","Woohoo!"])};
+ if(has('no','nope','nah'))return{text:pick(["Okay, no problem!","Aw, alright!","That's fine!"])};
+ if(/\d+\s*[\+\-\*x]\s*\d+/.test(t)){const m=t.match(/(\d+)\s*([\+\-\*x])\s*(\d+)/);const a=+m[1],b=+m[3],o=m[2];const r=o==='+'?a+b:o==='-'?a-b:a*b;return{text:`That's ${r}! ${n.key==='galley'?'Math is basically science!':'I knew that one!'}`}}
+ if(t.endsWith('?'))return{text:pick(["Hmm, good question! I think… YES!","Ooh, I'm not sure! Maybe ask Galley, Galley knows everything.","Hmm, let me think… probably!","That's a mystery! Maybe we'll find out on our adventure."])};
+ return{text:pick(T.filler)}}
+function friendBattle(n){const top=Math.max(...S.party.map(m=>m.lvl));const team=TALK[n.key].team.map(([s,o])=>makeMon(s,Math.max(3,top-1+o)));if(!S.party.some(m=>m.hp>0)){toast('Your monsters are too tired! Heal them first.');return}
+ startBattle({trainer:{name:n.def.name,img:n.def.img,look:n.def,team,reward:120,friend:true},zone:curZone==='wilds'?'town':curZone})}
+window.stadiumBattle=k=>{if(!S.party.some(m=>m.hp>0)){toast('Your monsters are too tired! Heal them first.');return}closePanel();const L=LEADERS[k];const bonus=S.badges.includes(k)?3:0;startBattle({trainer:{name:L.name,look:L.look,team:L.team.map(([s,l])=>makeMon(s,l+bonus)),reward:k==='champ'?1500:300,badge:k},zone:L.zone,stadium:true})};
+
+// ================= battle scene =================
+const bScene=new THREE.Scene();const bCam=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,300);
+bScene.add(new THREE.HemisphereLight(0xffffff,0x667755,.85));{const l=new THREE.DirectionalLight(0xffffff,.8);l.position.set(-6,12,8);l.castShadow=true;l.shadow.mapSize.set(1024,1024);Object.assign(l.shadow.camera,{left:-12,right:12,top:12,bottom:-12});bScene.add(l)}
+const bGround=new THREE.Mesh(new THREE.CircleGeometry(40,48),M(0x7cc55a));bGround.rotation.x=-Math.PI/2;bGround.receiveShadow=true;bScene.add(bGround);
+const bPads=[];for(const p of[[-2.8,2.4],[2.8,-2.4]]){const d=new THREE.Mesh(new THREE.CircleGeometry(2,32),M(0xffffff,{transparent:true,opacity:.35}));d.rotation.x=-Math.PI/2;d.position.set(p[0],.03,p[1]);bScene.add(d);bPads.push(d)}
+const bWild=new THREE.Group();bScene.add(bWild);for(let i=0;i<26;i++){const a=i/26*Math.PI*2+rand(-.1,.1),r=rand(16,24),g=new THREE.Group();g.position.set(Math.sin(a)*r,0,Math.cos(a)*r);g.add(P(G.cyl,0x7a5232,[0,1,0],[.35,2,.35]));g.add(P(G.sph,0x43a047,[0,3,0],rand(1.6,2.2)));bWild.add(g)}
+const bStad=new THREE.Group();bScene.add(bStad);{bStad.add(new THREE.Mesh(new THREE.CylinderGeometry(15,15,.1,40),M(0xdcc8a0)));const crowd=[];for(let ring=0;ring<3;ring++){const R=17+ring*2.2,y=ring*1.6+.8;const tier=P(G.cyl,0x9e9e9e,[0,y-.4,0],[R+1,1.6*(ring+1),R+1]);tier.geometry=new THREE.CylinderGeometry(1,1,1,40,1,true);tier.material=M(0x9e9e9e,{side:THREE.DoubleSide});bStad.add(tier);
+ for(let i=0;i<46;i++){const a=i/46*Math.PI*2;if(Math.cos(a)>.75&&Math.sin(a)>-.5)continue;const c=P(G.box,pick([0xe53935,0x1e88e5,0xfdd835,0x43a047,0x8e24aa,0xff7043]),[Math.sin(a)*(R+.4),y+.9+ring*.8,Math.cos(a)*(R+.4)],[.6,.9,.5]);c.userData.base=c.position.y;c.userData.ph=Math.random()*7;bStad.add(c);crowd.push(c)}}bStad.userData.crowd=crowd;
+ const lines=new THREE.Mesh(new THREE.RingGeometry(3.2,3.4,40),M(0xffffff));lines.rotation.x=-Math.PI/2;lines.position.y=.07;bStad.add(lines)}
+let bP=null,bE=null,bPT=null,bET=null,bAnims=[],bBall=null;
+function tween(dur,fn){return new Promise(res=>{bAnims.push({t:0,dur,fn,res})})}
+function setupBattleScene(zone,stadium){const Z=ZONES[zone]||ZONES.town;bWild.visible=!stadium;bStad.visible=!!stadium;
+ const bgc=stadium?0x2a3a6a:(zone==='graveyard'?0x3a3050:zone==='volcano'?0xd08060:zone==='snow'?0xd8ecff:0x8fd3ff);bScene.background=new THREE.Color(bgc);bScene.fog=new THREE.Fog(bgc,30,70);
+ bGround.material=M(stadium?0x8fbf6a:(zone==='lake'?0x3a9ae8:Z.color));
+ for(const o of[bP,bE,bPT,bET])if(o)bScene.remove(o);bP=bE=bPT=bET=null;
+ bPT=makePerson(HEROES[S.hero]);bPT.position.set(-6,0,.6);bPT.rotation.y=Math.atan2(8,-5);bScene.add(bPT)}
+function placeMon(side,mon){const m=makeCreature(mon.sp);const pos=side==='p'?[-2.8,0,2.4]:[2.8,0,-2.4];m.position.set(...pos);m.rotation.y=side==='p'?Math.atan2(5.6,-4.8):Math.atan2(-5.6,4.8);m.userData.base=pos;m.scale.multiplyScalar(side==='e'?1.15:1);m.userData.s=m.scale.x;bScene.add(m);if(side==='p'){if(bP)bScene.remove(bP);bP=m}else{if(bE)bScene.remove(bE);bE=m}return m}
+async function popIn(m){const s=m.userData.s;m.scale.setScalar(.01);sfx.click();burst(m.position,0xffffff,14);await tween(.35,t=>m.scale.setScalar(s*Math.max(.01,t*(1.15-.15*t))))}
+const parts=[];function burst(pos,color,n,spd){for(let i=0;i<(n||16);i++){const p=P(G.sph,color,[pos.x,pos.y+1,pos.z],.12,null,{emissive:color});const v=new THREE.Vector3(rand(-1,1),rand(-.2,1.2),rand(-1,1)).normalize().multiplyScalar(rand(2,5)*(spd||1));bScene.add(p);parts.push({p,v,life:.6})}}
+function updateBattleScene(dt){const t=performance.now()/1000;bCam.position.set(-6.4+Math.sin(t*.3)*.4,4.4,9.6);bCam.lookAt(.6,.9,-1.2);
+ for(let i=bAnims.length-1;i>=0;i--){const a=bAnims[i];a.t+=dt;const k=Math.min(1,a.t/a.dur);a.fn(k);if(k>=1){bAnims.splice(i,1);a.res()}}
+ for(let i=parts.length-1;i>=0;i--){const q=parts[i];q.life-=dt;q.v.y-=6*dt;q.p.position.addScaledVector(q.v,dt);q.p.scale.setScalar(Math.max(.01,q.life*.25));if(q.life<=0){bScene.remove(q.p);parts.splice(i,1)}}
+ for(const m of[bP,bE])if(m&&!m.userData.busy){const b=m.userData.base;const g=SPECIES[m.userData.sp].shape==='ghost'||SPECIES[m.userData.sp].shape==='star';m.position.y=b[1]+(g?.5+Math.sin(t*2)*.2:Math.abs(Math.sin(t*2.5))*.08);m.traverse(o=>{if(o.userData.wing)o.rotation.z=o.userData.wing*(.4+Math.sin(t*10)*.4)})}
+ if(bStad.visible)for(const c of bStad.userData.crowd)c.position.y=c.userData.base+Math.abs(Math.sin(t*6+c.userData.ph))*.25;
+ if(bPT)animPerson(bPT,0,t);if(bET)animPerson(bET,0,t)}
+async function lunge(att,def,type){att.userData.busy=true;const a=att.userData.base,d=def.position;const dx=d.x-a[0],dz=d.z-a[2];
+ await tween(.18,k=>{att.position.set(a[0]+dx*.55*k,a[1]+Math.sin(k*Math.PI)*.8,a[2]+dz*.55*k)});
+ burst(def.position,TYPES[type].hex,22);
+ await tween(.2,k=>{att.position.set(a[0]+dx*.55*(1-k),a[1],a[2]+dz*.55*(1-k))});att.userData.busy=false}
+async function shake(m){m.userData.busy=true;const b=m.userData.base;let vis=true;await tween(.45,k=>{m.position.x=b[0]+Math.sin(k*40)*.18*(1-k);vis=Math.floor(k*10)%2===0;m.visible=vis});m.visible=true;m.position.x=b[0];m.userData.busy=false}
+async function faintAnim(m){m.userData.busy=true;const s=m.scale.x,y=m.position.y;await tween(.5,k=>{m.scale.setScalar(Math.max(.01,s*(1-k)));m.position.y=y-k*.5})}
+
+// ================= battle UI/logic =================
+let B=null,msgRes=null,msgTimer=null;
+function say(text,ms){return new Promise(res=>{$('battleMsg').innerHTML=text;clearTimeout(msgTimer);msgRes=()=>{msgRes=null;res()};msgTimer=setTimeout(()=>msgRes&&msgRes(),ms||1500)})}
+function skipMsg(){if(msgRes){clearTimeout(msgTimer);msgRes()}}
+$('battleMsg').addEventListener('click',skipMsg);
+function setMenu(btns){const m=$('battleMenu');m.innerHTML='';for(const b of btns){const e=document.createElement('button');e.innerHTML=b.l;if(b.cls)e.className=b.cls;if(b.dis)e.disabled=true;if(b.style)e.style.cssText=b.style;e.onclick=()=>{sfx.click();b.f()};m.appendChild(e)}}
+function hpColor(f){return f<.25?'#ff5252':f<.5?'#ffc107':'#3ccf5a'}
+function refreshCards(){const p=S.party[B.pi],e=B.enemyTeam[B.ei];const ps=stats(p),es=stats(e);
+ $('pName').textContent=SPECIES[p.sp].name;$('pLv').textContent='Lv'+p.lvl;$('pType').innerHTML=typeTag(SPECIES[p.sp].type);const pf=p.hp/ps.maxHp;$('pHp').style.width=pf*100+'%';$('pHp').style.background=hpColor(pf);$('pHpTxt').textContent=`${p.hp}/${ps.maxHp}`;$('pXp').style.width=(p.xp/xpNeed(p)*100)+'%';
+ $('eName').textContent=SPECIES[e.sp].name+(S.caught.includes(e.sp)&&B.wild?' 🔴':'');$('eLv').textContent='Lv'+e.lvl;$('eType').innerHTML=typeTag(SPECIES[e.sp].type);const ef=e.hp/es.maxHp;$('eHp').style.width=ef*100+'%';$('eHp').style.background=hpColor(ef)}
+function startWildBattle(w){const mon=makeMon(w.sp,w.lvl);startBattle({wild:mon,wobj:w,zone:w.zone})}
+async function startBattle(o){mode='battle';closeAll();mode='battle';$('prompt').classList.add('hidden');['hud','joy','touchBtns'].forEach(id=>$(id).classList.add('hidden'));$('battle').classList.remove('hidden');setMenu([]);
+ setupBattleScene(o.zone,o.stadium);
+ B={wild:o.wild,wobj:o.wobj,trainer:o.trainer,enemyTeam:o.trainer?o.trainer.team:[o.wild],ei:0,pi:S.party.findIndex(m=>m.hp>0),zone:o.zone,turn:0};
+ const e=B.enemyTeam[0];markSeen(e.sp);
+ if(o.trainer){bET=makePerson(o.trainer.look);bET.position.set(5,0,-5);bET.rotation.y=Math.atan2(-5,5);bScene.add(bET)}
+ placeMon('e',e).visible=false;placeMon('p',S.party[B.pi]).visible=false;refreshCards();$('playerCard').style.visibility='hidden';
+ if(o.wild){bE.visible=true;await popIn(bE);sfx.super();await say(`A wild <b>${SPECIES[e.sp].name}</b> (Lv ${e.lvl}) appeared!${e.sp===JUMPSTAR?' ✨ It\'s the LEGENDARY Jumpstar! ✨':''}`)}
+ else{await say(`<b>${o.trainer.name}</b> wants to battle!`);bE.visible=true;await popIn(bE);await say(`${o.trainer.name} sends out <b>${SPECIES[e.sp].name}</b>!`)}
+ bP.visible=true;await popIn(bP);$('playerCard').style.visibility='visible';await say(`Go, <b>${SPECIES[S.party[B.pi].sp].name}</b>!`,1000);
+ mainMenu()}
+function mainMenu(){const p=S.party[B.pi];$('battleMsg').innerHTML=`What will <b>${SPECIES[p.sp].name}</b> do?`;
+ setMenu([{l:'⚔️ Fight',cls:'primary',f:fightMenu},{l:'🎒 Bag',cls:'gold',f:bagMenu},{l:'🔄 Team',cls:'blue',f:()=>switchMenu(false)},{l:B.trainer?'🏳️ Give up':'🏃 Run',f:runAway}])}
+function fightMenu(){const p=S.party[B.pi],e=B.enemyTeam[B.ei];const btns=movesFor(p).map(mv=>{const ef=eff(mv.type,SPECIES[e.sp].type);return{l:`${mv.name}<br><small style="opacity:.8">${TYPES[mv.type].name} · ${mv.power}${ef>1?' · 💥 Super!':ef<1?' · weak':''}</small>`,style:`background:${TYPES[mv.type].color};color:#fff`,f:()=>doTurn({kind:'move',mv})}});btns.push({l:'⬅ Back',cls:'wide',f:mainMenu});setMenu(btns)}
+function bagMenu(){const btns=[];if(B.wild){btns.push({l:`🔴 Jump Ball ×${S.balls}`,dis:!S.balls,f:()=>doTurn({kind:'ball',sup:false})});btns.push({l:`🟣 Super Ball ×${S.superballs}`,dis:!S.superballs,f:()=>doTurn({kind:'ball',sup:true})})}
+ btns.push({l:`🧪 Potion ×${S.potions}`,dis:!S.potions,f:()=>doTurn({kind:'potion'})});btns.push({l:'⬅ Back',f:mainMenu});if(!B.wild)$('battleMsg').innerHTML="You can't catch another trainer's monster!";setMenu(btns)}
+function switchMenu(forced){const btns=S.party.map((m,i)=>({l:`${SPECIES[m.sp].name} Lv${m.lvl}<br><small>HP ${m.hp}/${stats(m).maxHp}</small>`,dis:m.hp<=0||i===B.pi,f:()=>forced?forcedSwitch(i):doTurn({kind:'switch',i})}));if(!forced)btns.push({l:'⬅ Back',f:mainMenu});$('battleMsg').innerHTML=forced?'Choose your next monster!':'Switch to which monster?';setMenu(btns)}
+function calcDmg(att,def,mv,isPlayer){const a=stats(att),d=stats(def);const e=eff(mv.type,SPECIES[def.sp].type);const stab=mv.type===SPECIES[att.sp].type?1.2:1;const crit=Math.random()<.07;let dmg=mv.power*a.atk/(d.def+10)*.5*e*stab*rand(.85,1)*(crit?1.5:1)*(isPlayer&&S.hero==='josh'?1.1:1);return{dmg:Math.max(1,Math.round(dmg)),e,crit}}
+async function attack(att,def,mv,isPlayer){const name=SPECIES[att.sp].name;await say(`${isPlayer?'':(B.trainer?'Enemy ':'Wild ')}<b>${name}</b> used <b>${mv.name}</b>!`,900);
+ const am=isPlayer?bP:bE,dm=isPlayer?bE:bP;if(Math.random()>mv.acc){await lunge(am,dm,'normal');await say('But it missed!',900);return}
+ await lunge(am,dm,mv.type);const r=calcDmg(att,def,mv,isPlayer);def.hp=Math.max(0,def.hp-r.dmg);r.e>1?sfx.super():sfx.hit();refreshCards();await shake(dm);
+ if(r.crit)await say('A critical hit!',800);if(r.e>1)await say("It's super effective! 💥",900);else if(r.e<1)await say("It's not very effective…",900)}
+function enemyMove(){const e=B.enemyTeam[B.ei],p=S.party[B.pi];const mv=movesFor(e);if(Math.random()<.6){return mv.reduce((b,m)=>m.power*eff(m.type,SPECIES[p.sp].type)>b.power*eff(b.type,SPECIES[p.sp].type)?m:b)}return pick(mv)}
+async function doTurn(act){setMenu([]);const p=S.party[B.pi],e=B.enemyTeam[B.ei];
+ if(act.kind==='move'){await attack(p,e,act.mv,true);if(e.hp<=0){await enemyFainted();return}}
+ else if(act.kind==='ball'){const caught=await throwBall(act.sup);if(caught)return}
+ else if(act.kind==='potion'){S.potions--;p.hp=Math.min(stats(p).maxHp,p.hp+40);sfx.heal();burst(bP.position,0x66ff99,16);refreshCards();await say(`${SPECIES[p.sp].name} feels better! 💚`,1000)}
+ else if(act.kind==='switch'){await say(`Come back, ${SPECIES[p.sp].name}!`,800);await faintAnim(bP);B.pi=act.i;placeMon('p',S.party[B.pi]);refreshCards();await popIn(bP);await say(`Go, <b>${SPECIES[S.party[B.pi].sp].name}</b>!`,900)}
+ const cur=S.party[B.pi];await attack(e,cur,enemyMove(),false);
+ if(cur.hp<=0){await playerFainted();return}
+ mainMenu()}
+async function throwBall(sup){if(sup)S.superballs--;else S.balls--;updateHUD();const e=B.enemyTeam[B.ei],sp=SPECIES[e.sp];
+ await say(`You threw a ${sup?'Super Ball':'Jump Ball'}!`,600);
+ const ball=new THREE.Group();ball.add(P(G.hemi,sup?0x8e24aa:0xe53935,[0,0,0],.3));ball.add(P(G.hemi,0xffffff,[0,0,0],.3,[Math.PI,0,0]));ball.add(P(G.cyl,0x222222,[0,0,0],[.31,.04,.31]));bScene.add(ball);
+ const from=new THREE.Vector3(-5.6,2.2,1),to=new THREE.Vector3(bE.position.x,1.2,bE.position.z);
+ await tween(.6,k=>{ball.position.lerpVectors(from,to,k);ball.position.y+=Math.sin(k*Math.PI)*3;ball.rotation.x+=.3});
+ burst(to,0xffffff,20);bE.userData.busy=true;const s0=bE.scale.x;await tween(.3,k=>bE.scale.setScalar(Math.max(.01,s0*(1-k))));bE.visible=false;
+ await tween(.3,k=>{ball.position.y=1.2-k*.9});
+ const hpF=e.hp/stats(e).maxHp;let chance=.3+.62*(1-hpF)+(sup?.22:0)-(sp.rare===1?.18:sp.rare===2?.38:0)+(S.hero==='galley'?.1:0)-(e.lvl-S.party[B.pi].lvl)*.01;chance=clamp(chance,.05,.97);
+ const wobbleOK=[Math.random()<Math.pow(chance,1/3),Math.random()<Math.pow(chance,1/3),Math.random()<Math.pow(chance,1/3)];
+ for(let i=0;i<3;i++){await sleep(250);sfx.wobble();await tween(.35,k=>ball.rotation.z=Math.sin(k*Math.PI*2)*.5);if(!wobbleOK[i]){bScene.remove(ball);bE.visible=true;burst(to,0xffffff,14);await tween(.25,k=>bE.scale.setScalar(s0*Math.max(.01,k)));bE.userData.busy=false;await say(pick(['Oh no! It broke free!','Argh! Almost had it!','Aww! It escaped!']),1100);return false}}
+ sfx.catch();burst(ball.position,0xffeb3b,30);const isNew=!S.caught.includes(e.sp);markCaught(e.sp);e.xp=0;
+ await say(`🎉 Gotcha! <b>${sp.name}</b> was caught!`,1800);if(isNew)await say(`${sp.name} was added to your Monster Book! 📖`,1400);
+ if(S.party.length<6){S.party.push(e)}else{S.box.push(e);await say(`Your team is full, so ${sp.name} went to the Monster Box.`,1400)}
+ bScene.remove(ball);if(B.wobj)removeWild(B.wobj);await endBattle('caught');return true}
+async function gainXP(enemy){const p=S.party[B.pi];const amt=Math.round(enemy.lvl*(B.trainer?14:10)*(enemy.sp===JUMPSTAR?2:1));p.xp+=amt;await say(`${SPECIES[p.sp].name} gained ${amt} XP!`,900);
+ while(p.xp>=xpNeed(p)){p.xp-=xpNeed(p);const before=stats(p).maxHp;const oldMoves=movesFor(p).length;p.lvl++;p.hp+=stats(p).maxHp-before;sfx.level();burst(bP.position,0x4aa3ff,20);refreshCards();await say(`⬆️ ${SPECIES[p.sp].name} grew to level ${p.lvl}!`,1200);
+  if(movesFor(p).length>oldMoves)await say(`✨ ${SPECIES[p.sp].name} learned <b>${movesFor(p).slice(-1)[0].name}</b>!`,1400);}refreshCards()}
+async function enemyFainted(){const e=B.enemyTeam[B.ei];await faintAnim(bE);await say(`${B.trainer?'':'Wild '}<b>${SPECIES[e.sp].name}</b> fainted!`,1000);await gainXP(e);
+ if(B.wild){const coins=e.lvl*4;S.coins+=coins;await say(`You found 🪙 ${coins} coins!`,900);if(B.wobj)removeWild(B.wobj);await endBattle('win');return}
+ B.ei++;if(B.ei<B.enemyTeam.length){const n=B.enemyTeam[B.ei];markSeen(n.sp);placeMon('e',n);refreshCards();await say(`${B.trainer.name} sends out <b>${SPECIES[n.sp].name}</b>!`,900);await popIn(bE);mainMenu();return}
+ sfx.win();await say(`🏆 You beat <b>${B.trainer.name}</b>!`,1600);S.coins+=B.trainer.reward;await say(`You won 🪙 ${B.trainer.reward} coins!`,1100);
+ if(B.trainer.friend){S.balls+=3;await say(`${B.trainer.name}: "Wow, you're really strong! Here, have 3 Jump Balls!"`,2000)}
+ if(B.trainer.badge){const k=B.trainer.badge,L=LEADERS[k];if(!S.badges.includes(k)){S.badges.push(k);await say(`${L.icon} You earned the <b>${L.badge}</b>!`,2200);if(k==='champ')await say('👑 YOU ARE THE NEW CHAMPION! Amazing! 👑',3000)}}
+ await endBattle('win')}
+async function playerFainted(){const p=S.party[B.pi];await faintAnim(bP);await say(`<b>${SPECIES[p.sp].name}</b> fainted!`,1100);
+ if(S.party.some(m=>m.hp>0)){switchMenu(true);return}
+ await say('Oh no! All your monsters fainted!',1500);await say('You hurry back to the Healing Center…',1500);
+ for(const m of S.party)m.hp=stats(m).maxHp;player.x=-14;player.z=10;player.y=0;await endBattle('lose');toast('💗 Nurse Penny healed your team!')}
+async function forcedSwitch(i){setMenu([]);B.pi=i;placeMon('p',S.party[i]);refreshCards();await popIn(bP);await say(`Go, <b>${SPECIES[S.party[i].sp].name}</b>!`,900);mainMenu()}
+async function runAway(){setMenu([]);if(B.trainer){await say('You gave up the battle. Train more and try again!',1400);await endBattle('run');return}
+ if(Math.random()<.85||S.hero==='z'){await say('You got away safely! 🏃',1000);await endBattle('run')}else{await say("Couldn't get away!",900);const cur=S.party[B.pi];await attack(B.enemyTeam[B.ei],cur,enemyMove(),false);if(cur.hp<=0){await playerFainted();return}mainMenu()}}
+async function endBattle(res){for(const q of parts)bScene.remove(q.p);parts.length=0;bAnims.length=0;$('battle').classList.add('hidden');showWorldUI();mode='world';encounterCD=2.5;
+ if(B&&B.wobj&&res==='run'){const w=B.wobj;const a=Math.atan2(w.x-player.x,w.z-player.z);w.tx=w.x+Math.sin(a)*6;w.tz=w.z+Math.cos(a)*6;w.timer=3}
+ B=null;updateHUD();save();checkQuests()}
+
+// ================= start / UI flow =================
+function showWorldUI(){$('hud').classList.remove('hidden');$('joy').classList.remove('hidden');$('touchBtns').classList.remove('hidden')}
+let selHero=null,selStarter=null;
+function buildTitle(){const hc=$('heroCards');for(const k in HEROES){const H=HEROES[k];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${H.img}"><b>${H.name}</b><small>${H.desc}</small><span class="perk">${H.perk}</span>`;c.onclick=()=>{selHero=k;[...hc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnHeroNext').disabled=false;sfx.click()};hc.appendChild(c)}
+ const sc=$('starterCards');for(const i of STARTERS){const s=SPECIES[i];const c=document.createElement('div');c.className='card';c.innerHTML=`<img src="${s.img}"><b>${s.name}</b>${typeTag(s.type)}<small>${s.desc}</small>`;c.onclick=()=>{selStarter=i;[...sc.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');$('btnStart').disabled=false;sfx.click()};sc.appendChild(c)}
+ const sv=loadSave();if(sv&&sv.party&&sv.party.length){$('btnContinue').classList.remove('hidden');$('btnContinue').textContent=`Continue as ${HEROES[sv.hero].name}`}}
+$('btnHeroNext').onclick=()=>{$('title').classList.add('hidden');$('starter').classList.remove('hidden')};
+$('btnStart').onclick=()=>{S=newState(selHero);const m=makeMon(selStarter,5);S.party.push(m);markCaught(selStarter);save();beginGame(true)};
+$('btnContinue').onclick=()=>{S=Object.assign(newState('seb'),loadSave());beginGame(false)};
+function beginGame(fresh){$('title').classList.add('hidden');$('starter').classList.add('hidden');
+ const H=HEROES[S.hero];player.mesh=makePerson(H);scene.add(player.mesh);player.speedMul=S.hero==='z'?1.3:1;player.jumpMul=S.hero==='seb'?1.25:1;
+ player.x=S.pos[0];player.y=S.pos[1]||0;player.z=S.pos[2];player.y=Math.max(0,player.y);
+ for(const k in HEROES)if(k!==S.hero)addNPC(k,HEROES[k],FRIEND_HOMES[k][0],FRIEND_HOMES[k][1],k==='z'?10:5);
+ addNPC('nurse_',Object.assign({name:'Nurse Penny'},NURSE),-14,14,2).nurse=true;
+ const nn=npcs.find(n=>n.key==='nurse_');nn.def.img=snapCache('nurse');
+ for(const c of chests)if(S.chests.includes(c.id)){c.lid.rotation.x=-1.2;c.lid.position.z=-.3;c.lid.position.y=1.2}
+ if(!S.caught.includes(JUMPSTAR))spawnJumpstar();
+ player.yaw=Math.PI;camYaw=0;
+ mode='world';showWorldUI();updateHUD();showZone(ZONES.town.name);
+ if(fresh)setTimeout(()=>openInfo('🌟 Welcome, '+H.name+'!',`<p style="font-size:18px">Your adventure in <b>Jumpstone Town</b> begins with your partner <b>${SPECIES[S.party[0].sp].name}</b>!</p><p>🐾 Walk into wild monsters to battle and catch them.<br>💬 Your friends are around town and the lands — press <b>E</b> to chat!<br>🏟️ Win badges at the 4 Stadiums.<br>☁️ Find the legendary Jumpstar…</p><p><b>Move:</b> WASD / arrows · <b>Jump:</b> Space · <b>Talk:</b> E · <b>Look:</b> drag</p>`),400)}
+// nurse chat
+TALK.nurse_={greet:["Hello dear! Welcome to Jumpstone Town!"],intro:"I'm Nurse Penny! I run the Healing Center. Come inside whenever your monsters need a rest.",fav:"I love all monsters equally! But Snowbun is very cuddly.",mood:["I'm wonderful, thank you for asking!"],filler:["Remember, healing is always free!","Take care of your monsters and they'll take care of you.","The Healing Center is the pink-roofed building right behind me."],adv:"An adventure? Make sure to bring Potions!",team:[[19,0],[4,1]]};
+
+// ================= main loop =================
+const clock=new THREE.Clock();
+function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);wTime+=dt;
+ if(mode==='battle'){updateBattleScene(dt);renderer.render(bScene,bCam);return}
+ if(mode==='world'){updatePlayer(dt);updateWild(dt);checkInteract()}
+ else{$('prompt').classList.add('hidden')}
+ if(mode!=='title'){updateNPCs(dt);updateCamera(dt);if((mmT+=dt)>.1){mmT=0;drawMinimap()}if(S&&Math.floor(wTime)%5===0&&Math.floor(wTime-dt)%5!==0){S.pos=[player.x,player.y,player.z];save();checkQuests()}}
+ else{camera.position.set(Math.sin(wTime*.1)*40,22,Math.cos(wTime*.1)*40);camera.lookAt(0,0,0)}
+ // ambient
+ if(window._smoke)window._smoke.forEach((s,i)=>{s.position.y=24+((wTime*1.5+i*2)%12);s.material.opacity=.35});
+ if(window._clouds)window._clouds.forEach((c,i)=>{c.position.x+=Math.sin(i)*dt*.5});
+ const pa=snowGeo.attributes.position;for(let i=0;i<pa.count;i++){let y=pa.getY(i)-dt*3;if(y<0)y=25;pa.setY(i,y)}pa.needsUpdate=true;
+ lanterns.forEach((l,i)=>l.scale.setScalar(.25+Math.sin(wTime*3+i)*.05));
+ for(const c of chests)if(c.gold)c.g.rotation.y+=dt;
+ renderer.render(scene,camera)}
+addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=bCam.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();bCam.updateProjectionMatrix()});
+buildTitle();loop();
+</script>
+</body>
+</html>
