@@ -72,6 +72,11 @@ main{max-width:1100px;padding:16px;display:none;gap:28px}
 .go{width:100%;border:0;border-radius:12px;padding:13px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-weight:700;font-size:17px}
 .fine{font-size:12px;color:var(--muted);margin-top:10px}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--accent);color:#fff;padding:12px 20px;border-radius:999px;font-weight:600;z-index:10;max-width:calc(100% - 32px);text-align:center}
+#openBar{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:640px;margin:0 auto;background:var(--bg);border:2px solid var(--accent);border-radius:16px;padding:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(40,20,90,.25);z-index:11}
+#openBar[hidden]{display:none}
+#openBar > div:first-child{flex:1 1 260px;min-width:0}
+#openUrl{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--card);color:var(--fg);font:13px ui-monospace,monospace}
+.ob-btns{display:flex;gap:8px;flex-wrap:wrap}
 footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
 </style>
 
@@ -128,6 +133,11 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
 </div>
 
 <div id="toast" hidden></div>
+<div id="openBar" hidden>
+  <div><b id="openName">Opening…</b><div class="meta">Didn't open? Copy the link and paste it into your web browser (Chrome, Edge…).</div>
+  <input id="openUrl" readonly></div>
+  <div class="ob-btns"><a class="pill premium" id="openGo" target="_blank" rel="noopener">Open again</a><button class="pill" id="openCopy">📋 Copy link</button><button class="pill" id="openClose" title="Close">✕</button></div>
+</div>
 <script>
 // ---------- helpers ----------
 const $ = s => document.querySelector(s);
@@ -420,6 +430,25 @@ $("#codeForm").onsubmit = e => {
 $("#themeBtn").onclick = () => {
   const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   r.dataset.theme = dark ? "light" : "dark"; store.set("sebble-theme", r.dataset.theme);
+};
+// When a website link is pressed, show its address too, in case the app blocks the link
+document.addEventListener("click", e => {
+  const a = e.target.closest('a[href^="https://"]');
+  if (!a || a.id === "openGo") return;
+  let name = "";
+  try { name = new URL(a.href).hostname.replace(/^www\./, ""); } catch {}
+  $("#openName").textContent = "Opening " + name + "…";
+  $("#openUrl").value = a.href;
+  $("#openGo").href = a.href;
+  $("#openBar").hidden = false;
+});
+$("#openClose").onclick = () => { $("#openBar").hidden = true; };
+$("#openUrl").onclick = e => e.target.select();
+$("#openCopy").onclick = () => {
+  const u = $("#openUrl");
+  const done = () => toast("📋 Link copied! Paste it into your browser.");
+  const fallback = () => { u.select(); try { document.execCommand("copy") ? done() : toast("Press Ctrl+C to copy the link."); } catch { toast("Press Ctrl+C to copy the link."); } };
+  try { navigator.clipboard.writeText(u.value).then(done, fallback); } catch { fallback(); }
 };
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-tab]"); if (t) run(currentQ, t.dataset.tab);
