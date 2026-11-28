@@ -848,12 +848,15 @@ async function buildSite(idea, old, change, step) {
   step(2, "Making it look amazing");
   const css = cleanCss(await ask1(ctx + "Here is the page HTML:\n" + body.slice(0, 6000) + "\n\n" + (old ? "Here is the old CSS:\n" + old.css.slice(0, 4000) + "\n\nUpdate it for the change. " : "") +
     "Write ONLY the CSS (no <style> tags) to make this page look amazing: a bold theme that suits the idea, gradients, rounded cards, hover effects, " +
-    "small animations, and a phone-friendly layout. Style every class and id used. Maximum 4000 characters."));
+    "gentle hover effects, and a phone-friendly layout. Style every class and id used. " +
+    "Do NOT make anything move, wobble, float or bounce forever (no infinite animations on buttons or main content); short animations on hover or click are fine. Maximum 4000 characters."));
   // 3) Game code (checked; if the AI makes a mistake, ask again once)
   step(3, "Making the buttons and games work");
   const jsAsk = ctx + "Here is the page HTML:\n" + body.slice(0, 6000) + "\n\n" + (old && old.js ? "Here is the old JavaScript:\n" + old.js.slice(0, 4000) + "\n\nUpdate it so it matches the new page. " : "") +
     "Write ONLY the JavaScript (no <script> tags) that makes every button, game, quiz and interactive element in this HTML work, using their ids. " +
-    "Check each element exists before using it. Add fun touches like little animations or emoji confetti. Make sure there are no errors. Maximum 4000 characters.";
+    "Check each element exists before using it. You may add a small celebration (a few emoji) ONLY right after the user clicks or wins something: " +
+    "it must last under 1.5 seconds, be removed from the page afterwards, use pointer-events:none so it never blocks clicks, and never repeat on a timer. " +
+    "No splashes, popups or effects that happen by themselves. Make sure there are no errors. Maximum 4000 characters.";
   let js = cleanJs(await ask1(jsAsk));
   if (!jsOk(js)) { step(3, "Fixing a little mistake"); js = cleanJs(await ask1(jsAsk + " Keep it under 3000 characters so it is complete.")); }
   if (!jsOk(js)) js = "";
