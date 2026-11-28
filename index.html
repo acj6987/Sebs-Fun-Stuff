@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sebble Search</title>
+<style>
+:root{
+  --bg:#ffffff; --fg:#1d1b26; --muted:#6b6880; --line:#e4e1ee; --card:#f7f5fc;
+  --accent:#6d3cf5; --accent2:#ff7a1a; --good:#13a36b; --link:#4b2ad6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121c; --fg:#f0eef7; --muted:#a29fb5; --line:#2e2a3d; --card:#1e1b29;
+    --accent:#9a74ff; --accent2:#ff9a4d; --good:#34d399; --link:#b6a0ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121c; --fg:#f0eef7; --muted:#a29fb5; --line:#2e2a3d; --card:#1e1b29;
+  --accent:#9a74ff; --accent2:#ff9a4d; --good:#34d399; --link:#b6a0ff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+a{color:var(--link);text-decoration:none} a:hover{text-decoration:underline}
+button{font:inherit;cursor:pointer}
+.top{display:flex;justify-content:flex-end;gap:10px;align-items:center;padding:12px 16px}
+.pill{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 14px;font-size:14px}
+.pill.premium{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:0;font-weight:600}
+.logo{font-weight:800;letter-spacing:-2px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.home{display:flex;flex-direction:column;align-items:center;padding:12vh 16px 40px}
+.home .logo{font-size:clamp(56px,14vw,96px);line-height:1}
+.tag{color:var(--muted);margin:6px 0 24px;text-align:center}
+.box{display:flex;align-items:center;width:100%;max-width:620px;border:1px solid var(--line);border-radius:999px;padding:4px 6px 4px 18px;background:var(--bg);box-shadow:0 2px 10px rgba(80,50,160,.08)}
+.box:focus-within{box-shadow:0 2px 16px rgba(109,60,245,.25)}
+.box input{flex:1;border:0;outline:0;background:transparent;color:var(--fg);font-size:17px;padding:10px 0;min-width:0}
+.box button{border:0;background:var(--accent);color:#fff;border-radius:999px;padding:9px 18px;font-weight:600}
+.btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:center}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:640px;margin-top:28px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--fg)}
+header.bar{display:none;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header.bar .logo{font-size:30px;cursor:pointer}
+header.bar .box{max-width:600px;flex:1}
+.tabs{display:none;gap:4px;padding:0 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;color:var(--muted);padding:10px 12px;border-bottom:3px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--accent);border-color:var(--accent);font-weight:600}
+main{max-width:1100px;padding:16px;display:none;gap:28px}
+.col{flex:1;min-width:0}
+.side{width:320px;flex-shrink:0}
+@media (max-width:860px){main{flex-direction:column}.side{width:100%}}
+.meta{color:var(--muted);font-size:13px;margin-bottom:12px}
+.res{margin-bottom:22px}
+.res .src{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.res .src b{display:inline-block;width:18px;height:18px;border-radius:5px;color:#fff;font-size:11px;text-align:center;line-height:18px}
+.res h3{margin:2px 0;font-size:19px;font-weight:500}
+.res p{margin:0;color:var(--fg);opacity:.85;font-size:14px}
+.answer{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:16px 18px;margin-bottom:22px}
+.answer .big{font-size:32px;font-weight:700}
+.panel{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:18px}
+.panel h4{margin:0 0 10px}
+.panel img{width:100%;border-radius:10px;max-height:220px;object-fit:cover}
+.sites{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.site{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:13px;color:var(--fg);position:relative}
+.site b{width:24px;height:24px;border-radius:6px;color:#fff;font-size:12px;display:grid;place-items:center;flex-shrink:0}
+.site.locked{opacity:.45}
+.site.locked::after{content:"🔒";position:absolute;right:6px;top:6px;font-size:11px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.tile{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);font-size:13px}
+.tile img{width:100%;height:140px;object-fit:cover;display:block;background:var(--line)}
+.tile div{padding:8px}
+.loading{color:var(--muted);padding:20px 0}
+.lock{border:2px dashed var(--accent);border-radius:16px;padding:18px;text-align:center;margin:10px 0 22px}
+.modal{position:fixed;inset:0;background:rgba(10,5,30,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+.modal .card{background:var(--bg);border-radius:20px;max-width:420px;width:100%;padding:26px;text-align:center}
+.price{font-size:48px;font-weight:800;margin:6px 0 0}
+.price small{font-size:16px;color:var(--muted);font-weight:500}
+.perks{text-align:left;margin:16px 0;padding-left:20px}
+.go{width:100%;border:0;border-radius:12px;padding:13px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-weight:700;font-size:17px}
+.fine{font-size:12px;color:var(--muted);margin-top:10px}
+footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span id="planLabel" class="pill">Free plan</span>
+  <button id="themeBtn" class="pill" title="Light / dark">🌓</button>
+  <button id="upBtn" class="pill premium">⭐ Go Premium</button>
+</div>
+
+<!-- HOME -->
+<section class="home" id="home">
+  <div class="logo">Sebble</div>
+  <div class="tag">Search the whole internet — not just Wikipedia and YouTube</div>
+  <form class="box" id="f1"><input id="q1" placeholder="Search anything…" autocomplete="off" autofocus><button>Search</button></form>
+  <div class="btns">
+    <button class="pill" id="lucky">🎲 Surprise me</button>
+    <button class="pill" data-q="weather in London">☀️ Weather</button>
+    <button class="pill" data-q="12 * 7 + 3">🧮 Calculator</button>
+  </div>
+  <div class="chips" id="tryChips"></div>
+</section>
+
+<!-- RESULTS -->
+<header class="bar" id="bar">
+  <div class="logo" id="homeLogo">Sebble</div>
+  <form class="box" id="f2"><input id="q2" autocomplete="off"><button>Search</button></form>
+</header>
+<nav class="tabs" id="tabs"></nav>
+<main id="main">
+  <div class="col" id="results"></div>
+  <aside class="side" id="side"></aside>
+</main>
+
+<footer>Sebble Search · made for fun · results from Wikipedia, Open Library, iTunes, Wikimedia Commons, Open‑Meteo, Dictionary API + shortcuts to 20+ sites</footer>
+
+<!-- PREMIUM MODAL -->
+<div class="modal" id="modal">
+  <div class="card">
+    <div class="logo" style="font-size:40px">Sebble Premium</div>
+    <div class="price">£5 <small>every 5 months</small></div>
+    <div style="color:var(--muted)">That's just £1 a month!</div>
+    <ul class="perks">
+      <li>🛒 Shopping results — Amazon, eBay, Argos, Etsy</li>
+      <li>🎬 Videos — YouTube, Twitch, TikTok</li>
+      <li>🎵 Music, 📚 Books and 🖼️ Images tabs</li>
+      <li>🌍 20+ websites searched at once</li>
+      <li>🚫 Unlimited searches</li>
+    </ul>
+    <button class="go" id="payBtn">Subscribe — £5 / 5 months</button>
+    <div class="fine">This is a pretend subscription for fun — no real money is taken and no card details are asked for.</div>
+    <button class="pill" style="margin-top:12px" id="closeModal">Maybe later</button>
+  </div>
+</div>
+
+<script>
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const strip = s => String(s ?? "").replace(/<[^>]+>/g, "");
+const store = {
+  get(k){ try { return localStorage.getItem(k) } catch { return null } },
+  set(k,v){ try { localStorage.setItem(k,v) } catch {} }
+};
+let premium = store.get("sebble-premium") === "1";
+let searchesLeft = Number(store.get("sebble-left") ?? 10);
+let currentQ = "", currentTab = "all";
+
+// ---------- the websites Sebble searches ----------
+const SITES = [
+  {n:"Wikipedia", c:"#555", u:"https://en.wikipedia.org/w/index.php?search=", free:true},
+  {n:"YouTube",   c:"#e62117", u:"https://www.youtube.com/results?search_query=", free:true},
+  {n:"Amazon",    c:"#ff9900", u:"https://www.amazon.co.uk/s?k="},
+  {n:"eBay",      c:"#0064d2", u:"https://www.ebay.co.uk/sch/i.html?_nkw="},
+  {n:"Argos",     c:"#d42114", u:"https://www.argos.co.uk/search/"},
+  {n:"Etsy",      c:"#f1641e", u:"https://www.etsy.com/uk/search?q="},
+  {n:"Reddit",    c:"#ff4500", u:"https://www.reddit.com/search/?q="},
+  {n:"BBC",       c:"#000",    u:"https://www.bbc.co.uk/search?q=", free:true},
+  {n:"BBC Bitesize", c:"#7b2cbf", u:"https://www.bbc.co.uk/bitesize/search?q=", free:true},
+  {n:"Twitch",    c:"#9146ff", u:"https://www.twitch.tv/search?term="},
+  {n:"TikTok",    c:"#111",    u:"https://www.tiktok.com/search?q="},
+  {n:"Spotify",   c:"#1db954", u:"https://open.spotify.com/search/"},
+  {n:"IMDb",      c:"#c9a600", u:"https://www.imdb.com/find/?q="},
+  {n:"Maps",      c:"#2e8b57", u:"https://www.openstreetmap.org/search?query=", free:true},
+  {n:"Minecraft Wiki", c:"#5b8c32", u:"https://minecraft.wiki/?search="},
+  {n:"Roblox",    c:"#333",    u:"https://www.roblox.com/discover/?Keyword="},
+  {n:"Fandom",    c:"#fa005a", u:"https://www.fandom.com/?s="},
+  {n:"GitHub",    c:"#24292f", u:"https://github.com/search?q="},
+  {n:"Stack Overflow", c:"#f48024", u:"https://stackoverflow.com/search?q="},
+  {n:"Open Library", c:"#3a6ea5", u:"https://openlibrary.org/search?q=", free:true},
+  {n:"Steam",     c:"#1b2838", u:"https://store.steampowered.com/search/?term="},
+  {n:"Images",    c:"#0b8", u:"https://commons.wikimedia.org/w/index.php?search=", free:true},
+];
+const canUse = s => premium || s.free;
+const siteLink = (s,q) => s.u + encodeURIComponent(q);
+
+const TABS = [
+  ["all","🔎 All",true], ["images","🖼️ Images",false], ["videos","🎬 Videos",false],
+  ["shopping","🛒 Shopping",false], ["books","📚 Books",false], ["music","🎵 Music",false], ["sites","🌍 All websites",true]
+];
+
+// ---------- instant answers ----------
+function calc(q){
+  const e = q.replace(/×|x/g,"*").replace(/÷/g,"/").replace(/\^/g,"**").replace(/\s+/g,"");
+  if (!/^[\d.+\-*/()%]+$/.test(e) || !/\d/.test(e) || !/[+\-*/%]/.test(e)) return null;
+  try { const v = Function('"use strict";return (' + e + ')')(); if (Number.isFinite(v)) return +v.toFixed(10); } catch {}
+  return null;
+}
+function fun(q){
+  const l = q.toLowerCase().trim();
+  if (/^(flip a coin|coin flip|heads or tails)$/.test(l)) return {title:"Coin flip", big: Math.random()<.5?"🪙 Heads":"🪙 Tails"};
+  if (/^(roll a dice|roll dice|roll a die)$/.test(l)) return {title:"Dice roll", big:"🎲 "+(1+Math.floor(Math.random()*6))};
+  const r = l.match(/^random number(?: between)? (\d+) (?:and|to|-) (\d+)$/);
+  if (r){ const a=+r[1], b=+r[2]; return {title:`Random number ${a}–${b}`, big: a+Math.floor(Math.random()*(b-a+1))}; }
+  if (/^(what time is it|time|time now)$/.test(l)) return {title:"Time right now", big:new Date().toLocaleTimeString()};
+  if (/^(what('?s| is) the date|date|today)$/.test(l)) return {title:"Today", big:new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"})};
+  const c = calc(q); if (c !== null) return {title:esc(q)+" =", big:c};
+  return null;
+}
+
+async function getJSON(url){ const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+async function weather(place){
+  const g = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?count=1&name=${encodeURIComponent(place)}`);
+  const p = g.results?.[0]; if (!p) return null;
+  const w = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${p.latitude}&longitude=${p.longitude}&current=temperature_2m,weather_code,wind_speed_10m`);
+  const code = w.current.weather_code;
+  const icon = code===0?"☀️":code<4?"⛅":code<50?"🌫️":code<70?"🌧️":code<80?"🌨️":"⛈️";
+  return `<div class="answer"><div class="meta">Weather in ${esc(p.name)}, ${esc(p.country||"")}</div>
+    <div class="big">${icon} ${Math.round(w.current.temperature_2m)}°C</div>
+    <div class="meta">Wind ${Math.round(w.current.wind_speed_10m)} km/h · from Open‑Meteo</div></div>`;
+}
+
+async function define(word){
+  const d = await getJSON(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+  const e = d[0]; if (!e) return null;
+  const m = e.meanings.slice(0,2).map(m => `<p><i>${esc(m.partOfSpeech)}</i> — ${esc(m.definitions[0].definition)}</p>`).join("");
+  return `<div class="answer"><div class="big" style="font-size:26px">${esc(e.word)} <span class="meta">${esc(e.phonetic||"")}</span></div>${m}</div>`;
+}
+
+// ---------- data sources ----------
+async function wiki(q){
+  const d = await getJSON(`https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=8&srsearch=${encodeURIComponent(q)}`);
+  return d.query.search.map(r => ({src:"Wikipedia", c:"#555", t:r.title,
+    url:"https://en.wikipedia.org/wiki/"+encodeURIComponent(r.title.replace(/ /g,"_")), d:strip(r.snippet)+"…"}));
+}
+async function wikiSummary(title){
+  return getJSON(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g,"_"))}`);
+}
+async function books(q){
+  const d = await getJSON(`https://openlibrary.org/search.json?limit=12&q=${encodeURIComponent(q)}`);
+  return d.docs.map(b => ({t:b.title, by:(b.author_name||[]).join(", "), y:b.first_publish_year,
+    img: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : "", url:"https://openlibrary.org"+b.key}));
+}
+async function music(q){
+  const d = await getJSON(`https://itunes.apple.com/search?media=music&limit=12&term=${encodeURIComponent(q)}`);
+  return d.results.map(s => ({t:s.trackName, by:s.artistName, img:(s.artworkUrl100||"").replace("100x100","300x300"), url:s.trackViewUrl, prev:s.previewUrl}));
+}
+async function images(q){
+  const d = await getJSON(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=24&prop=imageinfo&iiprop=url&iiurlwidth=320&gsrsearch=${encodeURIComponent(q)}`);
+  return Object.values(d.query?.pages||{}).filter(p=>p.imageinfo).map(p => ({t:p.title.replace(/^File:/,"").replace(/\.\w+$/,""), img:p.imageinfo[0].thumburl, url:p.imageinfo[0].descriptionurl}));
+}
+
+// ---------- rendering ----------
+function resultHTML(r){
+  return `<div class="res"><div class="src"><b style="background:${r.c}">${r.src[0]}</b>${esc(r.src)}</div>
+    <h3><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.t)}</a></h3><p>${esc(r.d)}</p></div>`;
+}
+function sitesHTML(q, title="Search this on other websites"){
+  return `<div class="panel"><h4>${title}</h4><div class="sites">${SITES.map(s => canUse(s)
+    ? `<a class="site" href="${siteLink(s,q)}" target="_blank" rel="noopener"><b style="background:${s.c}">${s.n[0]}</b>${s.n}</a>`
+    : `<a class="site locked" href="#" data-lock><b style="background:${s.c}">${s.n[0]}</b>${s.n}</a>`).join("")}</div></div>`;
+}
+const lockHTML = what => `<div class="lock"><div style="font-size:30px">🔒</div><b>${what} is a Premium feature</b>
+  <p class="meta">Unlock Amazon, YouTube, Music, Books, Images and 20+ websites for just £5 every 5 months.</p>
+  <button class="pill premium" data-lock>⭐ Unlock for £5 / 5 months</button></div>`;
+const tiles = (arr, extra="") => arr.length ? `<div class="grid">${arr.map(x => `<a class="tile" href="${esc(x.url)}" target="_blank" rel="noopener">
+  ${x.img?`<img loading="lazy" src="${esc(x.img)}" alt="">`:`<img alt="">`}<div><b>${esc(x.t)}</b>${x.by?`<br><span class="meta">${esc(x.by)}${x.y?" · "+x.y:""}</span>`:""}</div></a>`).join("")}</div>${extra}` : `<p class="meta">Nothing found.</p>`;
+
+function bigLinks(q, names){
+  return names.map(n => SITES.find(s=>s.n===n)).map(s => `<div class="res"><div class="src"><b style="background:${s.c}">${s.n[0]}</b>${s.n}</div>
+    <h3><a href="${siteLink(s,q)}" target="_blank" rel="noopener">${esc(q)} on ${s.n} →</a></h3><p>See every result for “${esc(q)}” on ${s.n}.</p></div>`).join("");
+}
+
+function drawTabs(){
+  $("#tabs").innerHTML = TABS.map(([k,label,free]) => `<button data-tab="${k}" class="${k===currentTab?"on":""}">${label}${!free&&!premium?" 🔒":""}</button>`).join("");
+}
+
+async function run(q, tab="all"){
+  q = q.trim(); if (!q) return;
+  if (!premium){
+    if (searchesLeft <= 0){ openModal(); return; }
+    if (q !== currentQ){ searchesLeft--; store.set("sebble-left", searchesLeft); }
+  }
+  currentQ = q; currentTab = tab;
+  $("#q2").value = q;
+  $("#home").style.display = "none";
+  $("#bar").style.display = $("#tabs").style.display = "flex";
+  $("#main").style.display = "flex";
+  history.replaceState(null, "", "?q=" + encodeURIComponent(q) + (tab!=="all" ? "&tab="+tab : ""));
+  document.title = q + " – Sebble Search";
+  updatePlan(); drawTabs();
+  const R = $("#results"), S = $("#side");
+  R.innerHTML = `<div class="loading">Searching lots of websites…</div>`;
+  S.innerHTML = sitesHTML(q);
+  const t0 = performance.now();
+  const tabInfo = TABS.find(t=>t[0]===tab);
+  if (!tabInfo[2] && !premium){ R.innerHTML = lockHTML(tabInfo[1].slice(2).trim()); return; }
+
+  try {
+    if (tab === "all"){
+      let top = "";
+      const f = fun(q); if (f) top = `<div class="answer"><div class="meta">${f.title}</div><div class="big">${f.big}</div></div>`;
+      const wm = q.match(/^weather(?: in| for)? (.+)$/i) || q.match(/^(.+) weather$/i);
+      const dm = q.match(/^(?:define|meaning of|what does) (\w+)(?: mean)?$/i);
+      const jobs = [wiki(q).catch(()=>[])];
+      if (wm) jobs.push(weather(wm[1]).catch(()=>""));
+      if (dm) jobs.push(define(dm[1]).catch(()=>""));
+      const [w, extra=""] = await Promise.all(jobs);
+      top += extra || "";
+      let body = "";
+      if (premium){
+        body += bigLinks(q, ["Amazon","YouTube"]);
+      } else {
+        body += lockHTML("Amazon shopping");
+      }
+      body += w.map(resultHTML).join("");
+      if (premium) body += bigLinks(q, ["Reddit","eBay","BBC"]);
+      const ms = Math.round(performance.now()-t0);
+      R.innerHTML = `<div class="meta">About ${w.length + (premium?20:6)} sources searched (${(ms/1000).toFixed(2)} seconds)</div>` + top + (body || `<p>No results. Try another search!</p>`);
+      if (w[0]) wikiSummary(w[0].t).then(s => {
+        S.innerHTML = `<div class="panel">${s.thumbnail?`<img src="${esc(s.thumbnail.source)}" alt="">`:""}
+          <h4 style="margin-top:10px">${esc(s.title)}</h4><div class="meta">${esc(s.description||"")}</div>
+          <p style="font-size:14px">${esc((s.extract||"").slice(0,400))}${(s.extract||"").length>400?"…":""}</p>
+          <a href="${esc(s.content_urls?.desktop?.page)}" target="_blank" rel="noopener">Read more on Wikipedia</a></div>` + sitesHTML(q);
+      }).catch(()=>{});
+    }
+    else if (tab === "images") R.innerHTML = tiles(await images(q));
+    else if (tab === "books")  R.innerHTML = tiles(await books(q));
+    else if (tab === "music"){
+      const m = await music(q);
+      R.innerHTML = tiles(m) + `<div style="margin-top:20px">${bigLinks(q,["Spotify"])}</div>`;
+    }
+    else if (tab === "videos")   R.innerHTML = bigLinks(q, ["YouTube","Twitch","TikTok","IMDb"]);
+    else if (tab === "shopping") R.innerHTML = bigLinks(q, ["Amazon","eBay","Argos","Etsy","Steam"]);
+    else if (tab === "sites")    R.innerHTML = sitesHTML(q, "Search “"+esc(q)+"” everywhere");
+  } catch (e){
+    R.innerHTML = `<p>Oops, something went wrong getting results. Try again!</p>`;
+  }
+}
+
+function updatePlan(){
+  $("#planLabel").textContent = premium ? "⭐ Premium" : `Free plan · ${searchesLeft} searches left`;
+  $("#upBtn").style.display = premium ? "none" : "";
+}
+function openModal(){ $("#modal").style.display = "flex"; }
+function closeModal(){ $("#modal").style.display = "none"; }
+
+// ---------- events ----------
+$("#f1").onsubmit = e => { e.preventDefault(); run($("#q1").value); };
+$("#f2").onsubmit = e => { e.preventDefault(); run($("#q2").value, currentTab); };
+$("#homeLogo").onclick = () => { location.href = location.pathname; };
+$("#upBtn").onclick = openModal;
+$("#closeModal").onclick = closeModal;
+$("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+$("#payBtn").onclick = () => {
+  premium = true; store.set("sebble-premium","1"); closeModal(); updatePlan();
+  alert("🎉 Welcome to Sebble Premium! (Pretend — no money was taken.)");
+  if (currentQ) run(currentQ, currentTab);
+};
+$("#themeBtn").onclick = () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark"; store.set("sebble-theme", r.dataset.theme);
+};
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-tab]"); if (t) run(currentQ, t.dataset.tab);
+  const l = e.target.closest("[data-lock]"); if (l){ e.preventDefault(); openModal(); }
+  const qb = e.target.closest("[data-q]"); if (qb) run(qb.dataset.q);
+});
+const IDEAS = ["dinosaurs","Minecraft","LEGO","volcano","Harry Potter","flip a coin","define awesome","weather in Paris","Taylor Swift","roll a dice","football","space"];
+$("#tryChips").innerHTML = IDEAS.map(i => `<button class="chip" data-q="${esc(i)}">${esc(i)}</button>`).join("");
+$("#lucky").onclick = () => run(IDEAS[Math.floor(Math.random()*IDEAS.length)]);
+
+const savedTheme = store.get("sebble-theme"); if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+updatePlan();
+const params = new URLSearchParams(location.search);
+if (params.get("q")) run(params.get("q"), params.get("tab") || "all");
+</script>
+</body>
+</html>
