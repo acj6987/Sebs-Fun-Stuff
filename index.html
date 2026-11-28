@@ -116,7 +116,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;padding:30px 16px}
     <div style="color:var(--muted)">That's just £1 a month!</div>
     <ul class="perks">
       <li>🛒 Shopping results — Amazon, eBay, Argos, Etsy</li>
-      <li>🎬 Videos — YouTube, Twitch, TikTok</li>
+      <li>🎬 Videos — YouTube, Netflix, Twitch, TikTok</li>
       <li>🎵 Music, 📚 Books and 🖼️ Images tabs</li>
       <li>🌍 20+ websites searched at once</li>
       <li>🚫 Unlimited searches</li>
@@ -168,6 +168,7 @@ const SITES = [
   {n:"Twitch",    c:"#9146ff", u:"https://www.twitch.tv/search?term="},
   {n:"TikTok",    c:"#111",    u:"https://www.tiktok.com/search?q="},
   {n:"Spotify",   c:"#1db954", u:"https://open.spotify.com/search/"},
+  {n:"Netflix",   c:"#e50914", u:"https://www.netflix.com/search?q="},
   {n:"IMDb",      c:"#c9a600", u:"https://www.imdb.com/find/?q="},
   {n:"Maps",      c:"#2e8b57", u:"https://www.openstreetmap.org/search?query=", free:true},
   {n:"Minecraft Wiki", c:"#5b8c32", u:"https://minecraft.wiki/?search="},
@@ -355,7 +356,7 @@ async function run(q, tab="all", opt={}){
     else if (tab === "music"){
       R.innerHTML = await music(q).then(m => tiles(m) + `<div style="margin-top:20px">${bigLinks(q,["Spotify"])}</div>`).catch(()=>bigLinks(q,["Spotify","YouTube"]));
     }
-    else if (tab === "videos")   R.innerHTML = bigLinks(q, ["YouTube","Twitch","TikTok","IMDb"]);
+    else if (tab === "videos")   R.innerHTML = bigLinks(q, ["YouTube","Netflix","Twitch","TikTok","IMDb"]);
     else if (tab === "shopping") R.innerHTML = bigLinks(q, ["Amazon","eBay","Argos","Etsy","Steam"]);
     else if (tab === "sites")    R.innerHTML = sitesHTML(q, "Search “"+esc(q)+"” everywhere");
   } catch (e){
